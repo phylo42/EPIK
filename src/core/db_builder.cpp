@@ -13,16 +13,15 @@ using std::vector;
 using std::cout, std::endl;
 using std::to_string;
 
-db_builder::db_builder(const std::string& tree_file,
-        const std::string& working_directory,
-        size_t kmer_size,
-        const seq_traits& traits,
-        double reduction_ratio)
+db_builder::db_builder(const std::string& working_directory,
+           const std::string& ar_probabilities_file,
+           const std::string& tree_file,
+           size_t kmer_size,
+           const seq_traits& traits)
     : _tree_file(tree_file)
     , _working_directory(working_directory)
     , _kmer_size(kmer_size)
     , _seq_traits(traits)
-    , _reduction_ratio(reduction_ratio)
 {}
 
 return_code_t db_builder::run()

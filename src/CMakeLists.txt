@@ -12,7 +12,7 @@ set(SOURCE_FILES
         core/seq_traits.cpp core/seq_traits.h
         core/phylo_tree.cpp core/phylo_tree.h
         core/ar.cpp core/ar.h
-)
+        utils/buffered_reader.cpp utils/buffered_reader.h)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

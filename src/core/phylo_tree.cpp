@@ -1,21 +1,21 @@
 #include "phylo_tree.h"
+#include "../utils/buffered_reader.h"
 
 #include <cassert>
 #include <iostream>
 #include <fstream>
 #include <stack>
 #include <tuple>
+#include <memory>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
 
-using std::vector,
-std::stack;
+using std::vector, std::stack;
 using std::string;
 using std::move;
-using std::cout,
-std::endl;
+using std::cout, std::endl;
 
 using namespace _impl;
 
@@ -63,7 +63,7 @@ void phylo_node::_clean()
     _is_fake = false;
 }
 
-void phylo_node::add_children(phylo_node* node)
+void phylo_node::_add_children(phylo_node* node)
 {
     _children.push_back(node);
 }
@@ -253,7 +253,7 @@ phylo_node* newick_parser::_finish_node()
     _node_stack.pop();
     if (current_node->_parent != nullptr)
     {
-        current_node->_parent->add_children(current_node);
+        current_node->_parent->_add_children(current_node);
     }
 
     _parsing_node = false;
@@ -289,36 +289,21 @@ namespace bio = boost::iostreams;
 
 phylo_tree load_newick(const string& file_name)
 {
-    using std::fpos;
-    using std::ifstream;
-
     newick_parser parser;
     cout << "Loading newick: " + file_name << endl;
 
-    bio::mapped_file_source mmap(file_name);
-    bio::stream<bio::mapped_file_source> is(mmap, std::ios::in);
-    if (is)
+    std::unique_ptr<buffered_reader> reader = make_mapped_buffered_reader(file_name);
+    if (reader->good())
     {
-        // get length of file
-        is.seekg(0, ifstream::end);
-        fpos<mbstate_t> file_length = is.tellg();
-        is.seekg(0, ifstream::beg);
-
-        const int buffer_size = 4096;
-        char buffer[buffer_size];
-
-        fpos<mbstate_t> read = 0;
-        while (read < file_length)
+        while (!reader->empty())
         {
-            std::streamsize size_to_read = std::min(file_length - read, static_cast<std::streamoff>(buffer_size - 1));
-            is.read(buffer, size_to_read);
-            buffer[buffer_size - 1] = '\0';
-            read += size_to_read;
-            parser.parse(buffer);
+            string chunk = reader->read_next_chunk();
+            parser.parse(chunk);
         }
-        is.close();
-        return phylo_tree(parser.get_root(), parser.get_node_count());
     }
-    throw std::runtime_error("Cannot open file: " + file_name);
-
+    else
+    {
+        throw std::runtime_error("Cannot open file: " + file_name);
+    }
+    return phylo_tree(parser.get_root(), parser.get_node_count());
 }

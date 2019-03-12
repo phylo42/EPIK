@@ -25,8 +25,8 @@ return_code_t run(const cli::cli_parameters& parameters)
         case cli::build:
         {
             seq_traits seq_traits_p = make_dna_seq_traits();
-            db_builder builder(parameters.tree_file, parameters.working_directory,
-                    parameters.kmer_size, seq_traits_p, parameters.reduction_ratio);
+            db_builder builder(parameters.working_directory, parameters.ar_probabilities_file,
+                               parameters.tree_file, parameters.kmer_size, seq_traits_p);
             return builder.run();
         }
         default:

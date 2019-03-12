@@ -24,19 +24,10 @@ void check_conflicts(const po::variables_map& vm,
 namespace cli
 {
     static std::string HELP = "help", HELP_SHORT = "h";
-    static std::string REFTREE = "reftree", REFTREE_SHORT = "t";
     static std::string WORKING_DIR = "workdir", WORKING_DIR_SHORT = "w";
+    static std::string AR_PROBABILITIES = "ar-probabilities", AR_PROBABILITIES_SHORT = "a";
+    static std::string REFTREE = "reftree", REFTREE_SHORT = "t";
     static std::string K = "k", K_SHORT = "k";
-    static std::string REDUCTION_RATIO = "ratio-reduction";
-
-    void validate_reduction_ratio(double value)
-    {
-        if (value < 0.0 || value > 1.0)
-        {
-            throw po::validation_error(po::validation_error::invalid_option_value,
-                    REDUCTION_RATIO, std::to_string(value));
-        }
-    }
 
     const po::options_description get_opt_description()
     {
@@ -44,14 +35,14 @@ namespace cli
         desc.add_options()
                 ((HELP + "," + HELP_SHORT).c_str(),
                         "Show help")
+                ((WORKING_DIR + "," + WORKING_DIR_SHORT).c_str(), po::value<fs::path>()->default_value(fs::current_path()),
+                 "Path to the working directory")
+                ((AR_PROBABILITIES + "," + AR_PROBABILITIES_SHORT).c_str(), po::value<fs::path>()->required(),
+                 "Ancestral reconstruction probabilities file")
                 ((REFTREE + "," + REFTREE_SHORT).c_str(), po::value<fs::path>()->required(),
                         "Phylogenetic tree file")
-                ((WORKING_DIR + "," + WORKING_DIR_SHORT).c_str(), po::value<fs::path>()->default_value(fs::current_path()),
-                        "Path to the working directory (b|p phase).")
                 ((K + "," + K_SHORT).c_str(), po::value<size_t>()->default_value(8),
-                         "k-mer length used at DB build. (b phase)")
-                (REDUCTION_RATIO.c_str(), po::value<double>()->default_value(0.99f)->notifier(&validate_reduction_ratio),
-                        "Ratio for alignment reduction, e.g. sites holding > X% gaps are ignored. (b phase)");
+                         "k-mer length used at DB build");
         return desc;
     }
 
@@ -82,14 +73,10 @@ namespace cli
                 parameters.action = action_t::build;
             }
 
-            if (vm.count(REFTREE))
-            {
-                parameters.tree_file = vm[REFTREE].as<fs::path>().string();
-            }
-
             parameters.working_directory = vm[WORKING_DIR].as<fs::path>().string();
+            parameters.ar_probabilities_file = vm[AR_PROBABILITIES].as<fs::path>().string();
+            parameters.tree_file = vm[REFTREE].as<fs::path>().string();
             parameters.kmer_size = vm[K].as<size_t>();
-            parameters.reduction_ratio = vm[REDUCTION_RATIO].as<double>();
         }
         catch (const po::error& e)
         {

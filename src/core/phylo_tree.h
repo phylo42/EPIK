@@ -30,7 +30,7 @@ namespace _impl
         /// Clean node and fill with the default values. Used in the default constructor
         void _clean();
 
-        void add_children(phylo_node* node);
+        void _add_children(phylo_node* node);
 
     private:
         int _id;
