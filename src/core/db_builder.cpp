@@ -1,5 +1,6 @@
 #include "db_builder.h"
 #include "phylo_tree.h"
+#include "ar.h"
 #include <cstdlib>
 #include <vector>
 #include <iostream>
@@ -18,8 +19,9 @@ db_builder::db_builder(const std::string& working_directory,
            const std::string& tree_file,
            size_t kmer_size,
            const seq_traits& traits)
-    : _tree_file(tree_file)
-    , _working_directory(working_directory)
+    : _working_directory(working_directory)
+    , _ar_probabilities_file(ar_probabilities_file)
+    , _tree_file(tree_file)
     , _kmer_size(kmer_size)
     , _seq_traits(traits)
 {}
@@ -29,5 +31,6 @@ return_code_t db_builder::run()
     phylo_tree tree = load_newick(_tree_file);
     cout << tree.get_node_count() << endl;
 
+    proba_matrix probas = load_phyml_probas(_seq_traits.charset_size(), _ar_probabilities_file);
     return return_code::success;
 }

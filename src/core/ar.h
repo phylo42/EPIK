@@ -3,17 +3,15 @@
 #include <string>
 #include <vector>
 
-
 class proba_matrix
 {
-    friend proba_matrix load_phyml_probas(size_t seq_alphabet_size);
-    proba_matrix();
-
+    friend proba_matrix load_phyml_probas(size_t seq_alphabet_size, const std::string& file_name);
 public:
     using pos_probs_t = std::vector<float>;
     using branch_probs_t = std::vector<pos_probs_t>;
     using branch_entry_t = std::pair<std::string, branch_probs_t>;
 
+    proba_matrix();
 public:
     ~proba_matrix() = default;
 
@@ -24,4 +22,4 @@ private:
     std::vector<branch_entry_t> _data;
 };
 
-proba_matrix load_phyml_probas(size_t seq_alphabet_size);
+proba_matrix load_phyml_probas(size_t seq_alphabet_size, const std::string& file_name);

@@ -20,8 +20,9 @@ public:
     return_code_t run();
 
 private:
-    std::string _tree_file;
     std::string _working_directory;
+    std::string _ar_probabilities_file;
+    std::string _tree_file;
 
     size_t _kmer_size;
     seq_traits _seq_traits;

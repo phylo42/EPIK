@@ -1,14 +1,11 @@
 #include "phylo_tree.h"
-#include "../utils/buffered_reader.h"
-
+#include "../utils/file_io.h"
 #include <cassert>
 #include <iostream>
 #include <fstream>
 #include <stack>
 #include <tuple>
 #include <memory>
-#include <boost/iostreams/device/mapped_file.hpp>
-#include <boost/iostreams/stream.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
 
@@ -100,7 +97,7 @@ public:
     /// Parse an input buffer. This function can be called more than once,
     /// during the buffered reading from disk.
     /// \param data A string variable containing the current buffer data to parse.
-    void parse(const std::string& data);
+    void parse(const string& data);
 
     phylo_node* get_root() const;
     size_t get_node_count() const;
@@ -285,7 +282,6 @@ void newick_parser::_parse_node_text()
     _node_text.clear();
 }
 
-namespace bio = boost::iostreams;
 
 phylo_tree load_newick(const string& file_name)
 {

@@ -20,6 +20,12 @@ bool seq_traits::is_gap(char c) const
     return c == '-' || c == '.';
 }
 
+size_t seq_traits::charset_size() const
+{
+    return _char_set.size();
+}
+
+
 seq_traits make_dna_seq_traits()
 {
     const std::set<char> char_set = { 'A', 'C', 'G', 'T', 'N', '.', '-' };

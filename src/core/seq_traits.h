@@ -13,6 +13,9 @@ public:
     bool is_valid(char c) const;
     bool is_ambiguous(char c) const;
     bool is_gap(char c) const;
+
+    size_t charset_size() const;
+
 private:
     const std::set<char> _char_set;
     const std::set<char> _ambiguous_chars;
