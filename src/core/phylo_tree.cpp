@@ -1,4 +1,4 @@
-#include "newick.h"
+#include "phylo_tree.h"
 
 #include <cassert>
 #include <iostream>
@@ -10,10 +10,12 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
 
-using std::vector, std::stack;
+using std::vector,
+std::stack;
 using std::string;
 using std::move;
-using std::cout, std::endl;
+using std::cout,
+std::endl;
 
 using namespace _impl;
 
@@ -24,13 +26,14 @@ phylo_node::phylo_node()
 
 phylo_node::phylo_node(int id, const std::string& label, float branch_length,
                        const std::vector<phylo_node*>& children, phylo_node* parent, bool is_fake)
-    : _id(id)
-    , _label(label)
-    , _branch_length(branch_length)
-    , _children(children)
-    , _parent(parent)
-    , _is_fake(is_fake)
-{}
+        : _id(id)
+          , _label(label)
+          , _branch_length(branch_length)
+          , _children(children)
+          , _parent(parent)
+          , _is_fake(is_fake)
+{
+}
 
 phylo_node::~phylo_node() noexcept
 {
@@ -66,14 +69,16 @@ void phylo_node::add_children(phylo_node* node)
 }
 
 phylo_tree::phylo_tree(_impl::phylo_node* root, size_t node_count)
-    : _root(root)
-    , _node_count(node_count)
-{}
+        : _root(root)
+          , _node_count(node_count)
+{
+}
 
 phylo_tree::~phylo_tree() noexcept
 {
     delete _root;
 }
+
 size_t phylo_tree::get_node_count() const
 {
     return _node_count;
@@ -140,11 +145,12 @@ private:
 };
 
 newick_parser::newick_parser()
-    : _root(nullptr)
-    , _node_index(-1)
-    , _parsing_node(false)
-    , _end_of_file(false)
-{}
+        : _root(nullptr)
+          , _node_index(-1)
+          , _parsing_node(false)
+          , _end_of_file(false)
+{
+}
 
 void newick_parser::parse(const std::string& data)
 {
@@ -166,7 +172,7 @@ phylo_node* newick_parser::get_root() const
 
 size_t newick_parser::get_node_count() const
 {
-    return (size_t)_node_index + 1;
+    return (size_t) _node_index + 1;
 }
 
 void newick_parser::_parse_symbol(char symbol)

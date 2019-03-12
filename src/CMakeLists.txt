@@ -9,11 +9,10 @@ set(SOURCE_FILES
         core/db_builder.cpp core/db_builder.h
         cli/command_line.cpp cli/command_line.h
         cli/exceptions.cpp cli/exceptions.h
-        ar/evo_model.cpp ar/evo_model.h
-        ar/bindep_wrapper.cpp ar/bindep_wrapper.h
-        core/alignment.cpp core/alignment.h
-        core/fasta.cpp core/fasta.h
-        core/seq_traits.cpp core/seq_traits.h core/newick.cpp core/newick.h)
+        core/seq_traits.cpp core/seq_traits.h
+        core/phylo_tree.cpp core/phylo_tree.h
+        core/ar.cpp core/ar.h
+)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

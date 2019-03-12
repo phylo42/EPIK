@@ -3,7 +3,6 @@
 #include <exception>
 #include <string>
 #include <map>
-#include "../ar/evo_model.h"
 
 namespace cli
 {
@@ -17,9 +16,7 @@ namespace cli
     struct cli_parameters
     {
         // main options
-        std::string ar_binary;
         action_t action;
-        std::string alignment_file;
         std::string tree_file;
         std::string working_directory;
 
@@ -27,8 +24,6 @@ namespace cli
         // ...
 
         // algo options
-        ar::evo_model model = ar::get_default_model();
-        std::string ar_parameters;
         size_t kmer_size;
         double reduction_ratio;
 

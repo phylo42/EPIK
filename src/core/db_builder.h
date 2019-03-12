@@ -12,31 +12,19 @@ class seq_traits;
 class db_builder
 {
 public:
-    db_builder(const std::string& ar_binary,
-               const std::string& alignment_file,
-               const std::string& tree_file,
-               const std::string& working_directory,
-               const std::string& ar_directory,
-               const std::string& ar_parameters,
+    db_builder(const std::string &tree_file,
+               const std::string &working_directory,
                size_t kmer_size,
-               const ar::evo_model& model,
-               const seq_traits& traits,
+               const seq_traits &traits,
                double reduction_ratio);
+
     return_code_t run();
 
 private:
-    std::string build_phyml_command() const;
-
-private:
-    std::string _ar_binary;
-    std::string _alignment_file;
     std::string _tree_file;
     std::string _working_directory;
-    std::string _ar_directory;
-    std::string _ar_parameters;
 
     size_t _kmer_size;
-    ar::evo_model _model;
     seq_traits _seq_traits;
     double _reduction_ratio;
 };

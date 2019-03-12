@@ -20,11 +20,11 @@ namespace _impl
         phylo_node(const phylo_node& other) = default;
         ~phylo_node() noexcept;
 
-        phylo_node& operator=(const phylo_node &) = delete;
+        phylo_node& operator=(const phylo_node&) = delete;
 
         /// WARNING: this operator only checks for the id and label fields
-        bool operator==(const phylo_node &rhs) const noexcept;
-        bool operator!=(const phylo_node &rhs) const noexcept;
+        bool operator==(const phylo_node& rhs) const noexcept;
+        bool operator!=(const phylo_node& rhs) const noexcept;
 
     private:
         /// Clean node and fill with the default values. Used in the default constructor
