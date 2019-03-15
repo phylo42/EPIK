@@ -2,22 +2,37 @@
 
 #include <string>
 #include <memory>
+#include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/iostreams/stream.hpp>
 
+/// \brief A buffered reader class for memory mapped files.
 class buffered_reader
 {
 public:
-    virtual ~buffered_reader();
-    virtual std::string read_next_chunk() = 0;
-    virtual bool empty() const = 0;
-    virtual bool good() const = 0;
-};
-std::unique_ptr<buffered_reader> make_mapped_buffered_reader(const std::string& file_name);
+    explicit buffered_reader(const std::string& file_name);
+    buffered_reader(const buffered_reader&) = delete;
+    ~buffered_reader();
+    buffered_reader& operator=(const buffered_reader&) = delete;
 
-class string_reader
-{
-public:
-    virtual ~string_reader();
-    virtual bool get_line(std::string& line) = 0;
-    virtual bool good() const = 0;
+    std::string read_next_chunk();
+    bool empty() const;
+    bool good() const;
+private:
+    std::fpos<mbstate_t> _get_file_legth();
+    void _start_reading();
+    void _read_next_chunk();
+
+private:
+    using mf_source_t = boost::iostreams::mapped_file_source;
+    using stream_t = boost::iostreams::stream<mf_source_t>;
+
+    mf_source_t _msource;
+    stream_t _stream;
+
+    bool _started;
+    std::fpos<mbstate_t> _file_length;
+    std::fpos<mbstate_t> _read = 0;
+
+    const int _buffer_size = 4096;
+    char* _buffer;
 };
-std::unique_ptr<string_reader> make_mapped_string_reader(const std::string& file_name);

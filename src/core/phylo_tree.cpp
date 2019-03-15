@@ -81,11 +81,11 @@ size_t phylo_tree::get_node_count() const
     return _node_count;
 }
 
-/*!
- * \brief A class for parsing .newick-formatted files.
-   \details This class parses phylogenetic trees in the newick format. It designed to support
-   a buffered reading from disk.
-*/
+///
+/// \brief A class for parsing .newick-formatted files.
+/// \details This class parses phylogenetic trees in the newick format. It designed to support
+///  a buffered reading from disk.
+///
 class newick_parser
 {
 public:
@@ -104,8 +104,8 @@ public:
 
 private:
     /// Parse next symbol of input data.
-    /// \param symbol
-    void _parse_symbol(char symbol);
+    /// \param ch A character to parse
+    void _parse_character(char ch);
 
     /// \brief Handles a left parenthesis in input data.
     /// \details A left parenthesis indicates that a new node with children should be created.
@@ -125,7 +125,8 @@ private:
     void _handle_semicolon();
 
     /// \details Keep reading the current node description
-    void _handle_text(char symbol);
+    /// \param ch A character to parse
+    void _handle_text(char ch);
 
     void _start_node();
     phylo_node* _finish_node();
@@ -153,7 +154,7 @@ void newick_parser::parse(const std::string& data)
 {
     for (char c : data)
     {
-        _parse_symbol(c);
+        _parse_character(c);
 
         if (_end_of_file)
         {
@@ -172,9 +173,9 @@ size_t newick_parser::get_node_count() const
     return (size_t) _node_index + 1;
 }
 
-void newick_parser::_parse_symbol(char symbol)
+void newick_parser::_parse_character(char ch)
 {
-    switch (symbol)
+    switch (ch)
     {
         case '(':
             _handle_left_parenthesis();
@@ -189,7 +190,7 @@ void newick_parser::_parse_symbol(char symbol)
             _handle_semicolon();
             break;
         default:
-            _handle_text(symbol);
+            _handle_text(ch);
             break;
     }
 }
@@ -217,7 +218,7 @@ void newick_parser::_handle_semicolon()
     _end_of_file = true;
 }
 
-void newick_parser::_handle_text(char symbol)
+void newick_parser::_handle_text(char ch)
 {
     /// A node can start from a parenthesis (ex. "(A, B)C") or from a label (ex. "A").
     /// The second case is equal to "()A". In this case we need to create a node as soon
@@ -229,7 +230,7 @@ void newick_parser::_handle_text(char symbol)
     }
 
     /// Keep reading the node description
-    _node_text.push_back(symbol);
+    _node_text.push_back(ch);
 }
 
 void newick_parser::_start_node()
@@ -282,18 +283,17 @@ void newick_parser::_parse_node_text()
     _node_text.clear();
 }
 
-
 phylo_tree load_newick(const string& file_name)
 {
-    newick_parser parser;
     cout << "Loading newick: " + file_name << endl;
 
-    std::unique_ptr<buffered_reader> reader = make_mapped_buffered_reader(file_name);
-    if (reader->good())
+    newick_parser parser;
+    buffered_reader reader(file_name);
+    if (reader.good())
     {
-        while (!reader->empty())
+        while (!reader.empty())
         {
-            string chunk = reader->read_next_chunk();
+            string chunk = reader.read_next_chunk();
             parser.parse(chunk);
         }
     }
@@ -301,5 +301,7 @@ phylo_tree load_newick(const string& file_name)
     {
         throw std::runtime_error("Cannot open file: " + file_name);
     }
+
+    cout << "Loaded a tree of " << parser.get_node_count() << " nodes." << endl << endl;
     return phylo_tree(parser.get_root(), parser.get_node_count());
 }

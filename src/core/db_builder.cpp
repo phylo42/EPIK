@@ -29,8 +29,6 @@ db_builder::db_builder(const std::string& working_directory,
 return_code_t db_builder::run()
 {
     phylo_tree tree = load_newick(_tree_file);
-    cout << tree.get_node_count() << endl;
-
-    proba_matrix probas = load_phyml_probas(_seq_traits.charset_size(), _ar_probabilities_file);
+    proba_matrix probas = load_phyml_probas(_ar_probabilities_file);
     return return_code::success;
 }

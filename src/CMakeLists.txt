@@ -6,9 +6,9 @@ find_package(Boost COMPONENTS program_options filesystem log iostreams REQUIRED)
 set(CMAKE_CXX_STANDARD 17)
 set(SOURCE_FILES
         main.cpp
-        core/db_builder.cpp core/db_builder.h
         cli/command_line.cpp cli/command_line.h
         cli/exceptions.cpp cli/exceptions.h
+        core/db_builder.cpp core/db_builder.h
         core/seq_traits.cpp core/seq_traits.h
         core/phylo_tree.cpp core/phylo_tree.h
         core/ar.cpp core/ar.h
