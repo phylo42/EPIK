@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
+#set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Boost COMPONENTS program_options filesystem log iostreams REQUIRED)
 
 set(SOURCE_FILES
@@ -13,10 +14,14 @@ set(SOURCE_FILES
         utils/file_io.cpp utils/file_io.h)
 
 
-include_directories(../third-party/abseil-cpp)
+include_directories(
+        ../third-party/abseil-cpp
+        ../third-party/fast-cpp-csv-parser
+)
 
 add_library(rappas-core ${SOURCE_FILES})
 target_link_libraries(rappas-core
         ${Boost_LIBRARIES}
         absl::strings
+        Threads::Threads
 )

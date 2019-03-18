@@ -14,6 +14,7 @@ public:
     db_builder(const std::string& working_directory,
                const std::string& ar_probabilities_file,
                const std::string& tree_file,
+               const std::string& mapping_file,
                size_t kmer_size,
                const seq_traits& traits);
 
@@ -23,6 +24,7 @@ private:
     std::string _working_directory;
     std::string _ar_probabilities_file;
     std::string _tree_file;
+    std::string _mapping_file;
 
     size_t _kmer_size;
     seq_traits _seq_traits;

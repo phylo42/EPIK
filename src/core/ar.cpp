@@ -5,6 +5,7 @@
 #include <absl/strings/string_view.h>
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_split.h>
+#include <csv.h>
 
 using std::string;
 using absl::string_view;
@@ -61,10 +62,10 @@ void proba_matrix::_add_branch_entry(const branch_entry_t& branch_entry)
 class phyml_result_parser
 {
 public:
-    explicit phyml_result_parser();
+    explicit phyml_result_parser() = default;
     phyml_result_parser(const phyml_result_parser&) = delete;
     ~phyml_result_parser() = default;
-    phyml_result_parser& operator=(const phyml_result_parser&) = default;
+    phyml_result_parser& operator=(const phyml_result_parser&) = delete;
 
     /// Parse an input buffer. This function can be called more than once,
     /// during the buffered reading from disk. Buffer is split by a newline
@@ -82,7 +83,7 @@ public:
     /// is supposed to be called at the very end of the parsing process,
     /// after all of the `parse(buffer)` calls.
     /// \sa parse
-    proba_matrix&& get_matrix();
+    proba_matrix&& get_result();
 
 private:
     void _finish_branch();
@@ -92,10 +93,6 @@ private:
     proba_matrix _matrix;
     proba_matrix::branch_entry_t _current_branch;
 };
-
-phyml_result_parser::phyml_result_parser()
-    : _matrix()
-{}
 
 size_t phyml_result_parser::parse(const string_view& new_data)
 {
@@ -198,7 +195,7 @@ void phyml_result_parser::_finish_branch()
     _current_branch.clear();
 }
 
-proba_matrix&& phyml_result_parser::get_matrix()
+proba_matrix&& phyml_result_parser::get_result()
 {
     // We can not know by the file format if the input is over or not. So we assume that we need to
     // process the last branch entry before returning the result;
@@ -209,11 +206,10 @@ proba_matrix&& phyml_result_parser::get_matrix()
     return std::move(_matrix);
 }
 
-proba_matrix load_phyml_probas(const string& file_name)
+template <class ReturnType, class Parser>
+ReturnType load_line_separated(const string& file_name)
 {
-    cout << "Loading PhyML results: " + file_name << endl;
-
-    phyml_result_parser parser;
+    Parser parser;
     buffered_reader reader(file_name);
     if (reader.good())
     {
@@ -247,8 +243,30 @@ proba_matrix load_phyml_probas(const string& file_name)
     {
         throw std::runtime_error("Cannot open file: " + file_name);
     }
-    proba_matrix matrix = parser.get_matrix();
+    return parser.get_result();
+}
+
+proba_matrix load_phyml_probas(const string& file_name)
+{
+    cout << "Loading PhyML results: " + file_name << endl;
+    auto matrix = load_line_separated<proba_matrix, phyml_result_parser>(file_name);
     cout << "Loaded " << matrix.num_branches() << " matrices of size [" << matrix.num_sites()
          << " x " << matrix.num_variants() << "]." << endl << endl;
     return matrix;
+}
+
+node_mapping load_node_mapping(const std::string& file_name)
+{
+    cout << "Loading a node mapping: " + file_name << endl;
+    node_mapping mapping;
+
+    io::CSVReader<2, io::trim_chars<' '>, io::no_quote_escape<'\t'>> in(file_name);
+    in.read_header(io::ignore_extra_column, "extended_label", "ARtree_label");
+    std::string extended_label, artree_label;
+    while(in.read_row(extended_label, artree_label))
+    {
+        mapping[extended_label] = artree_label;
+    }
+    cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
+    return mapping;
 }
