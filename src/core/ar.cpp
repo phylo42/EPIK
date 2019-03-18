@@ -2,12 +2,16 @@
 #include "../utils/file_io.h"
 #include <iostream>
 #include <memory>
-#include <boost/algorithm/string.hpp>
+#include <absl/strings/string_view.h>
+#include <absl/strings/str_cat.h>
+#include <absl/strings/str_split.h>
 
 using std::string;
+using absl::string_view;
 using std::cout, std::endl;
 using std::vector;
 using std::pair;
+using std::begin, std::end;
 
 void swap(proba_matrix::branch_entry_t& b1, proba_matrix::branch_entry_t& b2)
 {
@@ -63,9 +67,16 @@ public:
     phyml_result_parser& operator=(const phyml_result_parser&) = default;
 
     /// Parse an input buffer. This function can be called more than once,
-    /// during the buffered reading from disk.
-    /// \param data A string variable containing a current buffer to parse.
-    void parse(const string& data);
+    /// during the buffered reading from disk. Buffer is split by a newline
+    /// character, and the lines parsed line by line. If the last line does not
+    /// end with a newline character, it is considered as incomplete and will
+    /// be ignored.
+    /// \param data A string view variable containing a non-owning pointer
+    /// to a buffer with new data to parse.
+    /// \return The number of parsed characters.
+    size_t parse(const string_view& new_data);
+
+    void parse_line(const string_view& line);
 
     /// Get the resulting matrix of posterior probabilities. This function
     /// is supposed to be called at the very end of the parsing process,
@@ -74,55 +85,48 @@ public:
     proba_matrix&& get_matrix();
 
 private:
-    void _process_line(const string& line);
     void _finish_branch();
 
 private:
     /// A temporary storage for the resulting probability matrix
     proba_matrix _matrix;
-
-    string _current_data;
     proba_matrix::branch_entry_t _current_branch;
 };
 
 phyml_result_parser::phyml_result_parser()
     : _matrix()
-    , _current_data("")
 {}
 
-void phyml_result_parser::parse(const string& new_data)
+size_t phyml_result_parser::parse(const string_view& new_data)
 {
-    _current_data.append(new_data);
+    vector<string_view> lines = absl::StrSplit(new_data, '\n');
 
-    vector<string> lines;
-    boost::split(lines, _current_data, boost::is_any_of("\n"));
-
-    size_t last_line_idx = lines.size() - 1;
-    if (_current_data.size() && _current_data[_current_data.size() - 1] != '\n')
-    {
-        _current_data = lines[last_line_idx];
-        --last_line_idx;
-    }
+    /// if the last token is not a full line with a newline character,
+    /// it will remain not parsed
+    bool parse_last_line = (new_data.back() == '\n');
+    size_t last_line_idx = lines.size() - 1 - (parse_last_line ? 0 : 1);
 
     for (size_t i = 0; i <= last_line_idx; ++i)
     {
-        _process_line(lines[i]);
+        parse_line(lines[i]);
     }
+
+    size_t byte_parsed = new_data.size();
+    if (last_line_idx != lines.size() - 1)
+    {
+        byte_parsed -= lines.back().size();
+    }
+    return byte_parsed;
 }
 
-vector<string> _split_line(const string& line)
+void str_trim(string_view& str_view)
 {
-    auto is_space = [](char c) -> bool { return c == ' ' || c == '\t'; };
-    auto is_empty = [](const string& s) -> bool { return s.empty(); };
-    vector<string> tokens;
-    boost::split(tokens, line, is_space);
-
-    // erase-remove idiom to remove all the spacebars and \t from the array of values
-    tokens.erase(std::remove_if(tokens.begin(), tokens.end(), is_empty), tokens.end());
-    return tokens;
+    const char* ws = " \t\n";
+    str_view.remove_prefix(std::min(str_view.find_first_not_of(ws), str_view.size()));
+    str_view.remove_suffix((str_view.size() - 1) - std::min(str_view.find_last_not_of(ws), str_view.size() - 1));
 }
 
-pair<int, proba_matrix::pos_probs_t> _parse_line(const vector<string>& tokens)
+pair<int, proba_matrix::pos_probs_t> _parse_line(const vector<string_view>& tokens)
 {
     auto it = tokens.begin();
 
@@ -130,18 +134,30 @@ pair<int, proba_matrix::pos_probs_t> _parse_line(const vector<string>& tokens)
     ++it;
 
     // parse the "Node Label" column
-    int node_label = std::stoi(*it);
+    int node_label = 0;
+    if (!absl::SimpleAtoi(*it, &node_label))
+    {
+        throw std::runtime_error("Wrong PhyML input: " + string(*it));
+    }
     ++it;
 
     // parse probability values
+    auto stof = [](const string_view& s) -> float
+    {
+        float v = 0;
+        if (!absl::SimpleAtof(s, &v))
+        {
+            throw std::runtime_error("Wrong PhyML input: " + string(s));
+        }
+        return v;
+    };
     proba_matrix::pos_probs_t probs;
-    std::transform(it, tokens.end(), std::back_inserter(probs),
-                   [](const string& s) -> float { return std::stof(s); });
-
+    probs.reserve(tokens.size());
+    std::transform(it, tokens.end(), std::back_inserter(probs), stof);
     return std::make_pair(node_label, probs);
 }
 
-void phyml_result_parser::_process_line(const string& line)
+void phyml_result_parser::parse_line(const string_view& line)
 {
     // skip empty lines and the lines that are not fully read yet
     // (they will be parsed during the next call of the parse() method
@@ -150,10 +166,14 @@ void phyml_result_parser::_process_line(const string& line)
         return;
     }
 
-    vector<string> tokens = _split_line(line);
+    vector<string_view> tokens = absl::StrSplit(line, '\t');
+    for (auto& token : tokens)
+    {
+        str_trim(token);
+    }
 
     // if this line starts from a digit in first column
-    string& first_token = tokens[0];
+    string_view first_token = tokens[0];
     if (!first_token.empty() && std::isdigit(first_token[0]))
     {
         pair<int, proba_matrix::pos_probs_t> values = _parse_line(tokens);
@@ -183,7 +203,7 @@ proba_matrix&& phyml_result_parser::get_matrix()
     // We can not know by the file format if the input is over or not. So we assume that we need to
     // process the last branch entry before returning the result;
     // 1) This operation is safe if there is nothing to push.
-    // 2) phyml_result_parser::get_matrix is not re-entrant anyway, because it moves the answer
+    // 2) phyml_result_parser::get_matrix is not re-entrant anyway, because it moves the answer away
     _finish_branch();
 
     return std::move(_matrix);
@@ -197,10 +217,30 @@ proba_matrix load_phyml_probas(const string& file_name)
     buffered_reader reader(file_name);
     if (reader.good())
     {
+        string not_parsed_data;
         while (!reader.empty())
         {
-            string chunk = reader.read_next_chunk();
-            parser.parse(chunk);
+            string_view chunk = reader.read_next_chunk();
+
+            /// continue to parse last line from the previous chunk
+            if (not_parsed_data.size() > 0)
+            {
+                auto it = std::find(begin(chunk), end(chunk), '\n');
+                if (it != end(chunk))
+                {
+                    /// we want to copy '\n' too
+                    ++it;
+
+                    string_view end_of_last_line(begin(chunk), std::distance(begin(chunk), it));
+                    string last_line;
+                    absl::StrAppend(&last_line, not_parsed_data, end_of_last_line);
+                    parser.parse_line(last_line);
+                    chunk.remove_prefix(end_of_last_line.size());
+                }
+            }
+
+            size_t parsed_size = parser.parse(chunk);
+            not_parsed_data = chunk.substr(parsed_size, std::distance(begin(chunk) + parsed_size, end(chunk)));
         }
     }
     else

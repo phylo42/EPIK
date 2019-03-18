@@ -7,6 +7,7 @@ namespace bio = boost::iostreams;
 using std::string;
 using std::fpos;
 using std::ifstream;
+using absl::string_view;
 
 buffered_reader::buffered_reader(const string& file_name)
     : _msource(file_name)
@@ -33,7 +34,7 @@ fpos<mbstate_t> buffered_reader::_get_file_legth()
     return file_length;
 }
 
-string buffered_reader::read_next_chunk()
+string_view buffered_reader::read_next_chunk()
 {
     if (!_started)
     {
@@ -43,7 +44,7 @@ string buffered_reader::read_next_chunk()
     {
         _read_next_chunk();
     }
-    return string(_buffer);
+    return string_view(_buffer);
 }
 
 bool buffered_reader::empty() const

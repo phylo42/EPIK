@@ -4,6 +4,7 @@
 #include <memory>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <absl/strings/string_view.h>
 
 /// \brief A buffered reader class for memory mapped files.
 class buffered_reader
@@ -14,7 +15,7 @@ public:
     ~buffered_reader();
     buffered_reader& operator=(const buffered_reader&) = delete;
 
-    std::string read_next_chunk();
+    absl::string_view read_next_chunk();
     bool empty() const;
     bool good() const;
 private:

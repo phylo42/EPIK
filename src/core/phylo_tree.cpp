@@ -8,11 +8,13 @@
 #include <memory>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
+#include <absl/strings/string_view.h>
 
 using std::vector, std::stack;
 using std::string;
 using std::move;
 using std::cout, std::endl;
+using absl::string_view;
 
 using namespace _impl;
 
@@ -97,7 +99,7 @@ public:
     /// Parse an input buffer. This function can be called more than once,
     /// during the buffered reading from disk.
     /// \param data A string variable containing the current buffer data to parse.
-    void parse(const string& data);
+    void parse(const string_view& data);
 
     phylo_node* get_root() const;
     size_t get_node_count() const;
@@ -150,7 +152,7 @@ newick_parser::newick_parser()
 {
 }
 
-void newick_parser::parse(const std::string& data)
+void newick_parser::parse(const string_view& data)
 {
     for (char c : data)
     {
@@ -293,7 +295,7 @@ phylo_tree load_newick(const string& file_name)
     {
         while (!reader.empty())
         {
-            string chunk = reader.read_next_chunk();
+            auto chunk = reader.read_next_chunk();
             parser.parse(chunk);
         }
     }
