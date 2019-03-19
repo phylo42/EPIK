@@ -14,6 +14,7 @@ using std::vector, std::stack;
 using std::string;
 using std::move;
 using std::cout, std::endl;
+using std::begin, std::end;
 using absl::string_view;
 
 using namespace _impl;
@@ -24,13 +25,12 @@ phylo_node::phylo_node()
 }
 
 phylo_node::phylo_node(int id, const std::string& label, float branch_length,
-                       const std::vector<phylo_node*>& children, phylo_node* parent, bool is_fake)
-        : _id(id)
-          , _label(label)
-          , _branch_length(branch_length)
-          , _children(children)
-          , _parent(parent)
-          , _is_fake(is_fake)
+    const std::vector<phylo_node*>& children, phylo_node* parent)
+    : _id(id)
+    , _label(label)
+    , _branch_length(branch_length)
+    , _children(children)
+    , _parent(parent)
 {
 }
 
@@ -52,6 +52,11 @@ bool phylo_node::operator!=(const phylo_node& rhs) const noexcept
     return !operator==(rhs);
 }
 
+std::string phylo_node::get_label() const
+{
+    return _label;
+}
+
 void phylo_node::_clean()
 {
     _id = -1;
@@ -59,12 +64,104 @@ void phylo_node::_clean()
     _branch_length = 0;
     _children.clear();
     _parent = nullptr;
-    _is_fake = false;
 }
 
 void phylo_node::_add_children(phylo_node* node)
 {
     _children.push_back(node);
+}
+
+bool is_fake(const _impl::phylo_node& node)
+{
+    const string label = node.get_label();
+    return boost::ends_with(label, "_X0") || boost::ends_with(label, "_X1");
+}
+
+phylo_tree_iterator::phylo_tree_iterator()
+        : _current(nullptr)
+{}
+
+phylo_tree_iterator::phylo_tree_iterator(phylo_node* node)
+        : _current(node)
+{}
+
+phylo_tree_iterator::phylo_tree_iterator(const phylo_tree_iterator& other)
+        : _current(other._current)
+{}
+
+phylo_tree_iterator::~phylo_tree_iterator()
+{}
+
+phylo_tree_iterator& phylo_tree_iterator::operator=(const phylo_tree_iterator& rhs)
+{
+    if (*this != rhs)
+    {
+        _current = rhs._current;
+    }
+    return *this;
+}
+
+bool phylo_tree_iterator::operator==(const phylo_tree_iterator& rhs) const
+{
+    return _current == rhs._current;
+}
+
+bool phylo_tree_iterator::operator!=(const phylo_tree_iterator& rhs) const
+{
+    return !(*this == rhs);
+}
+
+phylo_tree_iterator& phylo_tree_iterator::operator++()
+{
+    /// Go upside down if necessary. We need to know the index of current node in the parent->children
+    phylo_node* temp = _current->_parent;
+    int idx = _id_in_parent(_current);
+    while (idx == -1 && temp)
+    {
+        temp = _current->_parent;
+        idx = _id_in_parent(_current);
+    }
+
+    /// the end of the tree
+    if (temp == nullptr)
+    {
+        _current = nullptr;
+    }
+        /// visit the next sibling
+    else if  (idx + 1 < temp->_children.size())
+    {
+        _current = temp->_children[idx + 1];
+    }
+        /// visit the parent
+    else
+    {
+        _current = temp;
+    }
+    return *this;
+}
+
+phylo_tree_iterator::reference phylo_tree_iterator::operator*() const
+{
+    return *_current;
+}
+
+phylo_tree_iterator::pointer phylo_tree_iterator::operator->() const
+{
+    return _current;
+}
+
+int phylo_tree_iterator::_id_in_parent(phylo_node* node) const
+{
+    if (node->_parent != nullptr)
+    {
+        const auto& children = node->_parent->_children;
+        const auto it = std::find(begin(children), end(children), node);
+        if (it != end(children))
+        {
+            return distance(begin(children), it);
+        }
+    }
+    return -1;
 }
 
 phylo_tree::phylo_tree(_impl::phylo_node* root, size_t node_count)
@@ -81,6 +178,21 @@ phylo_tree::~phylo_tree() noexcept
 size_t phylo_tree::get_node_count() const
 {
     return _node_count;
+}
+
+phylo_tree::const_iterator phylo_tree::begin() const
+{
+    phylo_node* temp = _root;
+    while (!temp->_children.empty())
+    {
+        temp = temp->_children[0];
+    }
+    return phylo_tree_iterator(temp);
+}
+
+phylo_tree::const_iterator phylo_tree::end() const
+{
+    return phylo_tree_iterator(nullptr);
 }
 
 ///

@@ -11,7 +11,10 @@ set(SOURCE_FILES
         core/seq_traits.cpp core/seq_traits.h
         core/phylo_tree.cpp core/phylo_tree.h
         core/ar.cpp core/ar.h
-        utils/file_io.cpp utils/file_io.h)
+        core/phylo_kmer_explorer.cpp
+        core/phylo_kmer_explorer.h
+        core/phylo_kmer.h
+        utils/file_io.cpp utils/file_io.h )
 
 
 include_directories(

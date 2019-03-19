@@ -1,6 +1,7 @@
 #include "db_builder.h"
 #include "phylo_tree.h"
 #include "ar.h"
+#include "phylo_kmer_explorer.h"
 #include <cstdlib>
 #include <vector>
 #include <iostream>
@@ -33,5 +34,24 @@ return_code_t db_builder::run()
     phylo_tree tree = load_newick(_tree_file);
     proba_matrix probas = load_phyml_probas(_ar_probabilities_file);
     node_mapping mapping = load_node_mapping(_mapping_file);
-    return return_code::success;
+
+    for (const auto& branch_nodes: tree)
+    {
+        if (is_fake(branch_nodes))
+        {
+            cout << branch_nodes.get_label() << endl;
+        }
+
+        /*
+        probas_view view = probas.make_view(branch_node);
+
+        phylo_kmer_explorer kmer_explorer(_seq_traits, view, branch_node);
+        while (kmer_explorer.has_next())
+        {
+            phylo_kmer ph_kmer = kmer_explorer.next_phylo_kmer();
+            _phylo_kmer_db[ph_kmer.kmer_value] = ph_kmer;
+        }
+*/
+    }
+    return_code::success;
 }

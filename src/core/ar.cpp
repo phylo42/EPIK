@@ -14,22 +14,6 @@ using std::vector;
 using std::pair;
 using std::begin, std::end;
 
-void swap(proba_matrix::branch_entry_t& b1, proba_matrix::branch_entry_t& b2)
-{
-    std::swap(b1.node_label, b2.node_label);
-    std::swap(b1.values, b2.values);
-}
-
-proba_matrix::branch_entry_t::branch_entry_t()
-    : node_label(-1)
-{}
-
-void proba_matrix::branch_entry_t::clear()
-{
-    proba_matrix::branch_entry_t empty;
-    swap(*this, empty);
-}
-
 proba_matrix::proba_matrix()
     : _data()
 {}
@@ -45,17 +29,22 @@ size_t proba_matrix::num_branches() const
 
 size_t proba_matrix::num_sites() const
 {
-    return _data.begin()->values.size();
+    return begin(_data)->second.size();
 }
 
 size_t proba_matrix::num_variants() const
 {
-    return _data.begin()->values.begin()->size();
+    return begin(_data)->second.begin()->size();
 }
 
-void proba_matrix::_add_branch_entry(const branch_entry_t& branch_entry)
+const proba_matrix::branch_entry_t proba_matrix::at(int branch_id) const
 {
-    _data.push_back(branch_entry);
+    return _data.at(branch_id);
+}
+
+void proba_matrix::_add_branch_entry(int node_id, const branch_entry_t& branch_entry)
+{
+    _data.emplace(node_id, branch_entry);
 }
 
 /// \brief A parser class for the results of PhyML ancestral reconstruction.
@@ -92,6 +81,7 @@ private:
     /// A temporary storage for the resulting probability matrix
     proba_matrix _matrix;
     proba_matrix::branch_entry_t _current_branch;
+    int _current_branch_id;
 };
 
 size_t phyml_result_parser::parse(const string_view& new_data)
@@ -176,21 +166,21 @@ void phyml_result_parser::parse_line(const string_view& line)
         pair<int, proba_matrix::pos_probs_t> values = _parse_line(tokens);
 
         // check if it is the first line for a new branch
-        if (values.first != _current_branch.node_label)
+        if (values.first != _current_branch_id)
         {
             _finish_branch();
-            _current_branch.node_label = values.first;
+            _current_branch_id = values.first;
         }
-        _current_branch.values.push_back(values.second);
+        _current_branch.push_back(values.second);
     }
 }
 
 void phyml_result_parser::_finish_branch()
 {
     // put the previous branch to a matrix if exists
-    if (!_current_branch.values.empty())
+    if (!_current_branch.empty())
     {
-        _matrix._add_branch_entry(_current_branch);
+        _matrix._add_branch_entry(_current_branch_id, _current_branch);
     }
     _current_branch.clear();
 }

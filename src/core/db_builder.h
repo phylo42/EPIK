@@ -2,11 +2,17 @@
 
 #include <string>
 #include <memory>
+#include <unordered_map>
 #include "return.h"
 #include "seq_traits.h"
+#include "phylo_kmer.h"
 
 class alignment;
 class seq_traits;
+
+
+using phylo_kmer_db = std::unordered_map<phylo_kmer::kmer_value_t, phylo_kmer>;
+
 
 class db_builder
 {
@@ -28,4 +34,5 @@ private:
 
     size_t _kmer_size;
     seq_traits _seq_traits;
+    phylo_kmer_db _phylo_kmer_db;
 };
