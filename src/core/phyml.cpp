@@ -1,5 +1,7 @@
-#include "ar.h"
+#include "phyml.h"
 #include "../utils/file_io.h"
+#include "phylo_tree.h"
+
 #include <iostream>
 #include <memory>
 #include <absl/strings/string_view.h>
@@ -13,39 +15,6 @@ using std::cout, std::endl;
 using std::vector;
 using std::pair;
 using std::begin, std::end;
-
-proba_matrix::proba_matrix()
-    : _data()
-{}
-
-proba_matrix::proba_matrix(proba_matrix&& other)
-    : _data(std::move(other._data))
-{}
-
-size_t proba_matrix::num_branches() const
-{
-    return _data.size();
-}
-
-size_t proba_matrix::num_sites() const
-{
-    return begin(_data)->second.size();
-}
-
-size_t proba_matrix::num_variants() const
-{
-    return begin(_data)->second.begin()->size();
-}
-
-const proba_matrix::branch_entry_t proba_matrix::at(int branch_id) const
-{
-    return _data.at(branch_id);
-}
-
-void proba_matrix::_add_branch_entry(int node_id, const branch_entry_t& branch_entry)
-{
-    _data.emplace(node_id, branch_entry);
-}
 
 /// \brief A parser class for the results of PhyML ancestral reconstruction.
 class phyml_result_parser
@@ -255,8 +224,9 @@ node_mapping load_node_mapping(const std::string& file_name)
     std::string extended_label, artree_label;
     while(in.read_row(extended_label, artree_label))
     {
-        mapping[extended_label] = artree_label;
+        mapping.from_phyml[artree_label] = extended_label;
+        mapping.to_phyml[extended_label] = artree_label;
     }
-    cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
+    cout << "Loaded " << mapping.from_phyml.size() << " mapped ids." << endl << endl;
     return mapping;
 }

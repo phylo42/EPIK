@@ -1,7 +1,8 @@
 #include "db_builder.h"
 #include "phylo_tree.h"
-#include "ar.h"
+#include "proba_matrix.h"
 #include "phylo_kmer_explorer.h"
+#include "phyml.h"
 #include <cstdlib>
 #include <vector>
 #include <iostream>
@@ -14,6 +15,20 @@ using std::string;
 using std::vector;
 using std::cout, std::endl;
 using std::to_string;
+
+
+/// Apply a node mapping to a phylogenetic tree
+void apply_mapping(phylo_tree& tree, const node_mapping& mapping)
+{
+    for (auto& node : tree)
+    {
+        auto it = mapping.from_phyml.find(node.get_label());
+        if (it != end(mapping.from_phyml))
+        {
+            node.set_label(it->second);
+        }
+    }
+}
 
 db_builder::db_builder(const std::string& working_directory,
            const std::string& ar_probabilities_file,
@@ -32,26 +47,30 @@ db_builder::db_builder(const std::string& working_directory,
 return_code_t db_builder::run()
 {
     phylo_tree tree = load_newick(_tree_file);
-    proba_matrix probas = load_phyml_probas(_ar_probabilities_file);
-    node_mapping mapping = load_node_mapping(_mapping_file);
+    const proba_matrix probas = load_phyml_probas(_ar_probabilities_file);
 
-    for (const auto& branch_nodes: tree)
+    /// restore original names of inner branch nodes that has been rewritten by PhyML
+    /// TODO: encapsulate this in a AR strategy class
+    const node_mapping mapping = load_node_mapping(_mapping_file);
+    apply_mapping(tree, mapping);
+
+    /// iterate over fake nodes
+    for (auto& branch_node: std::as_const(tree))
     {
-        if (is_fake(branch_nodes))
+        if (is_fake(branch_node))
         {
-            cout << branch_nodes.get_label() << endl;
-        }
+            /// get submatrix of probabilities for a current branch node
+            /// TODO: encapsulate this
+            int phyml_branch_id = std::stoi(mapping.to_phyml.at(branch_node.get_label()));
+            const auto& branch_probas = probas.at(phyml_branch_id);
 
-        /*
-        probas_view view = probas.make_view(branch_node);
-
-        phylo_kmer_explorer kmer_explorer(_seq_traits, view, branch_node);
-        while (kmer_explorer.has_next())
-        {
-            phylo_kmer ph_kmer = kmer_explorer.next_phylo_kmer();
-            _phylo_kmer_db[ph_kmer.kmer_value] = ph_kmer;
+            /// run branch and bound for this submatrix
+            phylo_kmer_explorer kmer_explorer(_seq_traits, branch_probas);
+            for (auto& phylo_kmer : kmer_explorer)
+            {
+                _phylo_kmer_db[phylo_kmer.kmer_value] = phylo_kmer;
+            }
         }
-*/
     }
     return_code::success;
 }

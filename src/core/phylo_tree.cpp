@@ -57,6 +57,17 @@ std::string phylo_node::get_label() const
     return _label;
 }
 
+void phylo_node::set_label(const std::string& label)
+{
+    _label = label;
+}
+
+std::vector<phylo_node*> phylo_node::get_children() const
+{
+    return _children;
+}
+
+
 void phylo_node::_clean()
 {
     _id = -1;
@@ -69,99 +80,6 @@ void phylo_node::_clean()
 void phylo_node::_add_children(phylo_node* node)
 {
     _children.push_back(node);
-}
-
-bool is_fake(const _impl::phylo_node& node)
-{
-    const string label = node.get_label();
-    return boost::ends_with(label, "_X0") || boost::ends_with(label, "_X1");
-}
-
-phylo_tree_iterator::phylo_tree_iterator()
-        : _current(nullptr)
-{}
-
-phylo_tree_iterator::phylo_tree_iterator(phylo_node* node)
-        : _current(node)
-{}
-
-phylo_tree_iterator::phylo_tree_iterator(const phylo_tree_iterator& other)
-        : _current(other._current)
-{}
-
-phylo_tree_iterator::~phylo_tree_iterator()
-{}
-
-phylo_tree_iterator& phylo_tree_iterator::operator=(const phylo_tree_iterator& rhs)
-{
-    if (*this != rhs)
-    {
-        _current = rhs._current;
-    }
-    return *this;
-}
-
-bool phylo_tree_iterator::operator==(const phylo_tree_iterator& rhs) const
-{
-    return _current == rhs._current;
-}
-
-bool phylo_tree_iterator::operator!=(const phylo_tree_iterator& rhs) const
-{
-    return !(*this == rhs);
-}
-
-phylo_tree_iterator& phylo_tree_iterator::operator++()
-{
-    /// Go upside down if necessary. We need to know the index of current node in the parent->children
-    phylo_node* temp = _current->_parent;
-    int idx = _id_in_parent(_current);
-    while (idx == -1 && temp)
-    {
-        temp = _current->_parent;
-        idx = _id_in_parent(_current);
-    }
-
-    /// the end of the tree
-    if (temp == nullptr)
-    {
-        _current = nullptr;
-    }
-        /// visit the next sibling
-    else if  (idx + 1 < temp->_children.size())
-    {
-        _current = temp->_children[idx + 1];
-    }
-        /// visit the parent
-    else
-    {
-        _current = temp;
-    }
-    return *this;
-}
-
-phylo_tree_iterator::reference phylo_tree_iterator::operator*() const
-{
-    return *_current;
-}
-
-phylo_tree_iterator::pointer phylo_tree_iterator::operator->() const
-{
-    return _current;
-}
-
-int phylo_tree_iterator::_id_in_parent(phylo_node* node) const
-{
-    if (node->_parent != nullptr)
-    {
-        const auto& children = node->_parent->_children;
-        const auto it = std::find(begin(children), end(children), node);
-        if (it != end(children))
-        {
-            return distance(begin(children), it);
-        }
-    }
-    return -1;
 }
 
 phylo_tree::phylo_tree(_impl::phylo_node* root, size_t node_count)
@@ -180,19 +98,34 @@ size_t phylo_tree::get_node_count() const
     return _node_count;
 }
 
+phylo_node* get_leftmost_child(phylo_node* root)
+{
+    const vector<phylo_node*>& children = root->get_children();
+    while (!root->get_children().empty())
+    {
+        root = root->get_children()[0];
+    }
+    return root;
+}
+
+phylo_tree::iterator phylo_tree::begin()
+{
+    return phylo_tree_iterator<false>(get_leftmost_child(_root));
+}
+
+phylo_tree::iterator phylo_tree::end()
+{
+    return phylo_tree_iterator<false>(nullptr);
+}
+
 phylo_tree::const_iterator phylo_tree::begin() const
 {
-    phylo_node* temp = _root;
-    while (!temp->_children.empty())
-    {
-        temp = temp->_children[0];
-    }
-    return phylo_tree_iterator(temp);
+    return phylo_tree_iterator<true>(get_leftmost_child(_root));
 }
 
 phylo_tree::const_iterator phylo_tree::end() const
 {
-    return phylo_tree_iterator(nullptr);
+    return phylo_tree_iterator<true>(nullptr);
 }
 
 ///
@@ -376,21 +309,24 @@ void newick_parser::_parse_node_text()
 {
     phylo_node* current_node = _node_stack.top();
 
-    // the content can be like "node_name:branch_length", ":branch_length", or just ""
+    // the content can be like "node_label:branch_length", ":branch_length", "node_label" or just ""
     if (!_node_text.empty())
     {
         using tokenizer = boost::tokenizer<boost::char_separator<char>>;
         tokenizer tokens(_node_text, boost::char_separator<char>(":"));
         auto it = begin(tokens);
 
-        // if no id presented
+        // if node label presented
         if (!boost::starts_with(_node_text, ":"))
         {
-            {
-                current_node->_label = *(it++);
-            }
+            current_node->_label = *(it++);
         }
-        current_node->_branch_length = std::stof(*it);
+
+        if (it != end(tokens))
+        {
+            current_node->_branch_length = std::stof(*it);
+        }
+
     }
 
     // the current node is over
@@ -418,4 +354,10 @@ phylo_tree load_newick(const string& file_name)
 
     cout << "Loaded a tree of " << parser.get_node_count() << " nodes." << endl << endl;
     return phylo_tree(parser.get_root(), parser.get_node_count());
+}
+
+bool is_fake(const _impl::phylo_node& node)
+{
+    const string& label = node.get_label();
+    return boost::ends_with(label, "_X0") || boost::ends_with(label, "_X1");
 }
