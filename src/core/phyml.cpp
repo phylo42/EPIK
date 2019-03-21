@@ -8,6 +8,7 @@
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_split.h>
 #include <csv.h>
+#include <numeric>
 
 using std::string;
 using absl::string_view;
@@ -82,7 +83,7 @@ void str_trim(string_view& str_view)
     str_view.remove_suffix((str_view.size() - 1) - std::min(str_view.find_last_not_of(ws), str_view.size() - 1));
 }
 
-pair<int, proba_matrix::pos_probs_t> _parse_line(const vector<string_view>& tokens)
+pair<int, proba_matrix::row_t> _parse_line(const vector<string_view>& tokens)
 {
     auto it = tokens.begin();
 
@@ -107,10 +108,16 @@ pair<int, proba_matrix::pos_probs_t> _parse_line(const vector<string_view>& toke
         }
         return v;
     };
-    proba_matrix::pos_probs_t probs;
+
+    proba_matrix::row_probs_t probs;
     probs.reserve(tokens.size());
     std::transform(it, tokens.end(), std::back_inserter(probs), stof);
-    return std::make_pair(node_label, probs);
+
+    /// fill the positions with values 0, 1, 2, ...
+    proba_matrix::row_pos_t pos(probs.size());
+    std::iota(begin(pos), end(pos), 0);
+
+    return std::make_pair(node_label, std::make_pair(probs, pos));
 }
 
 void phyml_result_parser::parse_line(const string_view& line)
@@ -132,7 +139,7 @@ void phyml_result_parser::parse_line(const string_view& line)
     string_view first_token = tokens[0];
     if (!first_token.empty() && std::isdigit(first_token[0]))
     {
-        pair<int, proba_matrix::pos_probs_t> values = _parse_line(tokens);
+        pair<int, proba_matrix::row_t> values = _parse_line(tokens);
 
         // check if it is the first line for a new branch
         if (values.first != _current_branch_id)
@@ -149,7 +156,7 @@ void phyml_result_parser::_finish_branch()
     // put the previous branch to a matrix if exists
     if (!_current_branch.empty())
     {
-        _matrix._add_branch_entry(_current_branch_id, _current_branch);
+        _matrix.add_branch_entry(_current_branch_id, _current_branch);
     }
     _current_branch.clear();
 }
@@ -209,6 +216,7 @@ proba_matrix load_phyml_probas(const string& file_name)
 {
     cout << "Loading PhyML results: " + file_name << endl;
     auto matrix = load_line_separated<proba_matrix, phyml_result_parser>(file_name);
+    matrix.sort();
     cout << "Loaded " << matrix.num_branches() << " matrices of size [" << matrix.num_sites()
          << " x " << matrix.num_variants() << "]." << endl << endl;
     return matrix;

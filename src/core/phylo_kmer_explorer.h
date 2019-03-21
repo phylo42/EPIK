@@ -10,7 +10,7 @@ class phylo_kmer_iterator
 public:
     // TODO:
     // Sorting of columns here
-    //store sorted indexes in proba_matrix?
+    // store sorted indexes in proba_matrix?
 };
 
 class phylo_kmer_explorer

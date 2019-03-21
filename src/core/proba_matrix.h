@@ -18,9 +18,13 @@ class proba_matrix
     friend phyml_result_parser;
 public:
     /// a row of size #variants, e.g. [0.1 0.3 0.7. 0.1]
-    using pos_probs_t = std::vector<float>;
+    using row_probs_t = std::vector<float>;
+    /// a row of size #variants that stores the ordering of row_probs_t, e.g. [3, 0, 2, 1] (T, A, G, c)
+    using row_pos_t = std::vector<unsigned char>;
+    /// a row of matrix
+    using row_t = std::pair<row_probs_t, row_pos_t>;
     /// a collection of rows for all the alignment positions
-    using branch_entry_t = std::vector<pos_probs_t>;
+    using branch_entry_t = std::vector<row_t>;
 
     proba_matrix();
     proba_matrix(const proba_matrix&) = delete;
@@ -35,8 +39,8 @@ public:
 
     const branch_entry_t at(int branch_id) const;
 
-private:
-    void _add_branch_entry(int node_id, const branch_entry_t& branch_entry);
+    void add_branch_entry(int node_id, const branch_entry_t& branch_entry);
+    void sort();
 
 private:
     std::unordered_map<int, branch_entry_t> _data;

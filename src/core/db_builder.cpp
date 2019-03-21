@@ -66,11 +66,12 @@ return_code_t db_builder::run()
 
             /// run branch and bound for this submatrix
             phylo_kmer_explorer kmer_explorer(_seq_traits, branch_probas);
+            (void) kmer_explorer;
             for (auto& phylo_kmer : kmer_explorer)
             {
                 _phylo_kmer_db[phylo_kmer.kmer_value] = phylo_kmer;
             }
         }
     }
-    return_code::success;
+    return return_code::success;
 }

@@ -122,12 +122,12 @@ namespace _impl
             {
                 _current = nullptr;
             }
-                /// visit the next sibling
-            else if  (idx + 1 < temp->_children.size())
+            /// visit the next sibling
+            else if ((size_t)idx + 1 < temp->_children.size())
             {
                 _current = temp->_children[idx + 1];
             }
-                /// visit the parent
+            /// visit the parent
             else
             {
                 _current = temp;
