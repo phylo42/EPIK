@@ -1,4 +1,6 @@
-#pragma once
+#ifndef RAPPAS_CPP_PROBA_MATRIX_H
+#define RAPPAS_CPP_PROBA_MATRIX_H
+
 
 #include <vector>
 #include <unordered_map>
@@ -59,3 +61,5 @@ public:
 private:
     storage _data;
 };
+
+#endif

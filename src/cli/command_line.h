@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_COMMAND_LINE_H
+#define RAPPAS_CPP_COMMAND_LINE_H
 
 #include <exception>
 #include <string>
@@ -28,3 +29,5 @@ namespace cli
     const std::string get_option_list();
     const cli_parameters process_command_line(int argc, const char* argv[]);
 }
+
+#endif

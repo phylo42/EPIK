@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_PHYLO_KMER_H
+#define RAPPAS_CPP_PHYLO_KMER_H
 
 #include <cstdint>
 
@@ -13,3 +14,5 @@ struct phylo_kmer
     branch_node_t branch_node;
     float score;
 };
+
+#endif

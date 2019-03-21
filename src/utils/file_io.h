@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_FILE_IO_H
+#define RAPPAS_CPP_FILE_IO_H
 
 #include <string>
 #include <memory>
@@ -37,3 +38,5 @@ private:
     const int _buffer_size = 4096;
     char* _buffer;
 };
+
+#endif

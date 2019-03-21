@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_PHYLO_TREE_H
+#define RAPPAS_CPP_PHYLO_TREE_H
 
 #include <string>
 #include <vector>
@@ -204,3 +205,5 @@ phylo_tree load_newick(const std::string& file_name);
 /// \details This function just parses a node label. By convention, a node is fake if its label
 /// ends with "_X0" or "_X1"
 bool is_fake(const _impl::phylo_node& node);
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_SEQ_TRAITS_H
+#define RAPPAS_CPP_SEQ_TRAITS_H
 
 #include <set>
 
@@ -22,3 +23,5 @@ private:
 };
 
 seq_traits make_dna_seq_traits();
+
+#endif

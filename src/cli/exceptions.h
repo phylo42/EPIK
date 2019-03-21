@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_EXCEPTIONS_H
+#define RAPPAS_CPP_EXCEPTIONS_H
 
 #include <exception>
 #include <string>
@@ -27,3 +28,5 @@ private:
     const std::string b_;
 };
 
+
+#endif

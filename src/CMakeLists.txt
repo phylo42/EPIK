@@ -14,7 +14,7 @@ set(SOURCE_FILES
         core/phylo_kmer_explorer.cpp
         core/phylo_kmer_explorer.h
         core/phylo_kmer.h
-        utils/file_io.cpp utils/file_io.h core/phyml.h core/phyml.cpp utils/algorithm.h)
+        utils/file_io.cpp utils/file_io.h core/phyml.h core/phyml.cpp utils/algorithm.h core/kmer.h)
 
 
 include_directories(

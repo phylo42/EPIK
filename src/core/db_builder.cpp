@@ -65,8 +65,8 @@ return_code_t db_builder::run()
             const auto& branch_probas = probas.at(phyml_branch_id);
 
             /// run branch and bound for this submatrix
-            phylo_kmer_explorer kmer_explorer(_seq_traits, branch_probas);
-            (void) kmer_explorer;
+            //phylo_kmer_explorer kmer_explorer(_seq_traits, branch_probas);
+            //(void) kmer_explorer;
 
 /*            for (auto& phylo_kmer : kmer_explorer)
             {

@@ -1,4 +1,5 @@
-#pragma  once
+#ifndef RAPPAS_CPP_DB_BUILDER_H
+#define RAPPAS_CPP_DB_BUILDER_H
 
 #include <string>
 #include <memory>
@@ -36,3 +37,5 @@ private:
     seq_traits _seq_traits;
     phylo_kmer_db _phylo_kmer_db;
 };
+
+#endif

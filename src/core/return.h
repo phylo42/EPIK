@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_RETURN_H
+#define RAPPAS_CPP_RETURN_H
 
 using return_code_t = int;
 
@@ -10,3 +11,5 @@ enum return_code
     unknown_error  = 3,
     help           = 4
 };
+
+#endif

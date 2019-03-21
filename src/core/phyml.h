@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RAPPAS_CPP_PHYML_H
+#define RAPPAS_CPP_PHYML_H
 
 #include <string>
 #include <unordered_map>
@@ -25,3 +26,4 @@ struct node_mapping
 /// Load a node mapping from file
 node_mapping load_node_mapping(const std::string& file_name);
 
+#endif
