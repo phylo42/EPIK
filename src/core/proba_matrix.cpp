@@ -1,14 +1,8 @@
-#include <algorithm>
 #include "proba_matrix.h"
 #include "../utils/algorithm.h"
 
-proba_matrix::proba_matrix()
-    : _data()
-{}
+#include <algorithm>
 
-proba_matrix::proba_matrix(proba_matrix&& other)
-    : _data(std::move(other._data))
-{}
 
 size_t proba_matrix::num_branches() const
 {
@@ -17,22 +11,52 @@ size_t proba_matrix::num_branches() const
 
 size_t proba_matrix::num_sites() const
 {
-    return begin(_data)->second.size();
+    return std::begin(_data)->second.size();
 }
 
 size_t proba_matrix::num_variants() const
 {
-    return begin(_data)->second.begin()->first.size();
+    return std::begin(_data)->second.begin()->first.size();
 }
 
-const proba_matrix::branch_entry_t proba_matrix::at(int branch_id) const
+proba_matrix::branch_entry_t& proba_matrix::operator[](key_t branch_id)
+{
+    return _data[branch_id];
+}
+
+const proba_matrix::branch_entry_t proba_matrix::at(key_t branch_id) const
 {
     return _data.at(branch_id);
 }
 
-void proba_matrix::add_branch_entry(int node_id, const branch_entry_t& branch_entry)
+proba_matrix::iterator proba_matrix::find(const key_t& key)
 {
-    _data.emplace(node_id, branch_entry);
+    return _data.find(key);
+}
+
+proba_matrix::const_iterator proba_matrix::find(const key_t& key) const
+{
+    return _data.find(key);
+}
+
+proba_matrix::iterator proba_matrix::begin()
+{
+    return std::begin(_data);
+}
+
+proba_matrix::iterator proba_matrix::end()
+{
+    return std::end(_data);
+}
+
+proba_matrix::const_iterator proba_matrix::begin() const
+{
+    return _data.cbegin();
+}
+
+proba_matrix::const_iterator proba_matrix::end() const
+{
+    return std::end(_data);
 }
 
 void proba_matrix::sort()
@@ -41,7 +65,9 @@ void proba_matrix::sort()
     {
         for (auto& row : map_entry.second)
         {
-            argsort(begin(row.second), end(row.second), begin(row.first), std::greater<>());
+            argsort(std::begin(row.second), std::end(row.second),
+                    std::begin(row.first),
+                    std::greater<>());
         }
     }
 }
