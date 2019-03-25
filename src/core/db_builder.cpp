@@ -1,8 +1,7 @@
 #include "db_builder.h"
-#include "phylo_tree.h"
-#include "proba_matrix.h"
-#include "phylo_kmer_explorer.h"
-#include "phyml.h"
+#include "core/tree/phylo_tree.h"
+#include "pp_matrix/proba_matrix.h"
+#include "core/pp_matrix/phyml.h"
 #include <cstdlib>
 #include <vector>
 #include <iostream>
@@ -46,16 +45,15 @@ db_builder::db_builder(const std::string& working_directory,
 
 return_code_t db_builder::run()
 {
-    phylo_tree tree = load_newick(_tree_file);
-    const proba_matrix probas = load_phyml_probas(_ar_probabilities_file);
-
+    const auto probas = load_phyml_probas(_ar_probabilities_file, _seq_traits);
+    auto tree = load_newick(_tree_file);
     /// restore original names of inner branch nodes that has been rewritten by PhyML
     /// TODO: encapsulate this in a AR strategy class
     const node_mapping mapping = load_node_mapping(_mapping_file);
     apply_mapping(tree, mapping);
 
     /// iterate over fake nodes
-    for (auto& branch_node: std::as_const(tree))
+    for (const auto& branch_node: std::as_const(tree))
     {
         if (is_fake(branch_node))
         {
@@ -65,8 +63,7 @@ return_code_t db_builder::run()
             const auto& branch_probas = probas.at(phyml_branch_id);
 
             /// run branch and bound for this submatrix
-            //phylo_kmer_explorer kmer_explorer(_seq_traits, branch_probas);
-            //(void) kmer_explorer;
+            //phylo_kmer_explorer kmer_explorer(_seq_traits, _kmer_size, branch_probas);
 
 /*            for (auto& phylo_kmer : kmer_explorer)
             {

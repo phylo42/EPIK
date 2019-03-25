@@ -1,25 +1,21 @@
-#include "phyml.h"
-#include "../utils/file_io.h"
-#include "phylo_tree.h"
-#include "proba_matrix.h"
-
 #include <iostream>
-#include <memory>
-#include <absl/strings/string_view.h>
-#include <absl/strings/str_cat.h>
-#include <absl/strings/str_split.h>
 #include <csv.h>
 #include <numeric>
+#include <range/v3/all.hpp>
+#include "phyml.h"
+#include "proba_matrix.h"
+
+using namespace ranges::v3;
 
 using std::string;
 using std::cout, std::endl;
-using std::begin, std::end;
 
 class phyml_output_reader
 {
 public:
-    phyml_output_reader(const string& file_name)
+    phyml_output_reader(const string& file_name, const seq_traits& traits)
         : _file_name(file_name)
+        , _traits(traits)
     {}
 
     phyml_output_reader(const phyml_output_reader&) = delete;
@@ -31,9 +27,7 @@ public:
         {
             cout << "Loading PhyML results: " + _file_name << endl;
 
-            proba_matrix matrix = read_matrix();
-            matrix.sort();
-
+            auto matrix = read_matrix();
             cout << "Loaded " << matrix.num_branches() << " matrices of size [" << matrix.num_sites()
                  << " x " << matrix.num_variants() << "]." << endl << endl;
 
@@ -57,8 +51,8 @@ private:
             io::single_and_empty_line_comment<'.'>> _in(_file_name);
         _in.read_header(io::ignore_extra_column, "NodeLabel", "A", "C", "G", "T");
 
-        proba_matrix::key_t node_label = proba_matrix::NOT_A_LABEL;
-        float a, c, g, t;
+        auto node_label = proba_matrix::NOT_A_LABEL;
+        score_t a, c, g, t;
         while (_in.read_row(node_label, a, c, g, t))
         {
             if (node_label == proba_matrix::NOT_A_LABEL)
@@ -66,8 +60,16 @@ private:
                 throw std::runtime_error("Node label value is too big: " + std::to_string(node_label));
             }
 
-            auto new_row = std::make_pair<proba_matrix::row_probs_t, proba_matrix::row_pos_t>({a, c, g, t},
-                                                                                              {0, 1, 2, 3});
+            /// log-transform the probabilities
+            auto new_row = row { {a, 0}, {c, 1}, {g, 2}, {t, 3} };
+            auto log = [](const proba_pair& p) { return proba_pair{std::log(p.value), p.index}; };
+            std::transform(begin(new_row), end(new_row), begin(new_row), log);
+
+            // sort them
+            auto compare = [](const proba_pair& p1, const proba_pair& p2) { return p1.value < p2.value; };
+            std::sort(begin(new_row), end(new_row), compare);
+
+            /// insert
             auto it = matrix.find(node_label);
             if (it != end(matrix))
             {
@@ -75,7 +77,7 @@ private:
             }
             else
             {
-                matrix[node_label] = {std::move(new_row)};
+                matrix[node_label] = { {std::move(new_row)}, dna_seq_traits };
             }
         }
         return matrix;
@@ -83,12 +85,12 @@ private:
 
 private:
     string _file_name;
-
+    const seq_traits& _traits;
 };
 
-proba_matrix load_phyml_probas(const string& file_name)
+proba_matrix load_phyml_probas(const std::string& file_name, const seq_traits& traits)
 {
-    phyml_output_reader reader(file_name);
+    phyml_output_reader reader(file_name, traits);
     return reader.read();
 }
 

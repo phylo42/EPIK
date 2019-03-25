@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include "utils/meta.h"
 
 class newick_parser;
 class phylo_tree;
@@ -23,11 +24,10 @@ namespace _impl
 
         explicit phylo_node(int id, const std::string& label, float branch_length,
                             const std::vector<phylo_node*>& children, phylo_node* parent);
-
         phylo_node(const phylo_node& other) = delete;
+        phylo_node& operator=(const phylo_node&) = delete;
         ~phylo_node() noexcept;
 
-        phylo_node& operator=(const phylo_node&) = delete;
 
         /// WARNING: this operator only checks for the id and label fields
         bool operator==(const phylo_node& rhs) const noexcept;
@@ -50,19 +50,6 @@ namespace _impl
         float _branch_length;
         std::vector<phylo_node*> _children;
         phylo_node* _parent;
-    };
-
-    template <bool flag, class IsTrue, class IsFalse>
-    struct choose;
-
-    template <class IsTrue, class IsFalse>
-    struct choose<true, IsTrue, IsFalse> {
-        typedef IsTrue type;
-    };
-
-    template <class IsTrue, class IsFalse>
-    struct choose<false, IsTrue, IsFalse> {
-        typedef IsFalse type;
     };
 
     /// \brief A forward access (non-)const iterator for phylo_node objects. Performs a depth-first

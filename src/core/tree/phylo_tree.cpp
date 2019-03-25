@@ -1,5 +1,5 @@
 #include "phylo_tree.h"
-#include "../utils/file_io.h"
+#include "utils/file_io.h"
 #include <cassert>
 #include <iostream>
 #include <fstream>

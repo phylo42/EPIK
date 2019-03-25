@@ -4,22 +4,28 @@ cmake_minimum_required(VERSION 3.0)
 find_package(Boost COMPONENTS program_options filesystem log iostreams REQUIRED)
 
 set(SOURCE_FILES
-        #main.cpp
         cli/command_line.cpp cli/command_line.h
         cli/exceptions.cpp cli/exceptions.h
         core/db_builder.cpp core/db_builder.h
         core/seq_traits.cpp core/seq_traits.h
-        core/phylo_tree.cpp core/phylo_tree.h
-        core/proba_matrix.cpp core/proba_matrix.h
-        core/phylo_kmer_explorer.cpp
-        core/phylo_kmer_explorer.h
+        core/tree/phylo_tree.cpp core/tree/phylo_tree.h
+        core/pp_matrix/proba_matrix.cpp core/pp_matrix/proba_matrix.h
         core/phylo_kmer.h
-        utils/file_io.cpp utils/file_io.h core/phyml.h core/phyml.cpp utils/algorithm.h core/kmer.h)
+        core/pp_matrix/phyml.h core/pp_matrix/phyml.cpp
+        core/kmer.h
+        core/pp_matrix/branch_entry.h core/pp_matrix/branch_entry.cpp
+        core/pp_matrix/row.h
+        core/phylo_kmer.cpp
+        utils/meta.h
+        utils/file_io.cpp utils/file_io.h
+        utils/algorithm.h)
 
 
 include_directories(
+        ./
         ../third-party/abseil-cpp
         ../third-party/fast-cpp-csv-parser
+        ../third-party/range-v3/include
 )
 
 add_library(rappas-core ${SOURCE_FILES})

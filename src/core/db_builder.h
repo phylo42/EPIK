@@ -12,7 +12,7 @@ class alignment;
 class seq_traits;
 
 
-using phylo_kmer_db = std::unordered_map<phylo_kmer::kmer_value_t, phylo_kmer>;
+using phylo_kmer_db = std::unordered_map<kmer_t, phylo_db_entry>;
 
 
 class db_builder
@@ -34,7 +34,7 @@ private:
     std::string _mapping_file;
 
     size_t _kmer_size;
-    seq_traits _seq_traits;
+    const seq_traits& _seq_traits;
     phylo_kmer_db _phylo_kmer_db;
 };
 

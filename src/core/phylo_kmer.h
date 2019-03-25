@@ -3,16 +3,37 @@
 
 #include <cstdint>
 
-/// TODO: Remove redundant fields from here. This structure is used in two different places: phylokmer calculation
-/// and as an entry type for a phylokmer database. Split it
+#include "kmer.h"
+
+typedef float score_t;
+typedef uint16_t branch_node_t;
+
+struct phylo_db_entry
+{
+    kmer_t value;
+    score_t score;
+    branch_node_t branch_node;
+};
+
 struct phylo_kmer
 {
-    using kmer_value_t = uint32_t;
-    using branch_node_t = uint16_t;
+    phylo_kmer(kmer_t v, score_t s);
+    phylo_kmer(const phylo_kmer&) = default;
+    phylo_kmer(phylo_kmer&&) = delete;
+    phylo_kmer& operator=(phylo_kmer&) = delete;
+    phylo_kmer& operator==(phylo_kmer&&) = delete;
+    ~phylo_kmer() = default;
 
-    kmer_value_t kmer_value;
-    branch_node_t branch_node;
-    float score;
+    bool is_nan() const;
+
+    kmer_t value;
+    score_t score;
 };
+
+bool operator==(const phylo_kmer& lhs, const phylo_kmer& rhs) noexcept;
+
+/// Returns a phylo_kmer with special values, considered as NotAPhyloKmer. This phylo kmer
+/// can not be equeal to any other phylo kmer (including itself)
+phylo_kmer make_napk();
 
 #endif
