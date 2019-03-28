@@ -6,15 +6,11 @@
 
 struct proba_pair
 {
-    proba_pair(score_t v, size_t i) : value { v }, index { i } { }
-    proba_pair(const proba_pair&) = default;
-    proba_pair& operator=(const proba_pair&) = default;
-    ~proba_pair() noexcept = default;
-
-    score_t value;
+    score_t score;
     size_t index;
 };
 
+using branch_id = uint16_t;
 using row = std::vector<proba_pair>;
 
 #endif //RAPPAS_CPP_ROW_H

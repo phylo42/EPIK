@@ -62,11 +62,11 @@ private:
 
             /// log-transform the probabilities
             auto new_row = row { {a, 0}, {c, 1}, {g, 2}, {t, 3} };
-            auto log = [](const proba_pair& p) { return proba_pair{std::log(p.value), p.index}; };
+            auto log = [](const proba_pair& p) { return proba_pair{std::log(p.score), p.index}; };
             std::transform(begin(new_row), end(new_row), begin(new_row), log);
 
             // sort them
-            auto compare = [](const proba_pair& p1, const proba_pair& p2) { return p1.value < p2.value; };
+            auto compare = [](const proba_pair& p1, const proba_pair& p2) { return p1.score > p2.score; };
             std::sort(begin(new_row), end(new_row), compare);
 
             /// insert
@@ -77,7 +77,7 @@ private:
             }
             else
             {
-                matrix[node_label] = { {std::move(new_row)}, dna_seq_traits };
+                matrix[node_label] = proba_matrix::mapped_type{node_label, {std::move(new_row)}, dna_seq_traits };
             }
         }
         return matrix;
@@ -85,7 +85,7 @@ private:
 
 private:
     string _file_name;
-    const seq_traits& _traits;
+    seq_traits _traits;
 };
 
 proba_matrix load_phyml_probas(const std::string& file_name, const seq_traits& traits)

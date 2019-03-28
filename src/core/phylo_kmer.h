@@ -17,13 +17,6 @@ struct phylo_db_entry
 
 struct phylo_kmer
 {
-    phylo_kmer(kmer_t v, score_t s);
-    phylo_kmer(const phylo_kmer&) = default;
-    phylo_kmer(phylo_kmer&&) = delete;
-    phylo_kmer& operator=(phylo_kmer&) = delete;
-    phylo_kmer& operator==(phylo_kmer&&) = delete;
-    ~phylo_kmer() = default;
-
     bool is_nan() const;
 
     kmer_t value;

@@ -100,7 +100,6 @@ size_t phylo_tree::get_node_count() const
 
 phylo_node* get_leftmost_child(phylo_node* root)
 {
-    const vector<phylo_node*>& children = root->get_children();
     while (!root->get_children().empty())
     {
         root = root->get_children()[0];

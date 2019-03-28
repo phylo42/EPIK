@@ -9,32 +9,32 @@ size_t proba_matrix::num_branches() const
 
 size_t proba_matrix::num_sites() const
 {
-    return std::begin(_data)->second.alignment_size();
+    return std::begin(_data)->second.get_alignment_size();
 }
 
 size_t proba_matrix::num_variants() const
 {
-    return std::begin(_data)->second.alphabet_size();
+    return std::begin(_data)->second.get_alphabet_size();
 }
 
-proba_matrix::mapped_type& proba_matrix::operator[](key_t branch_id)
+proba_matrix::mapped_type& proba_matrix::operator[](branch_id id)
 {
-    return _data[branch_id];
+    return _data[id];
 }
 
-const proba_matrix::mapped_type& proba_matrix::at(key_t branch_id) const
+const proba_matrix::mapped_type& proba_matrix::at(branch_id id) const
 {
-    return _data.at(branch_id);
+    return _data.at(id);
 }
 
-proba_matrix::iterator proba_matrix::find(const key_t& key)
+proba_matrix::iterator proba_matrix::find(const branch_id& id)
 {
-    return _data.find(key);
+    return _data.find(id);
 }
 
-proba_matrix::const_iterator proba_matrix::find(const key_t& key) const
+proba_matrix::const_iterator proba_matrix::find(const branch_id& id) const
 {
-    return _data.find(key);
+    return _data.find(id);
 }
 
 proba_matrix::iterator proba_matrix::begin()

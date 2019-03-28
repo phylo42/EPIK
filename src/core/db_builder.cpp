@@ -43,6 +43,21 @@ db_builder::db_builder(const std::string& working_directory,
     , _seq_traits(traits)
 {}
 
+void db_builder::explore_branch(const branch_entry& branch)
+{
+    std::cout << "Exploring branch " << branch.get_branch_id() << std::endl;
+
+    for (auto window = branch.begin(_kmer_size); window != branch.end(); ++window)
+    {
+        std::cout << window->get_end_pos() << std::endl;
+        for (auto kmer : *window)
+        {
+            (void)kmer;
+            std::cout << kmer.value << " : " << kmer.score << std::endl;
+        }
+    }
+}
+
 return_code_t db_builder::run()
 {
     const auto probas = load_phyml_probas(_ar_probabilities_file, _seq_traits);
@@ -58,17 +73,8 @@ return_code_t db_builder::run()
         if (is_fake(branch_node))
         {
             /// get submatrix of probabilities for a current branch node
-            /// TODO: encapsulate this
-            int phyml_branch_id = std::stoi(mapping.to_phyml.at(branch_node.get_label()));
-            const auto& branch_probas = probas.at(phyml_branch_id);
-
-            /// run branch and bound for this submatrix
-            //phylo_kmer_explorer kmer_explorer(_seq_traits, _kmer_size, branch_probas);
-
-/*            for (auto& phylo_kmer : kmer_explorer)
-            {
-                _phylo_kmer_db[phylo_kmer.kmer_value] = phylo_kmer;
-            }*/
+            auto phyml_branch_id = std::stoi(mapping.to_phyml.at(branch_node.get_label()));
+            explore_branch(probas.at(phyml_branch_id));
         }
     }
     return return_code::success;

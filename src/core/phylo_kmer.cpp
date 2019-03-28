@@ -34,5 +34,5 @@ bool operator==(const phylo_kmer& lhs, const phylo_kmer& rhs) noexcept
 
 phylo_kmer make_napk()
 {
-    return phylo_kmer(nan_value, nan_score);
+    return phylo_kmer { nan_value, nan_score };
 }

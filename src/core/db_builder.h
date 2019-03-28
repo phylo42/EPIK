@@ -9,7 +9,7 @@
 #include "phylo_kmer.h"
 
 class alignment;
-class seq_traits;
+class branch_entry;
 
 
 using phylo_kmer_db = std::unordered_map<kmer_t, phylo_db_entry>;
@@ -28,6 +28,8 @@ public:
     return_code_t run();
 
 private:
+    void explore_branch(const branch_entry& branch);
+
     std::string _working_directory;
     std::string _ar_probabilities_file;
     std::string _tree_file;

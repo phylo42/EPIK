@@ -14,20 +14,21 @@ inline size_t bits_required(size_t kmer_size, size_t alphabet_size)
 };
 
 /// Returns the maximum value that can be writen down with kmer_size chars over alphabet of
-/// size alphabet_size.
-/// TODO: implement in non-recursively
+/// size alphabet_size
 inline kmer_t mask(size_t kmer_size, size_t alphabet_size)
 {
-    if (kmer_size == 1)
-    {
-        return 1;
-    }
-    return (mask(kmer_size - 1, alphabet_size) << bits_required(1, alphabet_size)) | mask(1, alphabet_size);
+    return (1u << (kmer_size * bits_required(1, alphabet_size))) - 1;
 };
 
-inline kmer_t shift_append(kmer_t value, size_t kmer_size, size_t alphabet_size, unsigned char letter)
+inline kmer_t left_shift(kmer_t value, size_t kmer_size, size_t alphabet_size)
 {
-    return ((value << bits_required(1, alphabet_size)) | letter);
+    return value << bits_required(1, alphabet_size);
 }
+
+inline kmer_t right_shift(kmer_t value, size_t kmer_size, size_t alphabet_size)
+{
+    return value >> bits_required(1, alphabet_size);
+}
+
 
 #endif

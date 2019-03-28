@@ -17,11 +17,10 @@
 class proba_matrix final
 {
 public:
-    using key_t = uint8_t;
-    static const key_t NOT_A_LABEL = std::numeric_limits<key_t>::max();
+    static const branch_id NOT_A_LABEL = std::numeric_limits<branch_id>::max();
 
     /// a map for a fast access to a submatrix by branch node label
-    using storage = std::unordered_map<key_t, branch_entry>;
+    using storage = std::unordered_map<branch_id, branch_entry>;
     using iterator = typename storage::iterator;
     using const_iterator = typename storage::const_iterator;
     using mapped_type = storage::mapped_type;
@@ -39,10 +38,10 @@ public:
     size_t num_variants() const;
 
     // Lookup
-    mapped_type& operator[](key_t branch_id);
-    const mapped_type& at(key_t branch_id) const;
-    iterator find(const key_t& key);
-    const_iterator find(const key_t& key) const;
+    mapped_type& operator[](branch_id id);
+    const mapped_type& at(branch_id id) const;
+    iterator find(const branch_id& id);
+    const_iterator find(const branch_id& id) const;
 
     /// iterators
     iterator begin();
