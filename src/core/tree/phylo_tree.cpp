@@ -82,11 +82,10 @@ void phylo_node::_add_children(phylo_node* node)
     _children.push_back(node);
 }
 
-phylo_tree::phylo_tree(_impl::phylo_node* root, size_t node_count)
-        : _root(root)
-          , _node_count(node_count)
-{
-}
+phylo_tree::phylo_tree(_impl::phylo_node* root, size_t node_count) noexcept
+        : _root{ root }
+        , _node_count{ node_count }
+{}
 
 phylo_tree::~phylo_tree() noexcept
 {
@@ -98,7 +97,7 @@ size_t phylo_tree::get_node_count() const
     return _node_count;
 }
 
-phylo_node* get_leftmost_child(phylo_node* root)
+phylo_node* _impl::get_leftmost_child(phylo_node* root)
 {
     while (!root->get_children().empty())
     {
@@ -109,7 +108,7 @@ phylo_node* get_leftmost_child(phylo_node* root)
 
 phylo_tree::iterator phylo_tree::begin()
 {
-    return phylo_tree_iterator<false>(get_leftmost_child(_root));
+    return phylo_tree_iterator<false>{ _impl::get_leftmost_child(_root) };
 }
 
 phylo_tree::iterator phylo_tree::end()
@@ -119,7 +118,7 @@ phylo_tree::iterator phylo_tree::end()
 
 phylo_tree::const_iterator phylo_tree::begin() const
 {
-    return phylo_tree_iterator<true>(get_leftmost_child(_root));
+    return phylo_tree_iterator<true>{ _impl::get_leftmost_child(_root) };
 }
 
 phylo_tree::const_iterator phylo_tree::end() const
@@ -325,7 +324,6 @@ void newick_parser::_parse_node_text()
         {
             current_node->_branch_length = std::stof(*it);
         }
-
     }
 
     // the current node is over

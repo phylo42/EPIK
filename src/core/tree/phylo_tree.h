@@ -52,6 +52,8 @@ namespace _impl
         phylo_node* _parent;
     };
 
+    phylo_node* get_leftmost_child(phylo_node* root);
+
     /// \brief A forward access (non-)const iterator for phylo_node objects. Performs a depth-first
     /// search among a subtree of input phylo_node.
     template <bool IsConst>
@@ -114,6 +116,7 @@ namespace _impl
             else if ((size_t)idx + 1 < temp->_children.size())
             {
                 _current = temp->_children[idx + 1];
+                _current = get_leftmost_child(_current);
             }
             /// visit the parent
             else
@@ -158,19 +161,16 @@ namespace _impl
 /// \sa load_newick
 class phylo_tree
 {
-private:
     friend phylo_tree load_newick(const std::string& file_name);
-    phylo_tree(_impl::phylo_node* root, size_t node_count);
+
+public:
+    using const_iterator = _impl::phylo_tree_iterator<true>;
+    using iterator = _impl::phylo_tree_iterator<false>;
+
     phylo_tree(phylo_tree&&) = delete;
     phylo_tree(const phylo_tree&) = delete;
     phylo_tree& operator=(const phylo_tree&) = delete;
     phylo_tree&& operator=(phylo_tree&&) = delete;
-
-public:
-    typedef _impl::phylo_tree_iterator<true> const_iterator;
-    typedef _impl::phylo_tree_iterator<false> iterator;
-
-public:
     ~phylo_tree() noexcept;
 
     size_t get_node_count() const;
@@ -181,6 +181,8 @@ public:
     const_iterator end() const;
 
 private:
+    phylo_tree(_impl::phylo_node* root, size_t node_count) noexcept;
+
     _impl::phylo_node* _root;
     size_t _node_count;
 };

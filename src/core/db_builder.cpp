@@ -45,27 +45,29 @@ db_builder::db_builder(const std::string& working_directory,
 
 void db_builder::explore_branch(const branch_entry& branch)
 {
-    std::cout << "Exploring branch " << branch.get_branch_id() << std::endl;
+    //std::cout << "Exploring branch " << branch.get_branch_id() << std::endl;
 
     for (auto window = branch.begin(_kmer_size); window != branch.end(); ++window)
     {
-        std::cout << window->get_end_pos() << std::endl;
+        //std::cout << window->get_end_pos() << std::endl;
         for (auto kmer : *window)
         {
             (void)kmer;
-            std::cout << kmer.value << " : " << kmer.score << std::endl;
+            //std::cout << kmer.value << " : " << kmer.score << std::endl;
         }
     }
 }
 
 return_code_t db_builder::run()
 {
-    const auto probas = load_phyml_probas(_ar_probabilities_file, _seq_traits);
+    const node_mapping mapping = load_node_mapping(_mapping_file);
     auto tree = load_newick(_tree_file);
+
     /// restore original names of inner branch nodes that has been rewritten by PhyML
     /// TODO: encapsulate this in a AR strategy class
-    const node_mapping mapping = load_node_mapping(_mapping_file);
     apply_mapping(tree, mapping);
+
+    const auto probas = load_phyml_probas(_ar_probabilities_file, _seq_traits);
 
     /// iterate over fake nodes
     for (const auto& branch_node: std::as_const(tree))
