@@ -18,7 +18,7 @@ set(SOURCE_FILES
         core/phylo_kmer.cpp
         utils/meta.h
         utils/file_io.cpp utils/file_io.h
-        utils/algorithm.h)
+        utils/algorithm.h core/pp_matrix/branch_entry_view.cpp core/pp_matrix/branch_entry_view.h)
 
 
 include_directories(

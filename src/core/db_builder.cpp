@@ -45,15 +45,15 @@ db_builder::db_builder(const std::string& working_directory,
 
 void db_builder::explore_branch(const branch_entry& branch)
 {
-    //std::cout << "Exploring branch " << branch.get_branch_id() << std::endl;
+    std::cout << "Exploring branch " << branch.get_branch_id() << std::endl;
 
     for (auto window = branch.begin(_kmer_size); window != branch.end(); ++window)
     {
-        //std::cout << window->get_end_pos() << std::endl;
+        std::cout << window->get_end_pos() << std::endl;
         for (auto kmer : *window)
         {
             (void)kmer;
-            //std::cout << kmer.value << " : " << kmer.score << std::endl;
+            std::cout << kmer.value << " : " << kmer.score << std::endl;
         }
     }
 }
