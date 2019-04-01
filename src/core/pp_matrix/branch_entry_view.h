@@ -16,8 +16,9 @@ class phylo_kmer_iterator
     struct phylo_mmer
     {
         phylo_kmer mmer;
-        size_t last_row;
+        size_t last_position;
         size_t last_index;
+        bool visited;
     };
 public:
     using iterator_category = std::forward_iterator_tag;
@@ -41,15 +42,16 @@ public:
     pointer operator->();
 
 private:
-    void calculate_next_phylokmer();
-    bool bottom_up();
-    void top_down();
+    void next_index(const phylo_mmer& last_mmer);
+    void next_position(const phylo_mmer& last_mmer);
+    phylo_mmer next_phylokmer();
 
     const branch_entry_view* _view;
     size_t _kmer_size;
     size_t _start_pos;
     stack_type _stack;
     score_t _threshold;
+    phylo_mmer _current;
 };
 
 class branch_entry;
@@ -78,8 +80,6 @@ public:
     size_t get_end_pos() const;
 
 private:
-    phylo_kmer_iterator::stack_type populate_stack() const;
-
     const branch_entry* _entry;
     size_t _start;
     size_t _end;

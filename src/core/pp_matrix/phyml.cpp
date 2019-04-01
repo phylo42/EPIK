@@ -62,7 +62,7 @@ private:
 
             /// log-transform the probabilities
             auto new_row = row { {a, 0}, {c, 1}, {g, 2}, {t, 3} };
-            auto log = [](const proba_pair& p) { return proba_pair{std::log(p.score), p.index}; };
+            auto log = [](const proba_pair& p) { return proba_pair{std::log10(p.score), p.index}; };
             std::transform(begin(new_row), end(new_row), begin(new_row), log);
 
             // sort them
