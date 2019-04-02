@@ -99,14 +99,14 @@ node_mapping load_node_mapping(const std::string& file_name)
     cout << "Loading a node mapping: " + file_name << endl;
     node_mapping mapping;
 
-    io::CSVReader<2, io::trim_chars<' '>, io::no_quote_escape<'\t'>> in(file_name);
-    in.read_header(io::ignore_extra_column, "extended_label", "ARtree_label");
-    std::string extended_label, artree_label;
-    while (in.read_row(extended_label, artree_label))
+    io::CSVReader<3, io::trim_chars<' '>, io::no_quote_escape<'\t'>> in(file_name);
+    in.read_header(io::ignore_extra_column, "extended_label", "ARTree_id", "ARtree_label");
+    std::string extended_label, artree_id, artree_label;
+    while (in.read_row(extended_label, artree_id, artree_label))
     {
-        mapping.from_phyml[artree_label] = extended_label;
-        mapping.to_phyml[extended_label] = artree_label;
+        mapping.artree_label_to_artree_id[artree_label] = artree_id;
+        mapping.extended_label_to_phyml_label[extended_label] = artree_label;
     }
-    cout << "Loaded " << mapping.from_phyml.size() << " mapped ids." << endl << endl;
+    cout << "Loaded " << mapping.artree_label_to_artree_id.size() << " mapped ids." << endl << endl;
     return mapping;
 }

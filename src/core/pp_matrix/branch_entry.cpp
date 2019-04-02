@@ -5,19 +5,19 @@ branch_entry::branch_entry(const seq_traits& traits)
 {}
 
 branch_entry::branch_entry(branch_id _id, std::vector<row>&& rows, const seq_traits& traits)
-    : _branch_id{ _id }
+    : _branch_label{ _id }
     , _rows{ std::move(rows) }
     , _traits{ traits }
 {}
 
 branch_entry::const_iterator branch_entry::begin(size_t kmer_size) const
 {
-    return { {this, 0, kmer_size } };
+    return { { this, 0, kmer_size } };
 }
 
 branch_entry::const_iterator branch_entry::end() const
 {
-    return { {this, 0, 0} };
+    return { { this, 0, 0 } };
 }
 
 void branch_entry::push_back(row&& r)
@@ -35,9 +35,9 @@ size_t branch_entry::get_alphabet_size() const
     return std::begin(_rows)->size();
 }
 
-branch_id branch_entry::get_branch_id() const
+branch_id branch_entry::get_branch_label() const
 {
-    return _branch_id;
+    return _branch_label;
 }
 
 const seq_traits& branch_entry::traits() const
@@ -52,10 +52,8 @@ const proba_pair& branch_entry::at(size_t position, size_t variant) const
 
 bool operator==(const branch_entry& lhs, const branch_entry& rhs)
 {
-    return lhs.get_branch_id() == rhs.get_branch_id();
+    return lhs.get_branch_label() == rhs.get_branch_label();
 }
-
-
 
 view_iterator::view_iterator(branch_entry_view view) noexcept
     : _view{ view }
@@ -64,7 +62,7 @@ view_iterator::view_iterator(branch_entry_view view) noexcept
 view_iterator& view_iterator::operator++()
 {
     auto entry = _view.get_entry();
-    if (_view.get_end_pos() < entry->get_alignment_size() - 1)
+    if (_view.get_end_pos() < entry->get_alignment_size())
     {
         _view = { branch_entry_view{ entry, _view.get_start_pos() + 1, _view.get_end_pos() + 1 } };
     }

@@ -30,14 +30,14 @@ public:
 
     size_t get_alignment_size() const;
     size_t get_alphabet_size() const;
-    branch_id get_branch_id() const;
+    branch_id get_branch_label() const;
 
     const seq_traits& traits() const;
 
     const proba_pair& at(size_t position, size_t variant) const;
 
 private:
-    branch_id _branch_id;
+    branch_id _branch_label;
     std::vector<row> _rows;
     seq_traits _traits;
 };

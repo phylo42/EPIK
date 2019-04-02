@@ -7,6 +7,7 @@
 #include "return.h"
 #include "seq_traits.h"
 #include "phylo_kmer.h"
+#include "pp_matrix/phyml.h"
 
 class alignment;
 class branch_entry;
@@ -38,6 +39,7 @@ private:
     size_t _kmer_size;
     const seq_traits& _seq_traits;
     phylo_kmer_db _phylo_kmer_db;
+    node_mapping _mapping;
 };
 
 #endif

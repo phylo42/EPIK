@@ -7,7 +7,7 @@ phylo_kmer_iterator::phylo_kmer_iterator(const branch_entry_view* view, size_t k
     , _kmer_size{ kmer_size }
     , _start_pos{ start_pos }
     , _stack{ std::move(stack) }
-    , _threshold{ std::log10(powf(1.0f / (view->get_end_pos() - view->get_start_pos()), view->get_entry()->get_alphabet_size())) }
+    , _threshold{ std::log10(powf(1.0f / view->get_entry()->get_alphabet_size(), float(view->get_end_pos() - view->get_start_pos()))) }
 {}
 
 bool phylo_kmer_iterator::operator==(const phylo_kmer_iterator& rhs) const noexcept
@@ -110,7 +110,7 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
                 next_position(last_mmer);
             }
         }
-        /// we are at the leaf level, test a k-mer
+        /// we are at the leaf level, test a k-mer at next iteration or return
         else
         {
             const auto last_mmer = _stack.back();
@@ -154,7 +154,7 @@ branch_entry_view::const_iterator branch_entry_view::end() const
 
 const proba_pair& branch_entry_view::at(size_t position, size_t variant) const
 {
-    return _entry->at(position, variant);
+    return _entry->at(_start + position, variant);
 }
 
 branch_entry_view& branch_entry_view::operator=(branch_entry_view&& other) noexcept

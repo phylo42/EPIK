@@ -19,8 +19,8 @@ struct node_mapping
 {
     using map_t = std::unordered_map<std::string, std::string>;
 
-    map_t to_phyml;
-    map_t from_phyml;
+    map_t extended_label_to_phyml_label;
+    map_t artree_label_to_artree_id;
 };
 
 /// Load a node mapping from file
