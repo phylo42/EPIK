@@ -68,7 +68,6 @@ std::vector<phylo_node*> phylo_node::get_children() const
     return _children;
 }
 
-
 void phylo_node::_clean()
 {
     _id = -1;
@@ -83,19 +82,13 @@ void phylo_node::_add_children(phylo_node* node)
     _children.push_back(node);
 }
 
-phylo_tree::phylo_tree(_impl::phylo_node* root, size_t node_count) noexcept
-        : _root{ root }
-        , _node_count{ node_count }
+phylo_tree::phylo_tree(_impl::phylo_node* root) noexcept
+    : _root{ root }
 {}
 
 phylo_tree::~phylo_tree() noexcept
 {
     delete _root;
-}
-
-size_t phylo_tree::get_node_count() const
-{
-    return _node_count;
 }
 
 phylo_node* _impl::get_leftmost_child(phylo_node* root)
@@ -179,10 +172,10 @@ private:
 };
 
 newick_parser::newick_parser()
-        : _root(nullptr)
-          , _node_index(-1)
-          , _parsing_node(false)
-          , _end_of_file(false)
+    : _root(nullptr)
+    , _node_index(-1)
+    , _parsing_node(false)
+    , _end_of_file(false)
 {
 }
 
@@ -341,7 +334,7 @@ phylo_tree load_newick(const string& file_name)
     }
 
     cout << "Loaded a tree of " << parser.get_node_count() << " nodes." << endl << endl;
-    return phylo_tree(parser.get_root(), parser.get_node_count());
+    return { parser.get_root() };
 }
 
 bool is_fake(const _impl::phylo_node& node)

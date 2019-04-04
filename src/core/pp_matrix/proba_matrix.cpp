@@ -12,11 +12,6 @@ size_t proba_matrix::num_sites() const
     return std::begin(_data)->second.get_alignment_size();
 }
 
-size_t proba_matrix::num_variants() const
-{
-    return std::begin(_data)->second.get_alphabet_size();
-}
-
 proba_matrix::mapped_type& proba_matrix::operator[](branch_id id)
 {
     return _data[id];

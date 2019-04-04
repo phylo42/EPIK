@@ -35,7 +35,6 @@ public:
     /// capacity
     size_t num_branches() const;
     size_t num_sites() const;
-    size_t num_variants() const;
 
     // Lookup
     mapped_type& operator[](branch_id id);

@@ -1,9 +1,7 @@
 #ifndef RAPPAS_CPP_RETURN_H
 #define RAPPAS_CPP_RETURN_H
 
-using return_code_t = int;
-
-enum return_code
+enum class return_code
 {
     success        = 0,
     argument_error = 1,

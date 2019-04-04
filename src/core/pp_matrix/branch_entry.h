@@ -2,7 +2,7 @@
 #define RAPPAS_CPP_BRANCH_ENTRY_H
 
 #include <vector>
-#include <core/seq_traits.h>
+#include <core/seq.h>
 #include <utils/meta.h>
 #include "row.h"
 #include "branch_entry_view.h"
@@ -15,8 +15,8 @@ class branch_entry final
 public:
     using const_iterator = view_iterator;
 
-    explicit branch_entry(const seq_traits& traits = dna_seq_traits);
-    branch_entry(branch_id _id, std::vector<row>&& rows, const seq_traits& traits);
+    explicit branch_entry() noexcept = default;
+    branch_entry(branch_id _id, std::vector<row>&& rows);
     branch_entry(const branch_entry&) = delete;
     branch_entry(branch_entry&&) = default;
     branch_entry& operator=(const branch_entry&) = delete;
@@ -29,17 +29,13 @@ public:
     void push_back(row&& r);
 
     size_t get_alignment_size() const;
-    size_t get_alphabet_size() const;
     branch_id get_branch_label() const;
-
-    const seq_traits& traits() const;
 
     const proba_pair& at(size_t position, size_t variant) const;
 
 private:
     branch_id _branch_label;
     std::vector<row> _rows;
-    seq_traits _traits;
 };
 
 bool operator==(const branch_entry& lhs, const branch_entry& rhs);

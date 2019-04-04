@@ -1,13 +1,8 @@
 #include "branch_entry.h"
 
-branch_entry::branch_entry(const seq_traits& traits)
-    : _traits{ traits }
-{}
-
-branch_entry::branch_entry(branch_id _id, std::vector<row>&& rows, const seq_traits& traits)
+branch_entry::branch_entry(branch_id _id, std::vector<row>&& rows)
     : _branch_label{ _id }
     , _rows{ std::move(rows) }
-    , _traits{ traits }
 {}
 
 branch_entry::const_iterator branch_entry::begin(size_t kmer_size) const
@@ -22,7 +17,7 @@ branch_entry::const_iterator branch_entry::end() const
 
 void branch_entry::push_back(row&& r)
 {
-    _rows.push_back(std::move(r));
+    _rows.push_back(r);
 }
 
 size_t branch_entry::get_alignment_size() const
@@ -30,19 +25,9 @@ size_t branch_entry::get_alignment_size() const
     return _rows.size();
 }
 
-size_t branch_entry::get_alphabet_size() const
-{
-    return std::begin(_rows)->size();
-}
-
 branch_id branch_entry::get_branch_label() const
 {
     return _branch_label;
-}
-
-const seq_traits& branch_entry::traits() const
-{
-    return _traits;
 }
 
 const proba_pair& branch_entry::at(size_t position, size_t variant) const

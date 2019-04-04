@@ -1,8 +1,8 @@
 #ifndef RAPPAS_CPP_ROW_H
 #define RAPPAS_CPP_ROW_H
 
-#include <vector>
 #include <core/phylo_kmer.h>
+#include <array>
 
 struct proba_pair
 {
@@ -11,6 +11,6 @@ struct proba_pair
 };
 
 using branch_id = uint16_t;
-using row = std::vector<proba_pair>;
+using row = std::array<proba_pair, seq_traits<seq_type>::alphabet_size>;
 
 #endif //RAPPAS_CPP_ROW_H

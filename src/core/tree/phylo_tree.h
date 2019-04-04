@@ -28,7 +28,6 @@ namespace _impl
         phylo_node& operator=(const phylo_node&) = delete;
         ~phylo_node() noexcept;
 
-
         /// WARNING: this operator only checks for the id and label fields
         bool operator==(const phylo_node& rhs) const noexcept;
         bool operator!=(const phylo_node& rhs) const noexcept;
@@ -62,22 +61,21 @@ namespace _impl
     class phylo_tree_iterator
     {
     public:
-        typedef std::forward_iterator_tag iterator_category;
-        typedef typename choose<IsConst, const phylo_node&, phylo_node&>::type reference;
-        typedef typename choose<IsConst, const phylo_node*, phylo_node*>::type pointer;
+        using iterator_category = std::forward_iterator_tag;
+        using reference = typename choose<IsConst, const phylo_node&, phylo_node&>::type;
+        using pointer = typename choose<IsConst, const phylo_node*, phylo_node*>::type;
 
     public:
         phylo_tree_iterator()
             : phylo_tree_iterator(nullptr)
         {}
 
-        phylo_tree_iterator(phylo_node* node)
+        explicit phylo_tree_iterator(phylo_node* node)
             : _current(node)
         {}
 
         phylo_tree_iterator(const phylo_tree_iterator& other) = default;
-        ~phylo_tree_iterator()
-        {}
+        ~phylo_tree_iterator() noexcept = default;
 
         phylo_tree_iterator& operator=(const phylo_tree_iterator& rhs)
         {
@@ -88,12 +86,12 @@ namespace _impl
             return *this;
         }
 
-        bool operator==(const phylo_tree_iterator& rhs) const
+        bool operator==(const phylo_tree_iterator& rhs) const noexcept
         {
             return _current == rhs._current;
         }
 
-        bool operator!=(const phylo_tree_iterator& rhs) const
+        bool operator!=(const phylo_tree_iterator& rhs) const noexcept
         {
             return !(*this == rhs);
         }
@@ -128,12 +126,12 @@ namespace _impl
             return *this;
         }
 
-        reference operator*()
+        reference operator*() const
         {
             return *_current;
         }
 
-        pointer operator->()
+        pointer operator->() const
         {
             return _current;
         }
@@ -171,19 +169,16 @@ public:
     phylo_tree(phylo_tree&&) = delete;
     phylo_tree(const phylo_tree&) = delete;
     phylo_tree& operator=(const phylo_tree&) = delete;
-    phylo_tree&& operator=(phylo_tree&&) = delete;
+    phylo_tree& operator=(phylo_tree&&) = delete;
     ~phylo_tree() noexcept;
-
-    size_t get_node_count() const;
 
     const_iterator begin() const;
     const_iterator end() const;
 
 private:
-    phylo_tree(_impl::phylo_node* root, size_t node_count) noexcept;
+    phylo_tree(_impl::phylo_node* root) noexcept;
 
     _impl::phylo_node* _root;
-    size_t _node_count;
 };
 
 /// A factory function to construct a phylo_tree from a newick file

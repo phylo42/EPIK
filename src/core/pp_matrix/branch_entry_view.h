@@ -51,7 +51,6 @@ private:
     size_t _start_pos;
     stack_type _stack;
     const score_t _threshold;
-    const size_t _alphabet_size;
     phylo_mmer _current;
 };
 

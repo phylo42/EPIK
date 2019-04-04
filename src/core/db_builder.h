@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "return.h"
-#include "seq_traits.h"
+#include "seq.h"
 #include "phylo_kmer_db.h"
 #include "pp_matrix/phyml.h"
 
@@ -18,10 +18,9 @@ class db_builder
 {
 public:
     db_builder(std::string working_directory, std::string ar_probabilities_file, std::string tree_file,
-               std::string extended_mapping_file, std::string artree_mapping_file, size_t kmer_size,
-               const seq_traits& traits);
+               std::string extended_mapping_file, std::string artree_mapping_file, size_t kmer_size);
 
-    return_code_t run();
+    return_code run();
 
 private:
     void explore_kmers(const phylo_tree& tree, const proba_matrix& probas);
@@ -34,7 +33,6 @@ private:
     std::string _artree_mapping_file;
 
     size_t _kmer_size;
-    const seq_traits& _seq_traits;
     phylo_kmer_db _phylo_kmer_db;
     extended_mapping _extended_mapping;
     artree_label_mapping _artree_mapping;

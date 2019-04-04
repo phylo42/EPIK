@@ -1,4 +1,7 @@
 #include "phylo_kmer.h"
+#include <limits>
+#include <type_traits>
+#include <cmath>
 
 /// Compares two floats for almost equality.
 /// From: https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
@@ -36,3 +39,9 @@ phylo_kmer make_napk()
 {
     return phylo_kmer { nan_value, nan_score };
 }
+
+score_t score_threshold(size_t kmer_size)
+{
+    return std::log10(powf(1.0f / seq_traits<seq_type>::alphabet_size, float(kmer_size)));
+}
+

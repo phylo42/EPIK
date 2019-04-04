@@ -13,9 +13,8 @@ using std::cout, std::endl;
 class phyml_output_reader
 {
 public:
-    phyml_output_reader(const string& file_name, const seq_traits& traits)
+    phyml_output_reader(const string& file_name)
         : _file_name(file_name)
-        , _traits(traits)
     {}
 
     phyml_output_reader(const phyml_output_reader&) = delete;
@@ -28,9 +27,8 @@ public:
             cout << "Loading PhyML results: " + _file_name << endl;
 
             auto matrix = read_matrix();
-            cout << "Loaded " << matrix.num_branches() << " matrices of size [" << matrix.num_sites()
-                 << " x " << matrix.num_variants() << "]." << endl << endl;
-
+            cout << "Loaded " << matrix.num_branches() << " matrices of " <<
+                matrix.num_sites() << " rows." << endl << endl;
             return matrix;
         }
         catch (io::error::integer_overflow& error)
@@ -61,8 +59,8 @@ private:
             }
 
             /// log-transform the probabilities
-            auto new_row = row { {a, 0}, {c, 1}, {g, 2}, {t, 3} };
-            auto log = [](const proba_pair& p) { return proba_pair{std::log10(p.score), p.index}; };
+            auto new_row = row { { { a, 0 }, { c, 1 }, { g, 2 }, { t, 3 } } };
+            auto log = [](const proba_pair& p) { return proba_pair{ std::log10(p.score), p.index }; };
             std::transform(begin(new_row), end(new_row), begin(new_row), log);
 
             // sort them
@@ -77,7 +75,7 @@ private:
             }
             else
             {
-                matrix[node_label] = proba_matrix::mapped_type{node_label, {std::move(new_row)}, dna_seq_traits };
+                matrix[node_label] = proba_matrix::mapped_type{node_label, {std::move(new_row)} };
             }
         }
         return matrix;
@@ -85,12 +83,11 @@ private:
 
 private:
     string _file_name;
-    seq_traits _traits;
 };
 
-proba_matrix load_phyml_probas(const std::string& file_name, const seq_traits& traits)
+proba_matrix load_phyml_probas(const std::string& file_name)
 {
-    phyml_output_reader reader(file_name, traits);
+    phyml_output_reader reader(file_name);
     return reader.read();
 }
 
