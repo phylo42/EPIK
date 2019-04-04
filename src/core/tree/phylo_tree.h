@@ -34,7 +34,7 @@ namespace _impl
         bool operator!=(const phylo_node& rhs) const noexcept;
 
         std::string get_label() const;
-        void set_label(const std::string& label);
+        phylo_node* get_parent() const;
 
         std::vector<phylo_node*> get_children() const;
 
@@ -45,7 +45,9 @@ namespace _impl
         void _add_children(phylo_node* node);
 
     private:
+        // TODO: test if _id convention is the same as RAPPAS' exented_tree_id one
         int _id;
+
         std::string _label;
         float _branch_length;
         std::vector<phylo_node*> _children;
@@ -165,7 +167,6 @@ class phylo_tree
 
 public:
     using const_iterator = _impl::phylo_tree_iterator<true>;
-    using iterator = _impl::phylo_tree_iterator<false>;
 
     phylo_tree(phylo_tree&&) = delete;
     phylo_tree(const phylo_tree&) = delete;
@@ -175,8 +176,6 @@ public:
 
     size_t get_node_count() const;
 
-    iterator begin();
-    iterator end();
     const_iterator begin() const;
     const_iterator end() const;
 

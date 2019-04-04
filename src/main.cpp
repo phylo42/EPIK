@@ -25,7 +25,8 @@ return_code_t run(const cli::cli_parameters& parameters)
         case cli::build:
         {
             db_builder builder(parameters.working_directory, parameters.ar_probabilities_file,
-                               parameters.tree_file, parameters.mapping_file, parameters.kmer_size, dna_seq_traits);
+                               parameters.tree_file, parameters.extended_mapping_file, parameters.artree_mapping_file,
+                               parameters.kmer_size, dna_seq_traits);
             return builder.run();
         }
         default:

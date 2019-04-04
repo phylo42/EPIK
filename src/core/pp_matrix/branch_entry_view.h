@@ -60,7 +60,7 @@ class branch_entry;
 class branch_entry_view final
 {
 public:
-    using const_iterator = const phylo_kmer_iterator;
+    using const_iterator = phylo_kmer_iterator;
     using const_reference = const_iterator::reference;
 
     branch_entry_view(const branch_entry* entry, size_t start, size_t end) noexcept;

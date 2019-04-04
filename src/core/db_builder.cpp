@@ -9,6 +9,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/log/trivial.hpp>
 #include <chrono>
+#include <iomanip>
 
 namespace fs = boost::filesystem;
 using std::string;
@@ -16,61 +17,78 @@ using std::vector;
 using std::cout, std::endl;
 using std::to_string;
 
-db_builder::db_builder(const std::string& working_directory,
-           const std::string& ar_probabilities_file,
-           const std::string& tree_file,
-           const std::string& mapping_file,
-           size_t kmer_size,
-           const seq_traits& traits)
-    : _working_directory(working_directory)
-    , _ar_probabilities_file(ar_probabilities_file)
-    , _tree_file(tree_file)
-    , _mapping_file(mapping_file)
+db_builder::db_builder(string working_directory, string ar_probabilities_file, string tree_file,
+    string extended_mapping_file, string artree_mapping_file, size_t kmer_size, const seq_traits& traits)
+    : _working_directory(move(working_directory))
+    , _ar_probabilities_file(move(ar_probabilities_file))
+    , _tree_file(move(tree_file))
+    , _extended_mapping_file(move(extended_mapping_file))
+    , _artree_mapping_file(move(artree_mapping_file))
     , _kmer_size(kmer_size)
     , _seq_traits(traits)
 {}
 
-void db_builder::explore_branch(const branch_entry& probas)
+size_t db_builder::explore_branch(const branch_entry& probas, branch_node_t original_id)
 {
-    const auto artree_branch_id = _mapping.artree_label_to_artree_id[std::to_string(probas.get_branch_label())];
-    //std::cout << "Exploring branch " << artree_branch_id << " (artree_label " << probas.get_branch_label() << ")\n";
+    size_t count = 0;
     for (auto window = probas.begin(_kmer_size); window != probas.end(); ++window)
     {
-        for (auto kmer : *window)
+        for (const auto& kmer : *window)
         {
-            /*std::cout << kmer.value << "\t" << kmer.score << "\t" << artree_branch_id
-                << '\t' << window->get_start_pos() << '\n' << std::flush;*/
-            (void)kmer;
+            /*std::cout << std::fixed << kmer.value << "\t" << std::setprecision(4) <<  kmer.score << "\t" << original_id
+                << '\t' << window->get_start_pos() << '\n' << std::flush;
+            (void)kmer;*/
+            _phylo_kmer_db.put(kmer.value, original_id, kmer.score, window->get_start_pos());
+            ++count;
         }
     }
+    return count;
 }
 
-return_code_t db_builder::run()
+void db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& probas)
 {
-    _mapping = load_node_mapping(_mapping_file);
-    auto tree = load_newick(_tree_file);
-
-    //apply_mapping(tree, mapping);
-
-    const auto probas = load_phyml_probas(_ar_probabilities_file, _seq_traits);
-
+    size_t count = 0;
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     /// iterate over fake nodes
-    for (const auto& branch_node: std::as_const(tree))
+    for (const auto& branch_node: tree)
     {
         if (is_fake(branch_node))
         {
+            const auto original_id = _extended_mapping[branch_node.get_label()];
+
             /// get submatrix of probabilities for a current branch node (if presented in proba matrix)
-            const auto phyml_branch_label = branch_id( std::stoul(_mapping.extended_label_to_phyml_label.at(branch_node.get_label())));
-            if (auto it = probas.find(phyml_branch_label); it != probas.end())
+            const auto phyml_branch_label = _artree_mapping[branch_node.get_label()];
+
+            //std::cout << branch_node.get_label() << " -> " << original_id <<  " (" << phyml_branch_label << ") " << std::endl;
+            if (const auto& it = probas.find(phyml_branch_label); it != probas.end())
             {
-                explore_branch(it->second);
+                count += explore_branch(it->second, original_id);
             }
         }
     }
     std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();
     std::cout << "Phylokmer generation time (s) = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() <<std::endl;
-    std::cout << "Phylokmer generation time (ms) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<std::endl;
+    std::cout << "Phylokmer generation time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() <<std::endl;
+
+    size_t total_entries = 0;
+    for (const auto& kmer_entry : _phylo_kmer_db)
+    {
+        total_entries += kmer_entry.second.size();
+    }
+    std::cout << "Kmers generated: " << _phylo_kmer_db.size() << "\n";
+    std::cout << "Kmer tuples in the hash: " << total_entries << "\n";
+    std::cout << "Tuples explored: " << count << "\n";
+}
+
+return_code_t db_builder::run()
+{
+    _extended_mapping = load_extended_mapping(_extended_mapping_file);
+    _artree_mapping = load_artree_mapping(_artree_mapping_file);
+
+    auto tree = load_newick(_tree_file);
+    const auto probas = load_phyml_probas(_ar_probabilities_file, _seq_traits);
+    explore_kmers(tree, probas);
+
     return return_code::success;
 }

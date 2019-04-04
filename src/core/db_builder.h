@@ -3,43 +3,41 @@
 
 #include <string>
 #include <memory>
-#include <unordered_map>
+
 #include "return.h"
 #include "seq_traits.h"
-#include "phylo_kmer.h"
+#include "phylo_kmer_db.h"
 #include "pp_matrix/phyml.h"
 
 class alignment;
 class branch_entry;
-
-
-using phylo_kmer_db = std::unordered_map<kmer_t, phylo_db_entry>;
-
+class phylo_tree;
+class proba_matrix;
 
 class db_builder
 {
 public:
-    db_builder(const std::string& working_directory,
-               const std::string& ar_probabilities_file,
-               const std::string& tree_file,
-               const std::string& mapping_file,
-               size_t kmer_size,
+    db_builder(std::string working_directory, std::string ar_probabilities_file, std::string tree_file,
+               std::string extended_mapping_file, std::string artree_mapping_file, size_t kmer_size,
                const seq_traits& traits);
 
     return_code_t run();
 
 private:
-    void explore_branch(const branch_entry& branch);
+    void explore_kmers(const phylo_tree& tree, const proba_matrix& probas);
+    size_t explore_branch(const branch_entry& probas, branch_node_t common_branch_label);
 
     std::string _working_directory;
     std::string _ar_probabilities_file;
     std::string _tree_file;
-    std::string _mapping_file;
+    std::string _extended_mapping_file;
+    std::string _artree_mapping_file;
 
     size_t _kmer_size;
     const seq_traits& _seq_traits;
     phylo_kmer_db _phylo_kmer_db;
-    node_mapping _mapping;
+    extended_mapping _extended_mapping;
+    artree_label_mapping _artree_mapping;
 };
 
 #endif

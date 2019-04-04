@@ -47,9 +47,9 @@ bool operator==(const branch_entry& lhs, const branch_entry& rhs);
 class view_iterator
 {
 public:
-    typedef std::forward_iterator_tag iterator_category;
-    using reference = const branch_entry_view&;
-    using pointer = const branch_entry_view*;
+    using iterator_category = std::forward_iterator_tag;
+    using const_reference = const branch_entry_view&;
+    using const_pointer = const branch_entry_view*;
 
     view_iterator(branch_entry_view view) noexcept;
     view_iterator(const view_iterator& view) = delete;
@@ -62,8 +62,8 @@ public:
 
     bool operator==(const view_iterator& rhs) const noexcept;
     bool operator!=(const view_iterator& rhs) const noexcept;
-    reference operator*();
-    pointer operator->();
+    const_reference operator*() const noexcept;
+    const_pointer operator->() const noexcept;
 private:
     branch_entry_view _view;
 };

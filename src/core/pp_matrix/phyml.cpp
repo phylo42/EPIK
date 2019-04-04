@@ -94,19 +94,48 @@ proba_matrix load_phyml_probas(const std::string& file_name, const seq_traits& t
     return reader.read();
 }
 
-node_mapping load_node_mapping(const std::string& file_name)
+extended_mapping load_extended_mapping(const std::string& file_name)
 {
     cout << "Loading a node mapping: " + file_name << endl;
-    node_mapping mapping;
+    artree_label_mapping mapping;
 
-    io::CSVReader<3, io::trim_chars<' '>, io::no_quote_escape<'\t'>> in(file_name);
-    in.read_header(io::ignore_extra_column, "extended_label", "ARTree_id", "ARtree_label");
-    std::string extended_label, artree_id, artree_label;
-    while (in.read_row(extended_label, artree_id, artree_label))
+    io::CSVReader<2, io::trim_chars<' '>, io::no_quote_escape<'\t'>> in(file_name);
+    in.read_header(io::ignore_extra_column, "original_id", "extended_name");
+    std::string extended_name;
+    branch_id original_id;
+    while (in.read_row(original_id, extended_name))
     {
-        mapping.artree_label_to_artree_id[artree_label] = artree_id;
-        mapping.extended_label_to_phyml_label[extended_label] = artree_label;
+        mapping[extended_name] = original_id;
     }
-    cout << "Loaded " << mapping.artree_label_to_artree_id.size() << " mapped ids." << endl << endl;
+    cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
+    return mapping;
+}
+
+bool is_number(const std::string& s)
+{
+    auto it = s.begin();
+    while (it != s.end() && std::isdigit(*it))
+    {
+        ++it;
+    }
+    return !s.empty() && it == s.end();
+}
+
+artree_label_mapping load_artree_mapping(const std::string& file_name)
+{
+    cout << "Loading a node mapping: " + file_name << endl;
+    artree_label_mapping mapping;
+
+    io::CSVReader<2, io::trim_chars<' '>, io::no_quote_escape<'\t'>> in(file_name);
+    in.read_header(io::ignore_extra_column, "extended_label", "ARtree_label");
+    std::string extended_label, artree_label;
+    while (in.read_row(extended_label, artree_label))
+    {
+        if (is_number(artree_label))
+        {
+            mapping[extended_label] = branch_node_t(std::stoul(artree_label));
+        }
+    }
+    cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
     return mapping;
 }

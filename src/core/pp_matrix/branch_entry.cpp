@@ -84,12 +84,12 @@ bool view_iterator::operator!=(const view_iterator& rhs) const noexcept
     return !(*this == rhs);
 }
 
-view_iterator::reference view_iterator::operator*()
+view_iterator::const_reference view_iterator::operator*() const noexcept
 {
     return _view;
 }
 
-view_iterator::pointer view_iterator::operator->()
+view_iterator::const_pointer view_iterator::operator->() const noexcept
 {
     return &_view;
 }

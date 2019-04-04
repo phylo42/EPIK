@@ -8,13 +8,6 @@
 typedef float score_t;
 typedef uint16_t branch_node_t;
 
-struct phylo_db_entry
-{
-    kmer_t value;
-    score_t score;
-    branch_node_t branch_node;
-};
-
 struct phylo_kmer
 {
     bool is_nan() const;

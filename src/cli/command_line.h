@@ -20,7 +20,8 @@ namespace cli
         std::string working_directory;
         std::string ar_probabilities_file;
         std::string tree_file;
-        std::string mapping_file;
+        std::string extended_mapping_file;
+        std::string artree_mapping_file;
 
         // algo options
         size_t kmer_size;

@@ -9,6 +9,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
 #include <absl/strings/string_view.h>
+#include <core/phylo_kmer.h>
 
 using std::vector, std::stack;
 using std::string;
@@ -57,9 +58,9 @@ std::string phylo_node::get_label() const
     return _label;
 }
 
-void phylo_node::set_label(const std::string& label)
+phylo_node* phylo_node::get_parent() const
 {
-    _label = label;
+    return _parent;
 }
 
 std::vector<phylo_node*> phylo_node::get_children() const
@@ -104,16 +105,6 @@ phylo_node* _impl::get_leftmost_child(phylo_node* root)
         root = root->get_children()[0];
     }
     return root;
-}
-
-phylo_tree::iterator phylo_tree::begin()
-{
-    return phylo_tree_iterator<false>{ _impl::get_leftmost_child(_root) };
-}
-
-phylo_tree::iterator phylo_tree::end()
-{
-    return phylo_tree_iterator<false>(nullptr);
 }
 
 phylo_tree::const_iterator phylo_tree::begin() const

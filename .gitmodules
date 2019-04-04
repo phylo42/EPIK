@@ -7,3 +7,6 @@
 [submodule "third-party/range-v3"]
 	path = third-party/range-v3
 	url = git@github.com:ericniebler/range-v3.git
+[submodule "third-party/parallel-hashmap"]
+	path = third-party/parallel-hashmap
+	url = git@github.com:greg7mdp/parallel-hashmap.git

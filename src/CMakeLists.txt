@@ -16,16 +16,17 @@ set(SOURCE_FILES
         core/pp_matrix/branch_entry.h core/pp_matrix/branch_entry.cpp
         core/pp_matrix/row.h
         core/phylo_kmer.cpp
+        core/pp_matrix/branch_entry_view.cpp core/pp_matrix/branch_entry_view.h
         utils/meta.h
         utils/file_io.cpp utils/file_io.h
-        utils/algorithm.h core/pp_matrix/branch_entry_view.cpp core/pp_matrix/branch_entry_view.h)
-
+        utils/algorithm.h core/phylo_kmer_db.cpp core/phylo_kmer_db.h)
 
 include_directories(
         ./
         ../third-party/abseil-cpp
         ../third-party/fast-cpp-csv-parser
         ../third-party/range-v3/include
+        #../third-party/parallel-hashmap
 )
 
 add_library(rappas-core ${SOURCE_FILES})
