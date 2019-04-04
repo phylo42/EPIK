@@ -10,3 +10,6 @@
 [submodule "third-party/parallel-hashmap"]
 	path = third-party/parallel-hashmap
 	url = git@github.com:greg7mdp/parallel-hashmap.git
+[submodule "third-party/skarupke"]
+	path = third-party/skarupke
+	url = git@github.com:skarupke/flat_hash_map.git

@@ -26,7 +26,8 @@ include_directories(
         ../third-party/abseil-cpp
         ../third-party/fast-cpp-csv-parser
         ../third-party/range-v3/include
-        #../third-party/parallel-hashmap
+        ../third-party/parallel-hashmap
+        ../third-party/skarupke
 )
 
 add_library(rappas-core ${SOURCE_FILES})

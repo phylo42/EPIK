@@ -30,8 +30,8 @@ public:
                         size_t start_pos, stack_type stack) noexcept;
     phylo_kmer_iterator(const phylo_kmer_iterator&) = delete;
     phylo_kmer_iterator(phylo_kmer_iterator&&) noexcept = default;
-    phylo_kmer_iterator& operator=(const phylo_kmer_iterator& rhs) = default;
-    phylo_kmer_iterator& operator=(phylo_kmer_iterator&&) noexcept = default;
+    phylo_kmer_iterator& operator=(const phylo_kmer_iterator& rhs) = delete;
+    phylo_kmer_iterator& operator=(phylo_kmer_iterator&&) = delete;
     ~phylo_kmer_iterator() noexcept = default;
 
     bool operator==(const phylo_kmer_iterator& rhs) const noexcept;
@@ -50,7 +50,8 @@ private:
     size_t _kmer_size;
     size_t _start_pos;
     stack_type _stack;
-    score_t _threshold;
+    const score_t _threshold;
+    const size_t _alphabet_size;
     phylo_mmer _current;
 };
 

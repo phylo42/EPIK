@@ -1,7 +1,7 @@
 #ifndef RAPPAS_CPP_PHYLO_KMER_DB_H
 #define RAPPAS_CPP_PHYLO_KMER_DB_H
 
-#include <absl/container/flat_hash_map.h>
+#include <flat_hash_map.hpp>
 #include "phylo_kmer.h"
 
 struct score_pos
@@ -13,7 +13,7 @@ struct score_pos
 class phylo_kmer_db
 {
 public:
-    using storage = absl::flat_hash_map<kmer_t, absl::flat_hash_map<branch_node_t, score_pos>>;
+    using storage = ska::flat_hash_map<kmer_t, ska::flat_hash_map<branch_node_t, score_pos>>;
     using const_iterator = storage::const_iterator;
 
     phylo_kmer_db() = default;

@@ -8,6 +8,7 @@ phylo_kmer_iterator::phylo_kmer_iterator(const branch_entry_view* view, size_t k
     , _start_pos{ start_pos }
     , _stack{ std::move(stack) }
     , _threshold{ std::log10(powf(1.0f / view->get_entry()->get_alphabet_size(), float(view->get_end_pos() - view->get_start_pos()))) }
+    , _alphabet_size(_view->get_entry()->get_alphabet_size())
 {}
 
 bool phylo_kmer_iterator::operator==(const phylo_kmer_iterator& rhs) const noexcept
@@ -46,17 +47,16 @@ phylo_kmer_iterator::pointer phylo_kmer_iterator::operator->()
 
 void phylo_kmer_iterator::next_index(const phylo_kmer_iterator::phylo_mmer& last_mmer)
 {
-    const auto alphabet_size = _view->get_entry()->get_alphabet_size();
     const auto& last_letter = _view->at(last_mmer.last_position, last_mmer.last_index);
 
     _stack.pop_back();
-    if (last_mmer.last_index < alphabet_size - 1)
+    if (last_mmer.last_index < _alphabet_size - 1)
     {
         const auto new_letter_position = last_mmer.last_position;
         const auto new_letter_index = last_mmer.last_index + 1;
         const auto& new_letter = _view->at(new_letter_position, new_letter_index);
         const auto new_mmer_value = left_shift(
-            right_shift(last_mmer.mmer.value, _kmer_size, alphabet_size), _kmer_size, alphabet_size) | new_letter.index;
+            right_shift(last_mmer.mmer.value, _kmer_size, _alphabet_size), _kmer_size, _alphabet_size) | new_letter.index;
         const auto new_mmer_score = last_mmer.mmer.score - last_letter.score + new_letter.score;
         const auto new_mmer = phylo_mmer{{new_mmer_value, new_mmer_score}, new_letter_position, new_letter_index,
                                          false};
@@ -73,11 +73,10 @@ void phylo_kmer_iterator::next_index(const phylo_kmer_iterator::phylo_mmer& last
 
 void phylo_kmer_iterator::next_position(const phylo_kmer_iterator::phylo_mmer& last_mmer)
 {
-    const auto alphabet_size = _view->get_entry()->get_alphabet_size();
     const auto new_letter_position = last_mmer.last_position + 1;
     const auto new_letter_index = 0;
     const auto& new_letter = _view->at(new_letter_position, new_letter_index);
-    const auto new_mmer_value = left_shift(last_mmer.mmer.value, _kmer_size, alphabet_size) | new_letter.index;
+    const auto new_mmer_value = left_shift(last_mmer.mmer.value, _kmer_size, _alphabet_size) | new_letter.index;
     const auto new_mmer_score = last_mmer.mmer.score + new_letter.score;
     const auto new_mmer = phylo_mmer{{new_mmer_value, new_mmer_score}, new_letter_position, new_letter_index,
                                      false};
