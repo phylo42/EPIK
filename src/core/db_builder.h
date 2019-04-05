@@ -2,14 +2,10 @@
 #define RAPPAS_CPP_DB_BUILDER_H
 
 #include <string>
-#include <memory>
-
 #include "return.h"
-#include "seq.h"
 #include "phylo_kmer_db.h"
 #include "pp_matrix/phyml.h"
 
-class alignment;
 class branch_entry;
 class phylo_tree;
 class proba_matrix;

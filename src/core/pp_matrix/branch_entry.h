@@ -2,9 +2,6 @@
 #define RAPPAS_CPP_BRANCH_ENTRY_H
 
 #include <vector>
-#include <core/seq.h>
-#include <utils/meta.h>
-#include "row.h"
 #include "branch_entry_view.h"
 
 class view_iterator;
