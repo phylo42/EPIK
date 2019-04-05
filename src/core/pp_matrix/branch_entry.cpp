@@ -1,11 +1,11 @@
 #include "branch_entry.h"
 
-branch_entry::branch_entry(branch_id _id, std::vector<row>&& rows)
+branch_entry::branch_entry(branch_id _id, vector_type&& rows)
     : _branch_label{ _id }
     , _rows{ std::move(rows) }
 {}
 
-branch_entry::const_iterator branch_entry::begin(size_t kmer_size) const
+branch_entry::const_iterator branch_entry::begin(uint32_t kmer_size) const
 {
     return { { this, 0, kmer_size } };
 }

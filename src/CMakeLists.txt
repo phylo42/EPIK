@@ -16,22 +16,22 @@ set(SOURCE_FILES
         core/pp_matrix/row.h
         core/phylo_kmer.cpp
         core/pp_matrix/branch_entry_view.cpp core/pp_matrix/branch_entry_view.h
+        core/phylo_kmer_db.cpp core/phylo_kmer_db.h
         utils/meta.h
         utils/file_io.cpp utils/file_io.h
-        utils/algorithm.h core/phylo_kmer_db.cpp core/phylo_kmer_db.h)
+        utils/algorithm.h
+        )
 
 include_directories(
         ./
-        ../third-party/abseil-cpp
         ../third-party/fast-cpp-csv-parser
         ../third-party/range-v3/include
-        ../third-party/parallel-hashmap
         ../third-party/skarupke
+        ../third-party/plf_stack
 )
 
 add_library(rappas-core ${SOURCE_FILES})
 target_link_libraries(rappas-core
         ${Boost_LIBRARIES}
-        absl::strings
         Threads::Threads
 )

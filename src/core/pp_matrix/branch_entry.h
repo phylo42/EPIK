@@ -14,16 +14,17 @@ class branch_entry final
 {
 public:
     using const_iterator = view_iterator;
+    using vector_type = std::vector<row>;
 
     explicit branch_entry() noexcept = default;
-    branch_entry(branch_id _id, std::vector<row>&& rows);
+    branch_entry(branch_id _id, vector_type&& rows);
     branch_entry(const branch_entry&) = delete;
     branch_entry(branch_entry&&) = default;
     branch_entry& operator=(const branch_entry&) = delete;
     branch_entry& operator=(branch_entry&&) = default;
     ~branch_entry() noexcept = default;
 
-    const_iterator begin(size_t kmer_size) const;
+    const_iterator begin(uint32_t kmer_size) const;
     const_iterator end() const;
 
     void push_back(row&& r);
@@ -35,7 +36,7 @@ public:
 
 private:
     branch_id _branch_label;
-    std::vector<row> _rows;
+    vector_type _rows;
 };
 
 bool operator==(const branch_entry& lhs, const branch_entry& rhs);

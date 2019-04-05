@@ -6,9 +6,9 @@
 #include <stack>
 #include <tuple>
 #include <memory>
+#include <string_view>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
-#include <absl/strings/string_view.h>
 #include <core/phylo_kmer.h>
 
 using std::vector, std::stack;
@@ -16,7 +16,7 @@ using std::string;
 using std::move;
 using std::cout, std::endl;
 using std::begin, std::end;
-using absl::string_view;
+using std::string_view;
 
 using namespace _impl;
 

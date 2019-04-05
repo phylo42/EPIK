@@ -7,7 +7,7 @@ namespace bio = boost::iostreams;
 using std::string;
 using std::fpos;
 using std::ifstream;
-using absl::string_view;
+using std::string_view;
 
 buffered_reader::buffered_reader(const string& file_name)
     : _msource(file_name)

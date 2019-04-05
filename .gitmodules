@@ -7,9 +7,9 @@
 [submodule "third-party/range-v3"]
 	path = third-party/range-v3
 	url = git@github.com:ericniebler/range-v3.git
-[submodule "third-party/parallel-hashmap"]
-	path = third-party/parallel-hashmap
-	url = git@github.com:greg7mdp/parallel-hashmap.git
 [submodule "third-party/skarupke"]
 	path = third-party/skarupke
 	url = git@github.com:skarupke/flat_hash_map.git
+[submodule "third-party/plf_stack"]
+	path = third-party/plf_stack
+	url = git@github.com:mattreecebentley/plf_stack.git

@@ -32,12 +32,13 @@ size_t db_builder::explore_branch(const branch_entry& probas, branch_node_t orig
     size_t count = 0;
     for (auto window = probas.begin(_kmer_size); window != probas.end(); ++window)
     {
+        const auto position = window->get_start_pos();
         for (const auto& kmer : *window)
         {
             /*std::cout << std::fixed << kmer.value << "\t" << std::setprecision(4) <<  kmer.score << "\t" << original_id
                 << '\t' << window->get_start_pos() << '\n' << std::flush;
             (void)kmer;*/
-            _phylo_kmer_db.put(kmer.value, original_id, kmer.score, window->get_start_pos());
+            _phylo_kmer_db.put(kmer.value, original_id, kmer.score, position);
             ++count;
         }
     }
