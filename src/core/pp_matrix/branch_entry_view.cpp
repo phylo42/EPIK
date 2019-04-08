@@ -3,7 +3,7 @@
 #include <cmath>
 
 phylo_kmer_iterator::phylo_kmer_iterator(const branch_entry* entry, size_t kmer_size,
-                                         size_t start_pos, stack_type stack) noexcept
+                                         pos_t start_pos, stack_type stack) noexcept
     : _entry{ entry }
     , _kmer_size{ kmer_size }
     , _start_pos{ start_pos }
@@ -168,12 +168,12 @@ const branch_entry* branch_entry_view::get_entry() const
     return _entry;
 }
 
-size_t branch_entry_view::get_start_pos() const
+pos_t branch_entry_view::get_start_pos() const
 {
     return _start;
 }
 
-size_t branch_entry_view::get_end_pos() const
+pos_t branch_entry_view::get_end_pos() const
 {
     return _end;
 }

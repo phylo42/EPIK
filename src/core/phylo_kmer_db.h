@@ -2,12 +2,20 @@
 #define RAPPAS_CPP_PHYLO_KMER_DB_H
 
 #include <flat_hash_map.hpp>
+#include <core/pp_matrix/row.h>
 #include "phylo_kmer.h"
 
 struct score_pos
 {
+    score_pos() noexcept;
+    score_pos(score_t s, pos_t p) noexcept;
+    ~score_pos() noexcept = default;
+
+    operator bool() const;
+
     score_t score;
-    size_t position;
+    pos_t position;
+
 };
 
 class phylo_kmer_db

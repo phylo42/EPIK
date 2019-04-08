@@ -10,6 +10,10 @@ struct proba_pair
     size_t index;
 };
 
+/// alignment position type
+using pos_t = size_t;
+constexpr pos_t not_a_position = std::numeric_limits<pos_t>::max();
+
 using branch_id = uint16_t;
 using row = std::array<proba_pair, seq_traits<seq_type>::alphabet_size>;
 

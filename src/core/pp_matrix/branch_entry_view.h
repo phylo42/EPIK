@@ -6,7 +6,6 @@
 
 class branch_entry;
 
-
 /// \brief A forward access const iterator for phylo_kmer pairs [kmer value, score]. Iterates over
 /// a fixed branch_entry_view of size K.
 class phylo_kmer_iterator
@@ -16,7 +15,7 @@ public:
     struct phylo_mmer
     {
         phylo_kmer mmer;
-        size_t last_position;
+        pos_t last_position;
         size_t last_index;
         bool visited;
     };
@@ -27,7 +26,7 @@ public:
     using stack_type = boost::container::static_vector<phylo_mmer, seq_traits<seq_type>::max_kmer_length>;
 
     phylo_kmer_iterator(const branch_entry* entry, size_t kmer_size,
-                        size_t start_pos, stack_type stack) noexcept;
+                        pos_t start_pos, stack_type stack) noexcept;
     phylo_kmer_iterator(const phylo_kmer_iterator&) = delete;
     phylo_kmer_iterator(phylo_kmer_iterator&&) = default;
     phylo_kmer_iterator& operator=(const phylo_kmer_iterator& rhs) = delete;
@@ -48,7 +47,7 @@ private:
 
     const branch_entry* _entry;
     size_t _kmer_size;
-    size_t _start_pos;
+    pos_t _start_pos;
     stack_type _stack;
     const score_t _threshold;
     phylo_mmer _current;
@@ -61,7 +60,7 @@ public:
     using const_iterator = phylo_kmer_iterator;
     using const_reference = const_iterator::reference;
 
-    branch_entry_view(const branch_entry* entry, size_t start, size_t end) noexcept;
+    branch_entry_view(const branch_entry* entry, pos_t start, pos_t end) noexcept;
     branch_entry_view(const branch_entry_view& other) noexcept;
     branch_entry_view(branch_entry_view&&) = delete;
     branch_entry_view& operator=(const branch_entry_view&) = delete;
@@ -72,13 +71,13 @@ public:
     const_iterator end() const;
 
     const branch_entry* get_entry() const;
-    size_t get_start_pos() const;
-    size_t get_end_pos() const;
+    pos_t get_start_pos() const;
+    pos_t get_end_pos() const;
 
 private:
     const branch_entry* _entry;
-    size_t _start;
-    size_t _end;
+    pos_t _start;
+    pos_t _end;
 };
 
 bool operator==(const branch_entry_view& a, const branch_entry_view& b) noexcept;
