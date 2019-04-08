@@ -67,9 +67,9 @@ void db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& proba
             }
         }
     }
-    auto end= std::chrono::steady_clock::now();
-    std::cout << "Phylokmer generation time (s) = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() <<std::endl;
-    std::cout << "Phylokmer generation time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() <<std::endl;
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "Phylokmer generation time (s) = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << std::endl;
+    std::cout << "Phylokmer generation time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << std::endl;
 
     size_t total_entries = 0;
     for (const auto& kmer_entry : _phylo_kmer_db)
@@ -83,6 +83,8 @@ void db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& proba
 
 return_code db_builder::run()
 {
+    //std::cout << alignof(phylo_kmer) << " " << sizeof(phylo_kmer) << std::endl;
+    std::cout << alignof(phylo_kmer_iterator::phylo_mmer) << " " << sizeof(phylo_kmer_iterator::phylo_mmer) << std::endl;
     _extended_mapping = load_extended_mapping(_extended_mapping_file);
     _artree_mapping = load_artree_mapping(_artree_mapping_file);
 

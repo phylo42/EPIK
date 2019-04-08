@@ -10,11 +10,10 @@ set(SOURCE_FILES
         core/seq.h
         core/tree/phylo_tree.cpp core/tree/phylo_tree.h
         core/pp_matrix/proba_matrix.cpp core/pp_matrix/proba_matrix.h
-        core/phylo_kmer.h
         core/pp_matrix/phyml.h core/pp_matrix/phyml.cpp
         core/pp_matrix/branch_entry.h core/pp_matrix/branch_entry.cpp
         core/pp_matrix/row.h
-        core/phylo_kmer.cpp
+        core/phylo_kmer.cpp core/phylo_kmer.h
         core/pp_matrix/branch_entry_view.cpp core/pp_matrix/branch_entry_view.h
         core/phylo_kmer_db.cpp core/phylo_kmer_db.h
         utils/meta.h
@@ -27,7 +26,6 @@ include_directories(
         ../third-party/fast-cpp-csv-parser
         ../third-party/range-v3/include
         ../third-party/skarupke
-        ../third-party/plf_stack
 )
 
 add_library(rappas-core ${SOURCE_FILES})

@@ -1,8 +1,8 @@
 #ifndef RAPPAS_CPP_BRANCH_ENTRY_VIEW_H
 #define RAPPAS_CPP_BRANCH_ENTRY_VIEW_H
 
+#include <boost/container/static_vector.hpp>
 #include "row.h"
-#include "plf_stack.h"
 
 class branch_entry;
 
@@ -24,7 +24,7 @@ public:
     using iterator_category = std::forward_iterator_tag;
     using reference = const phylo_kmer&;
     using pointer = const phylo_kmer*;
-    using stack_type = plf::stack<phylo_mmer>;
+    using stack_type = boost::container::static_vector<phylo_mmer, seq_traits<seq_type>::max_kmer_length>;
 
     phylo_kmer_iterator(const branch_entry* entry, size_t kmer_size,
                         size_t start_pos, stack_type stack) noexcept;

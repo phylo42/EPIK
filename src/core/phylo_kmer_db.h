@@ -13,7 +13,8 @@ struct score_pos
 class phylo_kmer_db
 {
 public:
-    using storage = ska::flat_hash_map<kmer_t, ska::flat_hash_map<branch_node_t, score_pos>>;
+    using inner_storage = ska::flat_hash_map<branch_node_t, score_pos>;
+    using storage = ska::flat_hash_map<kmer_t, inner_storage>;
     using const_iterator = storage::const_iterator;
 
     phylo_kmer_db() = default;

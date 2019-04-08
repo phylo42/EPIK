@@ -21,7 +21,7 @@ bool phylo_kmer_iterator::operator==(const phylo_kmer_iterator& rhs) const noexc
     {
         return false;
     }
-    return _stack.top().mmer == rhs._stack.top().mmer;
+    return _stack.back().mmer == rhs._stack.back().mmer;
 }
 
 bool phylo_kmer_iterator::operator!=(const phylo_kmer_iterator& rhs) const noexcept
@@ -47,38 +47,38 @@ phylo_kmer_iterator::pointer phylo_kmer_iterator::operator->()
 
 void phylo_kmer_iterator::next_index()
 {
-    const auto last_mmer = _stack.top();
-    _stack.pop();
+    const auto last_mmer = _stack.back();
+    _stack.pop_back();
     if (last_mmer.last_index < seq_traits<seq_type>::alphabet_size - 1)
     {
         const auto new_letter_position = last_mmer.last_position;
         const auto new_letter_index = last_mmer.last_index + 1;
-        const auto& last_letter = _entry->at(_start_pos + last_mmer.last_position, last_mmer.last_index);
+        const auto last_letter_score = _entry->at(_start_pos + last_mmer.last_position, last_mmer.last_index).score;
         const auto& new_letter = _entry->at(_start_pos + new_letter_position, new_letter_index);
         const auto new_mmer_value = (last_mmer.mmer.value & rightest_symbol_mask<seq_type>()) | new_letter.index;
-        const auto new_mmer_score = last_mmer.mmer.score - last_letter.score + new_letter.score;
+        const auto new_mmer_score = last_mmer.mmer.score - last_letter_score + new_letter.score;
         const auto new_mmer = phylo_mmer{ {new_mmer_value, new_mmer_score}, new_letter_position, new_letter_index, false };
-        _stack.push(new_mmer);
+        _stack.push_back(new_mmer);
     }
     else
     {
         if (!_stack.empty())
         {
-            _stack.top().visited = true;
+            _stack.back().visited = true;
         }
     }
 }
 
 void phylo_kmer_iterator::next_position()
 {
-    const auto& last_mmer = _stack.top();
+    const auto& last_mmer = _stack.back();
     const auto new_letter_position = last_mmer.last_position + 1;
     const auto new_letter_index = 0;
     const auto& new_letter = _entry->at(_start_pos + new_letter_position, new_letter_index);
     const auto new_mmer_value = (last_mmer.mmer.value << bit_length<seq_type>()) | new_letter.index;
     const auto new_mmer_score = last_mmer.mmer.score + new_letter.score;
     const auto new_mmer = phylo_mmer{ {new_mmer_value, new_mmer_score}, new_letter_position, new_letter_index, false };
-    _stack.push(new_mmer);
+    _stack.push_back(new_mmer);
 }
 
 phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
@@ -86,18 +86,18 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
     while (!_stack.empty())
     {
         /// cut a subtree (and go bottom-up)
-        if (_stack.top().mmer.score <= _threshold)
+        if (_stack.back().mmer.score <= _threshold)
         {
-            _stack.pop();
+            _stack.pop_back();
             if (!_stack.empty())
             {
-                _stack.top().visited = true;
+                _stack.back().visited = true;
             }
         }
         /// go top-down the tree
         else if (_stack.size() < _kmer_size)
         {
-            if (_stack.top().visited)
+            if (_stack.back().visited)
             {
                 next_index();
             }
@@ -109,7 +109,7 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
         /// we are at the leaf level, test a k-mer at next iteration or return
         else
         {
-            const auto last_mmer = _stack.top();
+            const auto last_mmer = _stack.back();
             if (last_mmer.visited)
             {
                 next_index();
@@ -117,7 +117,7 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
             }
             else
             {
-                _stack.top().visited = true;
+                _stack.back().visited = true;
             }
         }
     }
@@ -138,7 +138,7 @@ branch_entry_view::const_iterator branch_entry_view::begin() const
 {
     const auto& first_cell = _entry->at(_start, 0);
     phylo_kmer_iterator::stack_type stack;
-    stack.push(phylo_kmer_iterator::phylo_mmer{ { first_cell.index, first_cell.score }, 0, 0 });
+    stack.push_back(phylo_kmer_iterator::phylo_mmer{ { first_cell.index, first_cell.score }, 0, 0 });
     auto it = phylo_kmer_iterator{ _entry, _end - _start, _start, stack };
     ++it;
     return it;

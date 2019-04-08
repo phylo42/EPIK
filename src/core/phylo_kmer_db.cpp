@@ -4,6 +4,7 @@ void phylo_kmer_db::put(kmer_t key, branch_node_t branch, score_t score, size_t 
 {
     if (auto it = _map.find(key); it != _map.end())
     {
+
         if (auto inner_map_it = it->second.find(branch); inner_map_it != it->second.end())
         {
             if (inner_map_it->second.score < score)

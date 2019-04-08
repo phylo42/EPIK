@@ -21,6 +21,7 @@ struct seq_traits<dna>
     static constexpr char_type char_set[] = {'A', 'C', 'G', 'T'};
     static constexpr char_type ambiguous_chars[] =  {'N', '.', '-', 'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V'};
     static constexpr size_t alphabet_size = sizeof(char_set);
+    static constexpr size_t max_kmer_length = 16;
 };
 
 
