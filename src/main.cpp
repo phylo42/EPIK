@@ -1,9 +1,8 @@
 #include <iostream>
-#include <fstream>
 #include "cli/command_line.h"
 #include "cli/exceptions.h"
-#include "core/return.h"
-#include "core/db_builder.h"
+#include "return.h"
+#include "build/db_builder.h"
 
 return_code print_help()
 {
@@ -60,10 +59,10 @@ int main(int argc, const char* argv[])
         std::cout << e.what() << std::endl;
         return 1;
     }
-    /*catch (...)
+    catch (...)
     {
         std::cout << "Unexpected error. " << std::endl;
-        return return_code::unknown_error;
-    }*/
+        return 1;
+    }
     return 0;
 }

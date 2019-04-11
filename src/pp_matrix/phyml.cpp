@@ -1,11 +1,8 @@
 #include <iostream>
 #include <csv.h>
 #include <numeric>
-#include <range/v3/all.hpp>
 #include "phyml.h"
 #include "proba_matrix.h"
-
-using namespace ranges::v3;
 
 using std::string;
 using std::cout, std::endl;
@@ -69,7 +66,7 @@ private:
 
             /// insert
             auto it = matrix.find(node_label);
-            if (it != end(matrix))
+            if (it != std::end(matrix))
             {
                 it->second.push_back(std::move(new_row));
             }

@@ -4,7 +4,7 @@
 #include <boost/filesystem.hpp>
 
 #include "command_line.h"
-#include "../core/return.h"
+#include "../return.h"
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;

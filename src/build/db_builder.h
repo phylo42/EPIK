@@ -2,9 +2,9 @@
 #define RAPPAS_CPP_DB_BUILDER_H
 
 #include <string>
-#include "return.h"
-#include "phylo_kmer_db.h"
+#include <core/phylo_kmer_db.h>
 #include "pp_matrix/phyml.h"
+#include "return.h"
 
 class branch_entry;
 class phylo_tree;

@@ -1,7 +1,7 @@
 #include "db_builder.h"
-#include "core/tree/phylo_tree.h"
+#include "tree/phylo_tree.h"
 #include "pp_matrix/proba_matrix.h"
-#include "core/pp_matrix/phyml.h"
+#include "pp_matrix/phyml.h"
 #include <cstdlib>
 #include <vector>
 #include <iostream>
@@ -32,13 +32,9 @@ size_t db_builder::explore_branch(const branch_entry& probas, branch_node_t orig
     size_t count = 0;
     for (auto window = probas.begin(_kmer_size); window != probas.end(); ++window)
     {
-        const auto position = window->get_start_pos();
         for (const auto& kmer : *window)
         {
-            /*std::cout << std::fixed << kmer.value << "\t" << std::setprecision(4) <<  kmer.score << "\t" << original_id
-                << '\t' << window->get_start_pos() << '\n' << std::flush;
-            (void)kmer;*/
-            _phylo_kmer_db.put(kmer.value, original_id, kmer.score, position);
+            _phylo_kmer_db.put(kmer.value, original_id, kmer.score);
             ++count;
         }
     }
@@ -59,8 +55,6 @@ void db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& proba
 
             /// get submatrix of probabilities for a current branch node (if presented in proba matrix)
             const auto phyml_branch_label = _artree_mapping[branch_node.get_label()];
-
-            //std::cout << branch_node.get_label() << " -> " << original_id <<  " (" << phyml_branch_label << ") " << std::endl;
             if (const auto& it = probas.find(phyml_branch_label); it != probas.end())
             {
                 count += explore_branch(it->second, original_id);
@@ -83,12 +77,10 @@ void db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& proba
 
 return_code db_builder::run()
 {
-    //std::cout << alignof(phylo_kmer) << " " << sizeof(phylo_kmer) << std::endl;
-    std::cout << alignof(phylo_kmer_iterator::phylo_mmer) << " " << sizeof(phylo_kmer_iterator::phylo_mmer) << std::endl;
     _extended_mapping = load_extended_mapping(_extended_mapping_file);
     _artree_mapping = load_artree_mapping(_artree_mapping_file);
 
-    auto tree = load_newick(_tree_file);
+    const auto tree = load_newick(_tree_file);
     const auto probas = load_phyml_probas(_ar_probabilities_file);
     explore_kmers(tree, probas);
 

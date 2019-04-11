@@ -138,7 +138,7 @@ branch_entry_view::const_iterator branch_entry_view::begin() const
 {
     const auto& first_cell = _entry->at(_start, 0);
     phylo_kmer_iterator::stack_type stack;
-    stack.push_back(phylo_kmer_iterator::phylo_mmer{ { first_cell.index, first_cell.score }, 0, 0 });
+    stack.push_back(phylo_kmer_iterator::phylo_mmer{ { first_cell.index, first_cell.score }, 0, 0, false });
     auto it = phylo_kmer_iterator{ _entry, _end - _start, _start, stack };
     ++it;
     return it;

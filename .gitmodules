@@ -1,12 +1,9 @@
-[submodule "third-party/abseil-cpp"]
-	path = third-party/abseil-cpp
-	url = git@github.com:abseil/abseil-cpp.git
 [submodule "third-party/fast-cpp-csv-parser"]
 	path = third-party/fast-cpp-csv-parser
 	url = git@github.com:ben-strasser/fast-cpp-csv-parser.git
-[submodule "third-party/range-v3"]
-	path = third-party/range-v3
-	url = git@github.com:ericniebler/range-v3.git
 [submodule "third-party/skarupke"]
 	path = third-party/skarupke
 	url = git@github.com:skarupke/flat_hash_map.git
+[submodule "dependencies/rappas-core"]
+	path = dependencies/rappas-core
+	url = git@gite.lirmm.fr:rappas-team/rappas-core.git
