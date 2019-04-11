@@ -10,7 +10,7 @@ find_package(Threads REQUIRED)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG")
 #set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG)
 
@@ -60,12 +60,12 @@ set(SOURCE_FILES
 include_directories(src)
 include_directories(third-party/skarupke)
 include_directories(third-party/fast-cpp-csv-parser)
-include_directories(lib/rappas-core/include)
+include_directories(modules/rappas-core/include)
 
-add_subdirectory(lib/rappas-core)
+add_subdirectory(modules/rappas-core)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PRIVATE
         rappas-core
         ${Boost_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT})

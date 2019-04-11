@@ -8,5 +8,5 @@
 	path = dependencies/rappas-core
 	url = git@gite.lirmm.fr:rappas-team/rappas-core.git
 [submodule "lib/rappas-core"]
-	path = lib/rappas-core
+	path = modules/lib/rappas-core
 	url = git@gite.lirmm.fr:rappas-team/rappas-core.git
