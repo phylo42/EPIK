@@ -60,9 +60,9 @@ set(SOURCE_FILES
 include_directories(src)
 include_directories(third-party/skarupke)
 include_directories(third-party/fast-cpp-csv-parser)
-include_directories(dependencies/rappas-core/include)
+include_directories(lib/rappas-core/include)
 
-add_subdirectory(dependencies/rappas-core)
+add_subdirectory(lib/rappas-core)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME}
