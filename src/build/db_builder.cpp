@@ -27,14 +27,14 @@ db_builder::db_builder(string working_directory, string ar_probabilities_file, s
     , _kmer_size(kmer_size)
 {}
 
-size_t db_builder::explore_branch(const branch_entry& probas, branch_node_t original_id)
+size_t db_builder::explore_branch(const branch_entry& probas, core::phylo_kmer::branch_type original_id)
 {
     size_t count = 0;
     for (auto window = probas.begin(_kmer_size); window != probas.end(); ++window)
     {
         for (const auto& kmer : *window)
         {
-            _phylo_kmer_db.put(kmer.value, original_id, kmer.score);
+            _phylo_kmer_db.put(kmer.key, original_id, kmer.score);
             ++count;
         }
     }

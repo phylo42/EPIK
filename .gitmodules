@@ -4,9 +4,6 @@
 [submodule "third-party/skarupke"]
 	path = third-party/skarupke
 	url = git@github.com:skarupke/flat_hash_map.git
-[submodule "dependencies/rappas-core"]
-	path = dependencies/rappas-core
-	url = git@gite.lirmm.fr:rappas-team/rappas-core.git
-[submodule "lib/rappas-core"]
-	path = modules/lib/rappas-core
+[submodule "modules/rappas-core"]
+	path = modules/rappas-core
 	url = git@gite.lirmm.fr:rappas-team/rappas-core.git

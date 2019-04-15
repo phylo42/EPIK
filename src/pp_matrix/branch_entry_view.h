@@ -14,19 +14,19 @@ public:
     /// Temporary data storage for mmers, m <= k
     struct phylo_mmer
     {
-        phylo_kmer mmer;
-        pos_t last_position;
+        core::phylo_kmer mmer;
+        core::phylo_kmer::pos_type last_position;
         size_t last_index;
         bool visited;
     };
 
     using iterator_category = std::forward_iterator_tag;
-    using reference = const phylo_kmer&;
-    using pointer = const phylo_kmer*;
-    using stack_type = boost::container::static_vector<phylo_mmer, seq_traits<seq_type>::max_kmer_length>;
+    using reference = const core::phylo_kmer&;
+    using pointer = const core::phylo_kmer*;
+    using stack_type = boost::container::static_vector<phylo_mmer, core::seq_traits::max_kmer_length>;
 
     phylo_kmer_iterator(const branch_entry* entry, size_t kmer_size,
-                        pos_t start_pos, stack_type stack) noexcept;
+                        core::phylo_kmer::pos_type start_pos, stack_type stack) noexcept;
     phylo_kmer_iterator(const phylo_kmer_iterator&) = delete;
     phylo_kmer_iterator(phylo_kmer_iterator&&) = default;
     phylo_kmer_iterator& operator=(const phylo_kmer_iterator& rhs) = delete;
@@ -47,9 +47,9 @@ private:
 
     const branch_entry* _entry;
     size_t _kmer_size;
-    pos_t _start_pos;
+    const core::phylo_kmer::pos_type _start_pos;
+    const core::phylo_kmer::score_type _threshold;
     stack_type _stack;
-    const score_t _threshold;
     phylo_mmer _current;
 };
 
@@ -60,7 +60,7 @@ public:
     using const_iterator = phylo_kmer_iterator;
     using const_reference = const_iterator::reference;
 
-    branch_entry_view(const branch_entry* entry, pos_t start, pos_t end) noexcept;
+    branch_entry_view(const branch_entry* entry, core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept;
     branch_entry_view(const branch_entry_view& other) noexcept;
     branch_entry_view(branch_entry_view&&) = delete;
     branch_entry_view& operator=(const branch_entry_view&) = delete;
@@ -71,13 +71,13 @@ public:
     const_iterator end() const;
 
     const branch_entry* get_entry() const;
-    pos_t get_start_pos() const;
-    pos_t get_end_pos() const;
+    core::phylo_kmer::pos_type get_start_pos() const;
+    core::phylo_kmer::pos_type get_end_pos() const;
 
 private:
     const branch_entry* _entry;
-    pos_t _start;
-    pos_t _end;
+    core::phylo_kmer::pos_type _start;
+    core::phylo_kmer::pos_type _end;
 };
 
 bool operator==(const branch_entry_view& a, const branch_entry_view& b) noexcept;

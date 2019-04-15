@@ -20,7 +20,7 @@ public:
 
 private:
     void explore_kmers(const phylo_tree& tree, const proba_matrix& probas);
-    size_t explore_branch(const branch_entry& probas, branch_node_t common_branch_label);
+    size_t explore_branch(const branch_entry& probas, core::phylo_kmer::branch_type common_branch_label);
 
     std::string _working_directory;
     std::string _ar_probabilities_file;
@@ -29,7 +29,7 @@ private:
     std::string _artree_mapping_file;
 
     size_t _kmer_size;
-    phylo_kmer_db _phylo_kmer_db;
+    core::phylo_kmer_db _phylo_kmer_db;
     extended_mapping _extended_mapping;
     artree_label_mapping _artree_mapping;
 };

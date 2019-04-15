@@ -47,7 +47,7 @@ private:
         _in.read_header(io::ignore_extra_column, "NodeLabel", "A", "C", "G", "T");
 
         auto node_label = proba_matrix::NOT_A_LABEL;
-        score_t a, c, g, t;
+        core::phylo_kmer::score_type a, c, g, t;
         while (_in.read_row(node_label, a, c, g, t))
         {
             if (node_label == proba_matrix::NOT_A_LABEL)
@@ -127,7 +127,7 @@ artree_label_mapping load_artree_mapping(const std::string& file_name)
     {
         if (is_number(artree_label))
         {
-            mapping[extended_label] = branch_node_t(std::stoul(artree_label));
+            mapping[extended_label] = core::phylo_kmer::branch_type(std::stoul(artree_label));
         }
     }
     cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
