@@ -1,7 +1,7 @@
 #ifndef RAPPAS_CPP_PROBA_MATRIX_H
 #define RAPPAS_CPP_PROBA_MATRIX_H
 
-#include <flat_hash_map.hpp>
+#include <flat_hash_map/flat_hash_map.hpp>
 #include "branch_entry.h"
 
 /// \brief A posterior probabilities matrix class.

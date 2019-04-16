@@ -1,0 +1,6 @@
+[submodule "core"]
+	path = core
+	url = git@gite.lirmm.fr:rappas-team/rappas-core.git
+[submodule "strasser"]
+	path = strasser
+	url = git@gite.lirmm.fr:rappas-team/strasser.git

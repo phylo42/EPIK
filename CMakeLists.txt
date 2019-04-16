@@ -1,58 +1,32 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 project(builder VERSION 0.1.0 LANGUAGES CXX)
 
-######################################################################################################
-# Dependencies
-find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
-find_package(Threads REQUIRED)
-find_package(rappas REQUIRED)
+# WARNING: Some subprojects have custom libraries as dependencies:
+#
+#       build <- core (rappas::core)
+#       build <- strasser (strasser::csv_parser)
+#
+# find_package(<library-name>) inside the dependent CMake files will not find required libraries unless
+# you explicitly install them, for example:
+#
+#       cmake ..
+#       make
+#       make install
+#
+# I rely on the presence of these libraries as subprojects in this top-level directory instead, so
+# no installation required.
+#
+# There is another workaround for the same problem
+#       (see "Effective CMake" by Dan Pfeifer, https://youtu.be/bsXLMQ6WgIk)
+# which is not safe though:
+#       (see "Do Not Redefine CMake Commands" by Craig Scott,
+#       https://crascit.com/2018/09/14/do-not-redefine-cmake-commands/)
+#
+# So practically we should write:
+#       find_package(<library-name> REQUIRED)
+# in every dependent CMake file for every dependency, but I prefer to have all of the libraries
+# as subprojects and be built directly from a source tree by this CMake file.
 
-######################################################################################################
-# Application target and properties
-add_executable(builder
-        # cli
-        src/cli/command_line.cpp
-        src/cli/exceptions.cpp
-
-        # database builder
-        src/build/db_builder.cpp
-
-        # phylogenetic tree
-        src/tree/phylo_tree.cpp
-
-        # posterior probability matrix
-        src/pp_matrix/proba_matrix.cpp
-        src/pp_matrix/phyml.cpp
-        src/pp_matrix/branch_entry.cpp
-        src/pp_matrix/branch_entry_view.cpp
-
-        # utils
-        src/utils/file_io.cpp
-
-        src/main.cpp
-        )
-
-target_include_directories(builder
-        PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/third-party/fast-cpp-csv-parser/
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/third-party/skarupke
-)
-
-target_link_libraries(builder
-        PRIVATE
-            Boost::program_options
-            Boost::filesystem
-            Boost::iostreams
-            rappas::core
-        )
-
-# Turn on the warnings and treat them as errors
-target_compile_options(builder
-        PRIVATE
-            -Wall -Wextra -Wpedantic -Werror
-        )
-
-target_compile_features(builder
-        PUBLIC
-            cxx_std_17)
+add_subdirectory(core)
+add_subdirectory(strasser)
+add_subdirectory(build)
