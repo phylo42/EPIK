@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project(builder VERSION 0.1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.13)
+project(rappas_build VERSION 0.1.0 LANGUAGES CXX)
 
 # WARNING: Some subprojects have custom libraries as dependencies:
 #
