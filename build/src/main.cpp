@@ -1,8 +1,14 @@
 #include <iostream>
+#include <boost/filesystem.hpp>
+#include <core/phylo_kmer_db.h>
+#include <core/serialization.h>
+#include <chrono>
 #include "cli/command_line.h"
 #include "cli/exceptions.h"
 #include "return.h"
 #include "build/db_builder.h"
+
+namespace fs = boost::filesystem;
 
 return_code print_help()
 {
@@ -23,10 +29,18 @@ return_code run(const cli::cli_parameters& parameters)
         }
         case cli::build:
         {
-            db_builder builder(parameters.working_directory, parameters.ar_probabilities_file,
+            const auto db = build_database(parameters.working_directory, parameters.ar_probabilities_file,
                                parameters.tree_file, parameters.extended_mapping_file, parameters.artree_mapping_file,
                                parameters.kmer_size);
-            return builder.run();
+
+            const auto db_filename = fs::path(parameters.working_directory) / "DB.union";
+            std::cout << "Saving database to: " << db_filename.string() << "..." << std::endl;
+            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+            core::save(db, db_filename.string());
+            std::cout << "Time (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - begin).count() << std::endl << std::endl;
+
+            return return_code::success;
         }
         default:
         {

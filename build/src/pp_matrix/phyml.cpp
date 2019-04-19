@@ -21,11 +21,14 @@ public:
     {
         try
         {
-            cout << "Loading PhyML results: " + _file_name << endl;
-
+            cout << "Loading PhyML results: " + _file_name << "..." << endl;
+            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
             auto matrix = read_matrix();
+
             cout << "Loaded " << matrix.num_branches() << " matrices of " <<
-                matrix.num_sites() << " rows." << endl << endl;
+                matrix.num_sites() << " rows." << endl;
+            cout << "Time (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - begin).count() << endl << endl;
             return matrix;
         }
         catch (io::error::integer_overflow& error)

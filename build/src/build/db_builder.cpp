@@ -1,7 +1,4 @@
-#include "db_builder.h"
-#include "tree/phylo_tree.h"
-#include "pp_matrix/proba_matrix.h"
-#include "pp_matrix/phyml.h"
+
 #include <cstdlib>
 #include <vector>
 #include <iostream>
@@ -11,19 +8,55 @@
 #include <chrono>
 #include <iomanip>
 
+#include <core/phylo_kmer_db.h>
+#include "db_builder.h"
+#include "tree/phylo_tree.h"
+#include "pp_matrix/proba_matrix.h"
+#include "pp_matrix/phyml.h"
+
 namespace fs = boost::filesystem;
 using std::string;
 using std::vector;
 using std::cout, std::endl;
 using std::to_string;
 
-db_builder::db_builder(string working_directory, string ar_probabilities_file, string tree_file,
-    string extended_mapping_file, string artree_mapping_file, size_t kmer_size)
-    : _working_directory(move(working_directory))
-    , _ar_probabilities_file(move(ar_probabilities_file))
-    , _tree_file(move(tree_file))
-    , _extended_mapping_file(move(extended_mapping_file))
-    , _artree_mapping_file(move(artree_mapping_file))
+class db_builder
+{
+    friend core::phylo_kmer_db build_database(const std::string& working_directory, const std::string& ar_probabilities_file,
+                                              const std::string& tree_file, const std::string& extended_mapping_file,
+                                              const std::string& artree_mapping_file, size_t kmer_size);
+public:
+    db_builder(const std::string& working_directory, const std::string& ar_probabilities_file,
+               const std::string& tree_file, const std::string& extended_mapping_file,
+               const std::string& artree_mapping_file, size_t kmer_size);
+
+    void run();
+
+private:
+    size_t explore_kmers(const phylo_tree& tree, const proba_matrix& probas);
+    size_t explore_branch(const branch_entry& probas, core::phylo_kmer::branch_type common_branch_label);
+
+    std::string _working_directory;
+    std::string _ar_probabilities_file;
+    std::string _tree_file;
+    std::string _extended_mapping_file;
+    std::string _artree_mapping_file;
+
+    size_t _kmer_size;
+    core::phylo_kmer_db _phylo_kmer_db;
+    extended_mapping _extended_mapping;
+    artree_label_mapping _artree_mapping;
+};
+
+
+
+db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file, const string& tree_file,
+                       const string& extended_mapping_file, const string& artree_mapping_file, size_t kmer_size)
+    : _working_directory(working_directory)
+    , _ar_probabilities_file(ar_probabilities_file)
+    , _tree_file(tree_file)
+    , _extended_mapping_file(extended_mapping_file)
+    , _artree_mapping_file(artree_mapping_file)
     , _kmer_size(kmer_size)
 {}
 
@@ -41,10 +74,9 @@ size_t db_builder::explore_branch(const branch_entry& probas, core::phylo_kmer::
     return count;
 }
 
-void db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& probas)
+size_t db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& probas)
 {
     size_t count = 0;
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     /// iterate over fake nodes
     for (const auto& branch_node: tree)
@@ -61,28 +93,40 @@ void db_builder::explore_kmers(const phylo_tree& tree, const proba_matrix& proba
             }
         }
     }
-    auto end = std::chrono::steady_clock::now();
-    std::cout << "Phylokmer generation time (s) = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << std::endl;
-    std::cout << "Phylokmer generation time (ms) = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << std::endl;
-
-    size_t total_entries = 0;
-    for (const auto& kmer_entry : _phylo_kmer_db)
-    {
-        total_entries += kmer_entry.second.size();
-    }
-    std::cout << "Kmers generated: " << _phylo_kmer_db.size() << "\n";
-    std::cout << "Kmer tuples in the hash: " << total_entries << "\n";
-    std::cout << "Tuples explored: " << count << "\n";
+    return count;
 }
 
-return_code db_builder::run()
+void db_builder::run()
 {
     _extended_mapping = load_extended_mapping(_extended_mapping_file);
     _artree_mapping = load_artree_mapping(_artree_mapping_file);
 
     const auto tree = load_newick(_tree_file);
     const auto probas = load_phyml_probas(_ar_probabilities_file);
-    explore_kmers(tree, probas);
 
-    return return_code::success;
+    /// Run the branch and bound algorithm
+    std::cout << "Building database..." << std::endl;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    const auto tuples_count = explore_kmers(tree, probas);
+    auto end = std::chrono::steady_clock::now();
+
+    size_t total_entries = 0;
+    for (const auto& kmer_entry : _phylo_kmer_db)
+    {
+        total_entries += kmer_entry.second.size();
+    }
+
+    std::cout << "Built " << total_entries << " phylo-kmers out of " << tuples_count << " for " << _phylo_kmer_db.size()
+        << " k-mer values.\nTime (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+        << "\n\n" << std::flush;
+}
+
+core::phylo_kmer_db build_database(const std::string& working_directory, const std::string& ar_probabilities_file,
+                                   const std::string& tree_file, const std::string& extended_mapping_file,
+                                   const std::string& artree_mapping_file, size_t kmer_size)
+{
+    db_builder builder(working_directory, ar_probabilities_file, tree_file,
+        extended_mapping_file, artree_mapping_file, kmer_size);
+    builder.run();
+    return std::move(builder._phylo_kmer_db);
 }

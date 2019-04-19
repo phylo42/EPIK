@@ -2,36 +2,14 @@
 #define RAPPAS_CPP_DB_BUILDER_H
 
 #include <string>
-#include <core/phylo_kmer_db.h>
-#include "pp_matrix/phyml.h"
-#include "return.h"
 
-class branch_entry;
-class phylo_tree;
-class proba_matrix;
-
-class db_builder
+namespace core
 {
-public:
-    db_builder(std::string working_directory, std::string ar_probabilities_file, std::string tree_file,
-               std::string extended_mapping_file, std::string artree_mapping_file, size_t kmer_size);
+    class phylo_kmer_db;
+}
 
-    return_code run();
-
-private:
-    void explore_kmers(const phylo_tree& tree, const proba_matrix& probas);
-    size_t explore_branch(const branch_entry& probas, core::phylo_kmer::branch_type common_branch_label);
-
-    std::string _working_directory;
-    std::string _ar_probabilities_file;
-    std::string _tree_file;
-    std::string _extended_mapping_file;
-    std::string _artree_mapping_file;
-
-    size_t _kmer_size;
-    core::phylo_kmer_db _phylo_kmer_db;
-    extended_mapping _extended_mapping;
-    artree_label_mapping _artree_mapping;
-};
+core::phylo_kmer_db build_database(const std::string& working_directory, const std::string& ar_probabilities_file,
+                                   const std::string& tree_file, const std::string& extended_mapping_file,
+                                   const std::string& artree_mapping_file, size_t kmer_size);
 
 #endif
