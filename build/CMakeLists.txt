@@ -43,7 +43,7 @@ target_link_libraries(builder
             Boost::filesystem
             Boost::iostreams
             strasser::csv_parser
-            rappas::core
+            rappas::core_dna
         )
 
 # Turn on the warnings and treat them as errors
