@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.10)
 project(rappas_build VERSION 0.1.0 LANGUAGES CXX)
 
 # WARNING: Some subprojects have custom libraries as dependencies:

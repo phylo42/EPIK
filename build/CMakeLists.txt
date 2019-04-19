@@ -9,49 +9,53 @@ find_package(Threads REQUIRED)
 
 ######################################################################################################
 # Application target and properties
-add_executable(builder
-        # cli
-        src/cli/command_line.cpp
-        src/cli/exceptions.cpp
+add_executable(build_n "")
+set_target_properties(build_n PROPERTIES OUTPUT_NAME rappas-buildn)
 
-        # database builder
-        src/build/db_builder.cpp
+target_sources(build_n
+        PRIVATE
+            # cli
+            src/cli/command_line.cpp
+            src/cli/exceptions.cpp
 
-        # phylogenetic tree
-        src/tree/phylo_tree.cpp
+            # database builder
+            src/build/db_builder.cpp
 
-        # posterior probability matrix
-        src/pp_matrix/proba_matrix.cpp
-        src/pp_matrix/phyml.cpp
-        src/pp_matrix/branch_entry.cpp
-        src/pp_matrix/branch_entry_view.cpp
+            # phylogenetic tree
+            src/tree/phylo_tree.cpp
 
-        # utils
-        src/utils/file_io.cpp
+            # posterior probability matrix
+            src/pp_matrix/proba_matrix.cpp
+            src/pp_matrix/phyml.cpp
+            src/pp_matrix/branch_entry.cpp
+            src/pp_matrix/branch_entry_view.cpp
 
-        src/main.cpp
+            # utils
+            src/utils/file_io.cpp
+
+            src/main.cpp
         )
 
-target_include_directories(builder
+target_include_directories(build_n
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
 )
 
-target_link_libraries(builder
+target_link_libraries(build_n
         PRIVATE
             Boost::program_options
             Boost::filesystem
             Boost::iostreams
             strasser::csv_parser
-            rappas::core_dna
+            rappas::core_n
         )
 
 # Turn on the warnings and treat them as errors
-target_compile_options(builder
+target_compile_options(build_n
         PRIVATE
             -Wall -Wextra -Wpedantic -Werror
         )
 
-target_compile_features(builder
+target_compile_features(build_n
         PUBLIC
             cxx_std_17)
