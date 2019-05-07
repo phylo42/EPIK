@@ -1,5 +1,4 @@
 #include "proba_matrix.h"
-#include "utils/algorithm.h"
 #include <algorithm>
 
 size_t proba_matrix::num_branches() const

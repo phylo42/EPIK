@@ -1,7 +1,7 @@
 #ifndef RAPPAS_CPP_PROBA_MATRIX_H
 #define RAPPAS_CPP_PROBA_MATRIX_H
 
-#include <flat_hash_map/flat_hash_map.hpp>
+#include <unordered_map>
 #include "branch_entry.h"
 
 /// \brief A posterior probabilities matrix class.
@@ -16,7 +16,7 @@ public:
     static const branch_id NOT_A_LABEL = std::numeric_limits<branch_id>::max();
 
     /// a map for a fast access to a submatrix by branch node label
-    using storage = ska::flat_hash_map<branch_id, branch_entry>;
+    using storage = std::unordered_map<branch_id, branch_entry>;
     using iterator = typename storage::iterator;
     using const_iterator = typename storage::const_iterator;
     using mapped_type = storage::mapped_type;

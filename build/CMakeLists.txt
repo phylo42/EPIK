@@ -21,17 +21,11 @@ target_sources(build_n
             # database builder
             src/build/db_builder.cpp
 
-            # phylogenetic tree
-            src/tree/phylo_tree.cpp
-
             # posterior probability matrix
             src/pp_matrix/proba_matrix.cpp
             src/pp_matrix/phyml.cpp
             src/pp_matrix/branch_entry.cpp
             src/pp_matrix/branch_entry_view.cpp
-
-            # utils
-            src/utils/file_io.cpp
 
             src/main.cpp
         )
@@ -48,12 +42,13 @@ target_link_libraries(build_n
             Boost::iostreams
             strasser::csv_parser
             rappas::core_n
+            rappas::utils
         )
 
 # Turn on the warnings and treat them as errors
 target_compile_options(build_n
         PRIVATE
-            -Wall -Wextra -Wpedantic -Werror
+            -Wall -Wextra -Werror #-Wpedantic
         )
 
 target_compile_features(build_n

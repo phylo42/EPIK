@@ -1,6 +1,7 @@
 #include <iostream>
 #include <csv-parser/csv.h>
 #include <numeric>
+#include <cmath>
 #include "phyml.h"
 #include "proba_matrix.h"
 
