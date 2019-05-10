@@ -40,8 +40,6 @@ private:
     artree_label_mapping _artree_mapping;
 };
 
-
-
 db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file, const string& tree_file,
                        const string& extended_mapping_file, const string& artree_mapping_file, size_t kmer_size)
     : _working_directory{ working_directory }

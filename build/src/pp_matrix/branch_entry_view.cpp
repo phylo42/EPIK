@@ -1,6 +1,7 @@
 #include "branch_entry.h"
 #include "branch_entry_view.h"
 #include <cmath>
+#include <iostream>
 
 phylo_kmer_iterator::phylo_kmer_iterator(const branch_entry* entry, size_t kmer_size,
                                          core::phylo_kmer::pos_type start_pos, stack_type stack) noexcept
@@ -58,6 +59,7 @@ void phylo_kmer_iterator::next_index()
         const auto new_mmer_key = (last_mmer.mmer.key & core::rightest_symbol_mask<core::seq_type>()) | new_letter.index;
         const auto new_mmer_score = last_mmer.mmer.score - last_letter_score + new_letter.score;
         const auto new_mmer = phylo_mmer{ {new_mmer_key, new_mmer_score}, new_letter_position, new_letter_index, false };
+
         _stack.push_back(new_mmer);
     }
     else
@@ -78,6 +80,7 @@ void phylo_kmer_iterator::next_position()
     const auto new_mmer_key = (last_mmer.mmer.key << core::bit_length<core::seq_type>()) | new_letter.index;
     const auto new_mmer_score = last_mmer.mmer.score + new_letter.score;
     const auto new_mmer = phylo_mmer{ {new_mmer_key, new_mmer_score}, new_letter_position, new_letter_index, false };
+
     _stack.push_back(new_mmer);
 }
 
