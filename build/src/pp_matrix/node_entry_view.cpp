@@ -1,9 +1,9 @@
-#include "branch_entry.h"
-#include "branch_entry_view.h"
+#include "node_entry.h"
+#include "node_entry_view.h"
 #include <cmath>
 #include <iostream>
 
-phylo_kmer_iterator::phylo_kmer_iterator(const branch_entry* entry, size_t kmer_size,
+phylo_kmer_iterator::phylo_kmer_iterator(const node_entry* entry, size_t kmer_size,
                                          core::phylo_kmer::pos_type start_pos, stack_type stack) noexcept
     : _entry{ entry }
     , _kmer_size{ kmer_size }
@@ -127,17 +127,17 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
     return {};
 }
 
-branch_entry_view::branch_entry_view(const branch_entry* entry, core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept
+node_entry_view::node_entry_view(const node_entry* entry, core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept
     : _entry{ entry }
     , _start{ start }
     , _end{ end }
 {}
 
-branch_entry_view::branch_entry_view(const branch_entry_view& other) noexcept
-    : branch_entry_view{ other._entry, other._start, other._end}
+node_entry_view::node_entry_view(const node_entry_view& other) noexcept
+    : node_entry_view{ other._entry, other._start, other._end}
 {}
 
-branch_entry_view::const_iterator branch_entry_view::begin() const
+node_entry_view::const_iterator node_entry_view::begin() const
 {
     const auto& first_cell = _entry->at(_start, 0);
     phylo_kmer_iterator::stack_type stack;
@@ -147,12 +147,12 @@ branch_entry_view::const_iterator branch_entry_view::begin() const
     return it;
 }
 
-branch_entry_view::const_iterator branch_entry_view::end() const
+node_entry_view::const_iterator node_entry_view::end() const
 {
     return phylo_kmer_iterator{ _entry, 0, 0, {}};
 }
 
-branch_entry_view& branch_entry_view::operator=(branch_entry_view&& other) noexcept
+node_entry_view& node_entry_view::operator=(node_entry_view&& other) noexcept
 {
     if (*this != other)
     {
@@ -166,29 +166,29 @@ branch_entry_view& branch_entry_view::operator=(branch_entry_view&& other) noexc
     return *this;
 }
 
-const branch_entry* branch_entry_view::get_entry() const
+const node_entry* node_entry_view::get_entry() const
 {
     return _entry;
 }
 
-core::phylo_kmer::pos_type branch_entry_view::get_start_pos() const
+core::phylo_kmer::pos_type node_entry_view::get_start_pos() const
 {
     return _start;
 }
 
-core::phylo_kmer::pos_type branch_entry_view::get_end_pos() const
+core::phylo_kmer::pos_type node_entry_view::get_end_pos() const
 {
     return _end;
 }
 
-bool operator==(const branch_entry_view& a, const branch_entry_view& b) noexcept
+bool operator==(const node_entry_view& a, const node_entry_view& b) noexcept
 {
     return (a.get_start_pos() == b.get_start_pos()) &&
            (a.get_end_pos() == b.get_end_pos()) &&
            (a.get_entry() == b.get_entry());
 }
 
-bool operator!=(const branch_entry_view& a, const branch_entry_view& b) noexcept
+bool operator!=(const node_entry_view& a, const node_entry_view& b) noexcept
 {
     return !(a == b);
 }

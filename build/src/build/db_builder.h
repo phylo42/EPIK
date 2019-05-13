@@ -8,8 +8,11 @@ namespace core
     class phylo_kmer_db;
 }
 
-core::phylo_kmer_db build_database(const std::string& working_directory, const std::string& ar_probabilities_file,
-                                   const std::string& tree_file, const std::string& extended_mapping_file,
-                                   const std::string& artree_mapping_file, size_t kmer_size);
+namespace rappas
+{
+    core::phylo_kmer_db build(const std::string& working_directory, const std::string& ar_probabilities_file,
+        const std::string& tree_file, const std::string& extended_mapping_file,
+        const std::string& artree_mapping_file, size_t kmer_size);
+}
 
 #endif

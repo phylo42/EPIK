@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 # WARNING: some dependencies are not listed here. See the top-level CMake file
 # for more details
 find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
-find_package(Threads REQUIRED)
+find_package(OpenMP REQUIRED)
 
 ######################################################################################################
 # Application target and properties
@@ -23,9 +23,9 @@ target_sources(build_n
 
             # posterior probability matrix
             src/pp_matrix/proba_matrix.cpp
+            src/pp_matrix/node_entry.cpp
+            src/pp_matrix/node_entry_view.cpp
             src/pp_matrix/phyml.cpp
-            src/pp_matrix/branch_entry.cpp
-            src/pp_matrix/branch_entry_view.cpp
 
             src/main.cpp
         )
@@ -40,6 +40,7 @@ target_link_libraries(build_n
             Boost::program_options
             Boost::filesystem
             Boost::iostreams
+            OpenMP::OpenMP_CXX
             strasser::csv_parser
             rappas::core_n
             rappas::utils
