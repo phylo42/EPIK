@@ -1,6 +1,8 @@
 #include "proba_matrix.h"
 #include <algorithm>
 
+using namespace rappas;
+
 size_t proba_matrix::num_branches() const
 {
     return _data.size();
@@ -11,22 +13,22 @@ size_t proba_matrix::num_sites() const
     return std::begin(_data)->second.get_alignment_size();
 }
 
-proba_matrix::mapped_type& proba_matrix::operator[](branch_id id)
+proba_matrix::mapped_type& proba_matrix::operator[](branch_type id)
 {
     return _data[id];
 }
 
-const proba_matrix::mapped_type& proba_matrix::at(branch_id id) const
+const proba_matrix::mapped_type& proba_matrix::at(branch_type id) const
 {
     return _data.at(id);
 }
 
-proba_matrix::iterator proba_matrix::find(const branch_id& id)
+proba_matrix::iterator proba_matrix::find(const branch_type& id)
 {
     return _data.find(id);
 }
 
-proba_matrix::const_iterator proba_matrix::find(const branch_id& id) const
+proba_matrix::const_iterator proba_matrix::find(const branch_type& id) const
 {
     return _data.find(id);
 }

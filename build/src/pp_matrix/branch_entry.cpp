@@ -1,43 +1,45 @@
 #include "branch_entry.h"
 
-branch_entry::branch_entry(branch_id _id, vector_type&& rows)
+using namespace rappas;
+
+node_entry::node_entry(branch_type _id, vector_type&& rows)
     : _branch_label{ _id }
     , _rows{ std::move(rows) }
 {}
 
-branch_entry::const_iterator branch_entry::begin(uint32_t kmer_size) const
+node_entry::const_iterator node_entry::begin(uint32_t kmer_size) const
 {
     return { { this, 0, kmer_size } };
 }
 
-branch_entry::const_iterator branch_entry::end() const
+node_entry::const_iterator node_entry::end() const
 {
     return { { this, 0, 0 } };
 }
 
-void branch_entry::push_back(row&& r)
+void node_entry::push_back(row_type&& row)
 {
-    _rows.push_back(r);
+    _rows.push_back(row);
 }
 
-size_t branch_entry::get_alignment_size() const
+size_t node_entry::get_alignment_size() const
 {
     return _rows.size();
 }
 
-branch_id branch_entry::get_branch_label() const
+branch_type node_entry::get_label() const
 {
     return _branch_label;
 }
 
-const proba_pair& branch_entry::at(size_t position, size_t variant) const
+const proba_pair& node_entry::at(size_t position, size_t variant) const
 {
     return _rows[position][variant];
 }
 
-bool operator==(const branch_entry& lhs, const branch_entry& rhs)
+bool operator==(const node_entry& lhs, const node_entry& rhs)
 {
-    return lhs.get_branch_label() == rhs.get_branch_label();
+    return lhs.get_label() == rhs.get_label();
 }
 
 view_iterator::view_iterator(branch_entry_view view) noexcept

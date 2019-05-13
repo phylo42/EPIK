@@ -4,7 +4,7 @@
 #include <boost/container/static_vector.hpp>
 #include "row.h"
 
-class branch_entry;
+class node_entry;
 
 /// \brief A forward access const iterator for phylo_kmer pairs [kmer value, score]. Iterates over
 /// a fixed branch_entry_view of size K.
@@ -25,7 +25,7 @@ public:
     using pointer = const core::phylo_kmer*;
     using stack_type = boost::container::static_vector<phylo_mmer, core::seq_traits::max_kmer_length>;
 
-    phylo_kmer_iterator(const branch_entry* entry, size_t kmer_size,
+    phylo_kmer_iterator(const node_entry* entry, size_t kmer_size,
                         core::phylo_kmer::pos_type start_pos, stack_type stack) noexcept;
     phylo_kmer_iterator(const phylo_kmer_iterator&) = delete;
     phylo_kmer_iterator(phylo_kmer_iterator&&) = default;
@@ -45,7 +45,7 @@ private:
     void next_position();
     phylo_mmer next_phylokmer();
 
-    const branch_entry* _entry;
+    const node_entry* _entry;
     size_t _kmer_size;
     const core::phylo_kmer::pos_type _start_pos;
     const core::phylo_kmer::score_type _threshold;
@@ -60,7 +60,7 @@ public:
     using const_iterator = phylo_kmer_iterator;
     using const_reference = const_iterator::reference;
 
-    branch_entry_view(const branch_entry* entry, core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept;
+    branch_entry_view(const node_entry* entry, core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept;
     branch_entry_view(const branch_entry_view& other) noexcept;
     branch_entry_view(branch_entry_view&&) = delete;
     branch_entry_view& operator=(const branch_entry_view&) = delete;
@@ -70,12 +70,12 @@ public:
     const_iterator begin() const;
     const_iterator end() const;
 
-    const branch_entry* get_entry() const;
+    const node_entry* get_entry() const;
     core::phylo_kmer::pos_type get_start_pos() const;
     core::phylo_kmer::pos_type get_end_pos() const;
 
 private:
-    const branch_entry* _entry;
+    const node_entry* _entry;
     core::phylo_kmer::pos_type _start;
     core::phylo_kmer::pos_type _end;
 };

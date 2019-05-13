@@ -7,36 +7,36 @@
 class view_iterator;
 
 /// \brief A submatrix of posterior probabilities matrix (fixed branch, all the positions of input alignment)
-class branch_entry final
+class node_entry final
 {
 public:
     using const_iterator = view_iterator;
-    using vector_type = std::vector<row>;
+    using vector_type = std::vector<rappas::row_type>;
 
-    explicit branch_entry() noexcept = default;
-    branch_entry(branch_id _id, vector_type&& rows);
-    branch_entry(const branch_entry&) = delete;
-    branch_entry(branch_entry&&) = default;
-    branch_entry& operator=(const branch_entry&) = delete;
-    branch_entry& operator=(branch_entry&&) = default;
-    ~branch_entry() noexcept = default;
+    explicit node_entry() noexcept = default;
+    node_entry(rappas::branch_type _id, vector_type&& rows);
+    node_entry(const node_entry&) = delete;
+    node_entry(node_entry&&) = default;
+    node_entry& operator=(const node_entry&) = delete;
+    node_entry& operator=(node_entry&&) = default;
+    ~node_entry() noexcept = default;
 
     const_iterator begin(uint32_t kmer_size) const;
     const_iterator end() const;
 
-    void push_back(row&& r);
+    void push_back(rappas::row_type&& row);
 
     size_t get_alignment_size() const;
-    branch_id get_branch_label() const;
+    rappas::branch_type get_label() const;
 
-    const proba_pair& at(size_t position, size_t variant) const;
+    const rappas::proba_pair& at(size_t position, size_t variant) const;
 
 private:
-    branch_id _branch_label;
+    rappas::branch_type _branch_label;
     vector_type _rows;
 };
 
-bool operator==(const branch_entry& lhs, const branch_entry& rhs);
+bool operator==(const node_entry& lhs, const node_entry& rhs);
 
 class view_iterator
 {

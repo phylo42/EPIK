@@ -8,7 +8,7 @@ endif()
 
 # define a hash map
 if(NOT HASH_MAP)
-    set(HASH_MAP "USE_TSL_ROBIN_MAP")
+    set(HASH_MAP "USE_SKA_BYTELL_HASH_MAP")
 endif()
 
 add_subdirectory(core)
