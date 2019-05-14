@@ -48,17 +48,17 @@ phylo_kmer_iterator::pointer phylo_kmer_iterator::operator->()
 
 void phylo_kmer_iterator::next_index()
 {
-    const auto last_mmer = _stack.back();
+    const auto& last_mmer = _stack.back();
     _stack.pop_back();
     if (last_mmer.last_index < core::seq_traits::alphabet_size - 1)
     {
         const auto new_letter_position = last_mmer.last_position;
         const auto new_letter_index = last_mmer.last_index + 1;
         const auto last_letter_score = _entry->at(_start_pos + last_mmer.last_position, last_mmer.last_index).score;
-        const auto& new_letter = _entry->at(_start_pos + new_letter_position, new_letter_index);
+        const auto new_letter = _entry->at(_start_pos + new_letter_position, new_letter_index);
         const auto new_mmer_key = (last_mmer.mmer.key & core::rightest_symbol_mask<core::seq_type>()) | new_letter.index;
         const auto new_mmer_score = last_mmer.mmer.score - last_letter_score + new_letter.score;
-        const auto new_mmer = phylo_mmer{ {new_mmer_key, new_mmer_score}, new_letter_position, new_letter_index, false };
+        auto new_mmer = phylo_mmer{ {new_mmer_key, new_mmer_score}, new_letter_position, new_letter_index, false };
 
         _stack.push_back(new_mmer);
     }
@@ -79,7 +79,7 @@ void phylo_kmer_iterator::next_position()
     const auto& new_letter = _entry->at(_start_pos + new_letter_position, new_letter_index);
     const auto new_mmer_key = (last_mmer.mmer.key << core::bit_length<core::seq_type>()) | new_letter.index;
     const auto new_mmer_score = last_mmer.mmer.score + new_letter.score;
-    const auto new_mmer = phylo_mmer{ {new_mmer_key, new_mmer_score}, new_letter_position, new_letter_index, false };
+    auto new_mmer = phylo_mmer{ {new_mmer_key, new_mmer_score}, new_letter_position, new_letter_index, false };
 
     _stack.push_back(new_mmer);
 }

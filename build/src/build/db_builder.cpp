@@ -114,7 +114,6 @@ std::vector<std::string> get_ghost_ids(const core::phylo_tree& tree)
     return branch_ids;
 }
 
-
 size_t db_builder::explore_kmers(const core::phylo_tree& tree, const proba_matrix& probas)
 {
     size_t count = 0;
@@ -133,8 +132,8 @@ size_t db_builder::explore_kmers(const core::phylo_tree& tree, const proba_matri
         original_node_ids[i] = _extended_mapping[branch_node_label];
 
         /// Get submatrix of probabilities for a current branch node (if presented in proba matrix)
-        const auto phyml_node_label = _artree_mapping[branch_node_label];
-        if (const auto& it = probas.find(phyml_node_label); it != probas.end())
+        const auto artree_node_label = _artree_mapping[branch_node_label];
+        if (const auto& it = probas.find(artree_node_label); it != probas.end())
         {
             size_t branch_count;
             std::tie(_branch_maps[i], branch_count) = explore_branch(it->second);
@@ -148,7 +147,7 @@ size_t db_builder::explore_kmers(const core::phylo_tree& tree, const proba_matri
         auto& map = _branch_maps[i];
         for (const auto& [key, score] : map)
         {
-            _phylo_kmer_db.put(key, original_node_ids[i], score);
+            _phylo_kmer_db.insert(key, { original_node_ids[i], score });
         }
         /// Replace a map with an empty one to free memory
         map = {};
