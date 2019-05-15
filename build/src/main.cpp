@@ -30,8 +30,9 @@ return_code run(const cli::cli_parameters& parameters)
         case cli::build:
         {
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
-                                          parameters.tree_file, parameters.extended_mapping_file,
-                                          parameters.artree_mapping_file, parameters.kmer_size);
+                                          parameters.original_tree_file, parameters.extended_tree_file,
+                                          parameters.extended_mapping_file, parameters.artree_mapping_file,
+                                          parameters.kmer_size);
 
             const auto db_filename = fs::path(parameters.working_directory) / "DB.union";
 

@@ -129,7 +129,7 @@ namespace rappas
         extended_mapping load_extended_mapping(const std::string& file_name)
         {
             cout << "Loading a node mapping: " + file_name << endl;
-            artree_label_mapping mapping;
+            extended_mapping mapping;
 
             ::io::CSVReader<2, ::io::trim_chars<' '>, ::io::no_quote_escape<'\t'>> in(file_name);
             in.read_header(::io::ignore_extra_column, "original_id", "extended_name");

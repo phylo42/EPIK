@@ -27,6 +27,7 @@ namespace cli
     static std::string WORKING_DIR = "workdir", WORKING_DIR_SHORT = "w";
     static std::string AR_PROBABILITIES = "ar-probabilities", AR_PROBABILITIES_SHORT = "a";
     static std::string REFTREE = "reftree", REFTREE_SHORT = "t";
+    static std::string EXTENDED_TREE = "extended_tree", EXTENDED_TREE_SHORT = "x";
     static std::string EXTENDED_MAPPING = "extended_mapping", EXTENDED_MAPPING_SHORT = "e";
     static std::string ARTREE_MAPPING = "artree_mapping", ARTREE_MAPPING_SHORT = "m";
     static std::string K = "k", K_SHORT = "k";
@@ -42,7 +43,9 @@ namespace cli
             ((AR_PROBABILITIES + "," + AR_PROBABILITIES_SHORT).c_str(), po::value<fs::path>()->required(),
              "Ancestral reconstruction probabilities file")
             ((REFTREE + "," + REFTREE_SHORT).c_str(), po::value<fs::path>()->required(),
-             "Phylogenetic tree file")
+             "Original phylogenetic tree file")
+            ((EXTENDED_TREE + "," + EXTENDED_TREE_SHORT).c_str(), po::value<fs::path>()->required(),
+             "Extended phylogenetic tree file")
             ((EXTENDED_MAPPING + "," + EXTENDED_MAPPING_SHORT).c_str(), po::value<fs::path>()->required(),
              "Original mapping file")
             ((ARTREE_MAPPING + "," + ARTREE_MAPPING_SHORT).c_str(), po::value<fs::path>()->required(),
@@ -81,7 +84,8 @@ namespace cli
 
             parameters.working_directory = vm[WORKING_DIR].as<fs::path>().string();
             parameters.ar_probabilities_file = vm[AR_PROBABILITIES].as<fs::path>().string();
-            parameters.tree_file = vm[REFTREE].as<fs::path>().string();
+            parameters.original_tree_file = vm[REFTREE].as<fs::path>().string();
+            parameters.extended_tree_file = vm[EXTENDED_TREE].as<fs::path>().string();
             parameters.extended_mapping_file = vm[EXTENDED_MAPPING].as<fs::path>().string();
             parameters.artree_mapping_file = vm[ARTREE_MAPPING].as<fs::path>().string();
             parameters.kmer_size = vm[K].as<size_t>();
