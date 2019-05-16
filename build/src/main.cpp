@@ -29,6 +29,12 @@ return_code run(const cli::cli_parameters& parameters)
         }
         case cli::build:
         {
+            if (parameters.kmer_size > core::seq_traits::max_kmer_length)
+            {
+                std::cerr << "Maximum k-mer size allowed: " << core::seq_traits::max_kmer_length << std::endl;
+                return return_code::argument_error;
+            }
+
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
@@ -62,22 +68,22 @@ int main(int argc, const char* argv[])
     }
     catch (const conflicting_options& e)
     {
-        std::cout << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return 1;
     }
     catch (const bad_options& e)
     {
-        std::cout << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return 1;
     }
     catch (const std::runtime_error& e)
     {
-        std::cout << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return 1;
     }
     catch (...)
     {
-        std::cout << "Unexpected error. " << std::endl;
+        std::cerr << "Unexpected error. " << std::endl;
         return 1;
     }
     return 0;
