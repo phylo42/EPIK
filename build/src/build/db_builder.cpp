@@ -204,7 +204,7 @@ size_t db_builder::explore_kmers(const phylo_tree& orignal_tree, const phylo_tre
     _branch_maps.resize(orignal_tree.get_node_count());
     std::vector<phylo_kmer::branch_type> node_postorder_ids(orignal_tree.get_node_count());
 
-    //#pragma omp parallel for schedule(auto) reduction(+: count) //num_threads(8)
+    #pragma omp parallel for schedule(auto) reduction(+: count) //num_threads(8)
     for (size_t i = 0; i < node_groups.size(); ++i)
     {
         const auto& node_group = node_groups[i];
