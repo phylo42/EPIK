@@ -11,13 +11,15 @@ class node_entry;
 class phylo_kmer_iterator
 {
 public:
-    /// Temporary data storage for mmers, m <= k
+    /// \brief Temporary data storage for mmers, m <= k. Used only in the branch-and-bound algorithm
+    /// to generate phylo-kmers
     struct phylo_mmer
     {
         core::phylo_kmer mmer;
+        /// a position of the last letter
         core::phylo_kmer::pos_type last_position;
         size_t last_index;
-        bool visited;
+        size_t next_index;
     };
 
     using iterator_category = std::forward_iterator_tag;
@@ -26,7 +28,7 @@ public:
     using stack_type = boost::container::static_vector<phylo_mmer, core::seq_traits::max_kmer_length>;
 
     phylo_kmer_iterator(const node_entry* entry, size_t kmer_size,
-                        core::phylo_kmer::pos_type start_pos, stack_type stack) noexcept;
+                        core::phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept;
     phylo_kmer_iterator(const phylo_kmer_iterator&) = delete;
     phylo_kmer_iterator(phylo_kmer_iterator&&) = default;
     phylo_kmer_iterator& operator=(const phylo_kmer_iterator& rhs) = delete;
@@ -41,8 +43,6 @@ public:
     pointer operator->();
 
 private:
-    void next_index();
-    void next_position();
     phylo_mmer next_phylokmer();
 
     const node_entry* _entry;

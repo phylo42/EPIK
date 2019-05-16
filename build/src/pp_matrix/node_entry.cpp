@@ -7,9 +7,9 @@ node_entry::node_entry(branch_type _id, vector_type&& rows)
     , _rows{ std::move(rows) }
 {}
 
-node_entry::const_iterator node_entry::begin(uint32_t kmer_size) const
+node_entry::const_iterator node_entry::begin(size_t kmer_size) const
 {
-    return { { this, 0, kmer_size } };
+    return { { this, 0, core::phylo_kmer::pos_type(kmer_size) } };
 }
 
 node_entry::const_iterator node_entry::end() const
@@ -49,7 +49,7 @@ view_iterator::view_iterator(node_entry_view view) noexcept
 view_iterator& view_iterator::operator++()
 {
     auto entry = _view.get_entry();
-    if (_view.get_end_pos() < entry->get_alignment_size())
+    if (size_t(_view.get_end_pos()) < entry->get_alignment_size())
     {
         _view = { node_entry_view{ entry, _view.get_start_pos() + 1, _view.get_end_pos() + 1 } };
     }
