@@ -4,6 +4,7 @@
 
 #include <core/phylo_kmer_db.h>
 #include <core/phylo_tree.h>
+#include <utils/io/file_io.h>
 #include "db_builder.h"
 #include "pp_matrix/proba_matrix.h"
 #include "pp_matrix/phyml.h"
@@ -13,6 +14,8 @@ using std::cout, std::endl;
 using std::to_string;
 using namespace core;
 
+
+
 namespace rappas
 {
     /// \brief Constructs a database of phylo-kmers.
@@ -20,7 +23,8 @@ namespace rappas
     {
         friend phylo_kmer_db build(const string& working_directory, const string& ar_probabilities_file,
                                    const string& original_tree_file, const string& extended_tree_file,
-                                   const string& extended_mapping_file, const string& artree_mapping_file, size_t kmer_size);
+                                   const string& extended_mapping_file, const string& artree_mapping_file,
+                                   size_t kmer_size);
     public:
         /// Member types
         /// \brief A hash map to store all the phylo-kmers, placed to one original node
@@ -57,7 +61,8 @@ namespace rappas
 
         /// \brief Runs a phylo-kmer exploration for every ghost node of the extended_tree
         /// \return The number of explored phylo-kmers. This number can be more, than a size of a resulting database
-        size_t explore_kmers(const phylo_tree& orignal_tree, const phylo_tree& extended_tree, const proba_matrix& probas);
+        size_t explore_kmers(const phylo_tree& original_tree, const phylo_tree& extended_tree,
+                             const proba_matrix& probas);
 
         /// \brief Explores phylo-kmers of a collection of ghost nodes. Here we assume that the nodes
         /// in the group correspond to one original node
@@ -82,8 +87,9 @@ namespace rappas
 
 using namespace rappas;
 
-db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file, const string& original_tree_file,
-    const string& extended_tree_file, const string& extended_mapping_file, const string& artree_mapping_file, size_t kmer_size)
+db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file,
+    const string& original_tree_file, const string& extended_tree_file, const string& extended_mapping_file,
+    const string& artree_mapping_file, size_t kmer_size)
     : _working_directory{ working_directory }
     , _ar_probabilities_file{ ar_probabilities_file }
     , _original_tree_file{ original_tree_file }
@@ -91,7 +97,9 @@ db_builder::db_builder(const string& working_directory, const string& ar_probabi
     , _extended_mapping_file{ extended_mapping_file }
     , _artree_mapping_file{ artree_mapping_file }
     , _kmer_size{ kmer_size }
-    , _phylo_kmer_db{ kmer_size }
+    /// I do not like reading a file here, but it seems to be better than having something like "set_tree"
+    /// in the public interface of the phylo_kmer_db class.
+    , _phylo_kmer_db{ kmer_size, rappas::io::read_as_string(original_tree_file) }
 {}
 
 void db_builder::run()
@@ -120,8 +128,9 @@ void db_builder::run()
         total_entries += kmer_entry.second.size();
     }
 
-    std::cout << "Built " << total_entries << " phylo-kmers out of " << tuples_count << " for " << _phylo_kmer_db.size()
-              << " k-mer values.\nTime (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+    std::cout << "Built " << total_entries << " phylo-kmers out of " << tuples_count << " for "
+              << _phylo_kmer_db.size() << " k-mer values.\nTime (ms): "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
               << "\n\n" << std::flush;
 }
 
@@ -189,7 +198,8 @@ db_builder::proba_group db_builder::get_submatrices(const proba_matrix& probas, 
     return submatrices;
 }
 
-size_t db_builder::explore_kmers(const phylo_tree& orignal_tree, const phylo_tree& extended_tree, const proba_matrix& probas)
+size_t db_builder::explore_kmers(const phylo_tree& original_tree, const phylo_tree& extended_tree,
+                                 const proba_matrix& probas)
 {
     size_t count = 0;
 
@@ -201,8 +211,8 @@ size_t db_builder::explore_kmers(const phylo_tree& orignal_tree, const phylo_tre
 
     /// Process branches in parallel. Results of the branch-and-bound algorithm are stored
     /// in a hash map for every group separately.
-    _branch_maps.resize(orignal_tree.get_node_count());
-    std::vector<phylo_kmer::branch_type> node_postorder_ids(orignal_tree.get_node_count());
+    _branch_maps.resize(original_tree.get_node_count());
+    std::vector<phylo_kmer::branch_type> node_postorder_ids(original_tree.get_node_count());
 
     #pragma omp parallel for schedule(auto) reduction(+: count) //num_threads(8)
     for (size_t i = 0; i < node_groups.size(); ++i)
@@ -215,7 +225,8 @@ size_t db_builder::explore_kmers(const phylo_tree& orignal_tree, const phylo_tre
         /// in the original tree. We take the first ghost node, because all of them correspond the same
         /// original node
         const auto original_node_preorder_id = _extended_mapping[node_group[0]];
-        const auto original_node_postorder_id = (*orignal_tree[original_node_preorder_id])->get_postorder_id();
+        const phylo_node* original_node = *original_tree.get_by_preorder_id(original_node_preorder_id);
+        const auto original_node_postorder_id = original_node->get_postorder_id();
         node_postorder_ids[i] = original_node_postorder_id;
 
         /// Get submatrices of probabilities for a group
@@ -283,7 +294,8 @@ namespace rappas
 {
     phylo_kmer_db build(const std::string& working_directory, const std::string& ar_probabilities_file,
                         const std::string& original_tree_file, const std::string& extended_tree_file,
-                        const std::string& extended_mapping_file, const std::string& artree_mapping_file, size_t kmer_size)
+                        const std::string& extended_mapping_file, const std::string& artree_mapping_file,
+                        size_t kmer_size)
     {
         db_builder builder(working_directory, ar_probabilities_file, original_tree_file, extended_tree_file,
                            extended_mapping_file, artree_mapping_file, kmer_size);

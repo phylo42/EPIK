@@ -9,7 +9,7 @@ namespace rappas
     struct proba_pair
     {
         core::phylo_kmer::score_type score;
-        size_t index;
+        core::phylo_kmer::key_type index;
     };
 
     using branch_type = core::phylo_kmer::branch_type;
