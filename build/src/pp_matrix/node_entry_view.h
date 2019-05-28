@@ -1,8 +1,42 @@
 #ifndef RAPPAS_CPP_NODE_ENTRY_VIEW_H
 #define RAPPAS_CPP_NODE_ENTRY_VIEW_H
 
-#include <boost/container/static_vector.hpp>
 #include "row.h"
+#include <boost/version.hpp>
+
+/// static_vector has been accepted in boost only in v1.56. We check the version of boost library,
+/// and use std::vector if the library is too old.
+/// For our purposes, boost::static_vector is surely preferable due to its better performance.
+#if ((BOOST_VERSION / 100 % 1000) < 56)
+#define USE_NONSTATIC_VECTOR 1
+#endif
+
+#ifdef USE_NONSTATIC_VECTOR
+#include <vector>
+#pragma message("Boost is too old and does not provide static_vector. Using std::vector instead.")
+
+namespace rappas
+{
+    namespace impl
+    {
+        template <class... Args>
+        using stack_type = std::vector<Args...>;
+    }
+}
+#else
+
+#include <boost/container/static_vector.hpp>
+
+namespace rappas
+{
+    namespace impl
+    {
+        template <typename T>
+        using stack_type = boost::container::static_vector<T, core::seq_traits::max_kmer_length>;
+    }
+}
+#endif
+
 
 class node_entry;
 
@@ -22,10 +56,16 @@ public:
         size_t next_index;
     };
 
+    /// Member types
+
     using iterator_category = std::forward_iterator_tag;
     using reference = const core::phylo_kmer&;
     using pointer = const core::phylo_kmer*;
-    using stack_type = boost::container::static_vector<phylo_mmer, core::seq_traits::max_kmer_length>;
+
+    /// A stack type. Boost::static_vector of fixed size (core::seq_traits::max_kmer_length) if
+    /// presented in boost, std::vector instead.
+    using stack_type = rappas::impl::stack_type<phylo_mmer>;
+
 
     phylo_kmer_iterator(const node_entry* entry, size_t kmer_size,
                         core::phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept;
