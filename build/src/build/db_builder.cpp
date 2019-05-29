@@ -24,7 +24,7 @@ namespace rappas
         friend phylo_kmer_db build(const string& working_directory, const string& ar_probabilities_file,
                                    const string& original_tree_file, const string& extended_tree_file,
                                    const string& extended_mapping_file, const string& artree_mapping_file,
-                                   size_t kmer_size);
+                                   size_t kmer_size, size_t num_threads);
     public:
         /// Member types
         /// \brief A hash map to store all the phylo-kmers, placed to one original node
@@ -41,7 +41,8 @@ namespace rappas
         /// Ctors, dtor and operator=
         db_builder(const string& working_directory, const string& ar_probabilities_file,
                    const string& original_tree_file, const string& extended_tree_file,
-                   const string& extended_mapping_file, const string& artree_mapping_file, size_t kmer_size);
+                   const string& extended_mapping_file, const string& artree_mapping_file,
+                   size_t kmer_size, size_t num_threads);
         db_builder(const db_builder&) = delete;
         db_builder(db_builder&&) = delete;
         db_builder& operator=(const db_builder&) = delete;
@@ -77,6 +78,7 @@ namespace rappas
         string _artree_mapping_file;
 
         size_t _kmer_size;
+        size_t _num_threads;
         phylo_kmer_db _phylo_kmer_db;
         std::vector<branch_hash_map> _branch_maps;
 
@@ -89,7 +91,7 @@ using namespace rappas;
 
 db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file,
     const string& original_tree_file, const string& extended_tree_file, const string& extended_mapping_file,
-    const string& artree_mapping_file, size_t kmer_size)
+    const string& artree_mapping_file, size_t kmer_size, size_t num_threads)
     : _working_directory{ working_directory }
     , _ar_probabilities_file{ ar_probabilities_file }
     , _original_tree_file{ original_tree_file }
@@ -97,6 +99,7 @@ db_builder::db_builder(const string& working_directory, const string& ar_probabi
     , _extended_mapping_file{ extended_mapping_file }
     , _artree_mapping_file{ artree_mapping_file }
     , _kmer_size{ kmer_size }
+    , _num_threads{ num_threads }
     /// I do not like reading a file here, but it seems to be better than having something like "set_tree"
     /// in the public interface of the phylo_kmer_db class.
     , _phylo_kmer_db{ kmer_size, rappas::io::read_as_string(original_tree_file) }
@@ -214,7 +217,7 @@ size_t db_builder::explore_kmers(const phylo_tree& original_tree, const phylo_tr
     _branch_maps.resize(original_tree.get_node_count());
     std::vector<phylo_kmer::branch_type> node_postorder_ids(original_tree.get_node_count());
 
-    #pragma omp parallel for schedule(auto) reduction(+: count) //num_threads(8)
+    #pragma omp parallel for schedule(auto) reduction(+: count) num_threads(_num_threads)
     for (size_t i = 0; i < node_groups.size(); ++i)
     {
         const auto& node_group = node_groups[i];
@@ -295,10 +298,10 @@ namespace rappas
     phylo_kmer_db build(const std::string& working_directory, const std::string& ar_probabilities_file,
                         const std::string& original_tree_file, const std::string& extended_tree_file,
                         const std::string& extended_mapping_file, const std::string& artree_mapping_file,
-                        size_t kmer_size)
+                        size_t kmer_size, size_t num_threads)
     {
         db_builder builder(working_directory, ar_probabilities_file, original_tree_file, extended_tree_file,
-                           extended_mapping_file, artree_mapping_file, kmer_size);
+                           extended_mapping_file, artree_mapping_file, kmer_size, num_threads);
         builder.run();
         return std::move(builder._phylo_kmer_db);
     }

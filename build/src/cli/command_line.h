@@ -26,6 +26,7 @@ namespace cli
 
         // algo options
         size_t kmer_size;
+        size_t num_threads;
     };
 
     const std::string get_option_list();
