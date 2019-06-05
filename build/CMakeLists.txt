@@ -23,9 +23,9 @@ target_sources(build_n
 
             # posterior probability matrix
             src/pp_matrix/proba_matrix.cpp
+            src/pp_matrix/node_entry.cpp
+            src/pp_matrix/node_entry_view.cpp
             src/pp_matrix/phyml.cpp
-            src/pp_matrix/branch_entry.cpp
-            src/pp_matrix/branch_entry_view.cpp
 
             src/main.cpp
         )

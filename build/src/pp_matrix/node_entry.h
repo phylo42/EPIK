@@ -1,8 +1,8 @@
-#ifndef RAPPAS_CPP_BRANCH_ENTRY_H
-#define RAPPAS_CPP_BRANCH_ENTRY_H
+#ifndef RAPPAS_CPP_NODE_ENTRY_H
+#define RAPPAS_CPP_NODE_ENTRY_H
 
 #include <vector>
-#include "branch_entry_view.h"
+#include "node_entry_view.h"
 
 class view_iterator;
 
@@ -21,7 +21,7 @@ public:
     node_entry& operator=(node_entry&&) = default;
     ~node_entry() noexcept = default;
 
-    const_iterator begin(uint32_t kmer_size) const;
+    const_iterator begin(size_t kmer_size, core::phylo_kmer::score_type threshold) const;
     const_iterator end() const;
 
     void push_back(rappas::row_type&& row);
@@ -42,10 +42,10 @@ class view_iterator
 {
 public:
     using iterator_category = std::forward_iterator_tag;
-    using const_reference = const branch_entry_view&;
-    using const_pointer = const branch_entry_view*;
+    using const_reference = const node_entry_view&;
+    using const_pointer = const node_entry_view*;
 
-    view_iterator(branch_entry_view view) noexcept;
+    view_iterator(node_entry_view view) noexcept;
     view_iterator(const view_iterator& view) = delete;
     view_iterator(view_iterator&& view) = delete;
     view_iterator& operator=(const view_iterator&) = delete;
@@ -59,7 +59,7 @@ public:
     const_reference operator*() const noexcept;
     const_pointer operator->() const noexcept;
 private:
-    branch_entry_view _view;
+    node_entry_view _view;
 };
 
-#endif //RAPPAS_CPP_BRANCH_ENTRY_H
+#endif //RAPPAS_CPP_NODE_ENTRY_H

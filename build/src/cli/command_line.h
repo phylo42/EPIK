@@ -4,6 +4,7 @@
 #include <exception>
 #include <string>
 #include <map>
+#include <core/phylo_kmer.h>
 
 namespace cli
 {
@@ -19,12 +20,15 @@ namespace cli
         action_t action;
         std::string working_directory;
         std::string ar_probabilities_file;
-        std::string tree_file;
+        std::string original_tree_file;
+        std::string extended_tree_file;
         std::string extended_mapping_file;
         std::string artree_mapping_file;
 
         // algo options
         size_t kmer_size;
+        core::phylo_kmer::score_type omega;
+        size_t num_threads;
     };
 
     const std::string get_option_list();

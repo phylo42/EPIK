@@ -2,7 +2,7 @@
 #define RAPPAS_CPP_PROBA_MATRIX_H
 
 #include <unordered_map>
-#include "branch_entry.h"
+#include "node_entry.h"
 
 namespace rappas
 {

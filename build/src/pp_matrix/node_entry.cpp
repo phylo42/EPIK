@@ -1,4 +1,4 @@
-#include "branch_entry.h"
+#include "node_entry.h"
 
 using namespace rappas;
 
@@ -7,14 +7,14 @@ node_entry::node_entry(branch_type _id, vector_type&& rows)
     , _rows{ std::move(rows) }
 {}
 
-node_entry::const_iterator node_entry::begin(uint32_t kmer_size) const
+node_entry::const_iterator node_entry::begin(size_t kmer_size, core::phylo_kmer::score_type threshold) const
 {
-    return { { this, 0, kmer_size } };
+    return { { this, threshold, 0, core::phylo_kmer::pos_type(kmer_size) } };
 }
 
 node_entry::const_iterator node_entry::end() const
 {
-    return { { this, 0, 0 } };
+    return { { this, 0.0, 0, 0 } };
 }
 
 void node_entry::push_back(row_type&& row)
@@ -42,21 +42,21 @@ bool operator==(const node_entry& lhs, const node_entry& rhs)
     return lhs.get_label() == rhs.get_label();
 }
 
-view_iterator::view_iterator(branch_entry_view view) noexcept
+view_iterator::view_iterator(node_entry_view view) noexcept
     : _view{ view }
 {}
 
 view_iterator& view_iterator::operator++()
 {
     auto entry = _view.get_entry();
-    if (_view.get_end_pos() < entry->get_alignment_size())
+    if (size_t(_view.get_end_pos()) < entry->get_alignment_size())
     {
-        _view = { branch_entry_view{ entry, _view.get_start_pos() + 1, _view.get_end_pos() + 1 } };
+        _view = { node_entry_view{ entry, _view.get_threshold(), _view.get_start_pos() + 1, _view.get_end_pos() + 1 } };
     }
     else
     {
-        /// WARNING: the same code in branch_entry::end
-        _view = { branch_entry_view{ entry, 0, 0 } };
+        /// WARNING: the same code in node_entry::end
+        _view = { node_entry_view{ entry, 0.0, 0, 0 } };
     }
     return *this;
 }

@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include "row.h"
 
-class proba_matrix;
-
 namespace rappas
 {
     class proba_matrix;
