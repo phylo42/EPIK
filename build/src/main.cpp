@@ -1,12 +1,13 @@
 #include <iostream>
-#include <boost/filesystem.hpp>
+#include <sstream>
 #include <chrono>
+#include <boost/filesystem.hpp>
 #include <core/phylo_kmer_db.h>
 #include <core/serialization.h>
 #include "cli/command_line.h"
 #include "cli/exceptions.h"
-#include "return.h"
 #include "build/db_builder.h"
+#include "return.h"
 
 namespace fs = boost::filesystem;
 
@@ -17,6 +18,15 @@ return_code print_help()
               << cli::get_option_list() << std::endl;
 
     return return_code::help;
+}
+
+std::string generate_db_name(const core::phylo_kmer_db& db)
+{
+    const auto kmer_size = db.kmer_size();
+
+    std::ostringstream out;
+    out << "DB_k" << kmer_size << "_w" << db.omega() << "_t" << core::score_threshold(kmer_size) << ".rps";
+    return out.str();
 }
 
 return_code run(const cli::cli_parameters& parameters)
@@ -40,7 +50,7 @@ return_code run(const cli::cli_parameters& parameters)
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
                                           parameters.kmer_size, parameters.num_threads);
 
-            const auto db_filename = fs::path(parameters.working_directory) / "DB.union";
+            const auto db_filename = fs::path(parameters.working_directory) / generate_db_name(db);
 
             std::cout << "Saving database to: " << db_filename.string() << "..." << std::endl;
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -54,7 +64,7 @@ return_code run(const cli::cli_parameters& parameters)
         {
             return return_code::unknown_error;
         }
-    };
+    }
 }
 
 int main(int argc, const char* argv[])
