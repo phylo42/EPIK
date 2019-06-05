@@ -67,7 +67,7 @@ public:
     using stack_type = rappas::impl::stack_type<phylo_mmer>;
 
 
-    phylo_kmer_iterator(const node_entry* entry, size_t kmer_size,
+    phylo_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
                         core::phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept;
     phylo_kmer_iterator(const phylo_kmer_iterator&) = delete;
     phylo_kmer_iterator(phylo_kmer_iterator&&) = default;
@@ -100,7 +100,8 @@ public:
     using const_iterator = phylo_kmer_iterator;
     using const_reference = const_iterator::reference;
 
-    node_entry_view(const node_entry* entry, core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept;
+    node_entry_view(const node_entry* entry, core::phylo_kmer::score_type threshold,
+        core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept;
     node_entry_view(const node_entry_view& other) noexcept;
     node_entry_view(node_entry_view&&) = delete;
     node_entry_view& operator=(const node_entry_view&) = delete;
@@ -108,14 +109,16 @@ public:
     ~node_entry_view() noexcept = default;
 
     const_iterator begin() const;
-    const_iterator end() const;
+    const_iterator end() const noexcept;
 
-    const node_entry* get_entry() const;
-    core::phylo_kmer::pos_type get_start_pos() const;
-    core::phylo_kmer::pos_type get_end_pos() const;
+    const node_entry* get_entry() const noexcept;
+    core::phylo_kmer::pos_type get_start_pos() const noexcept;
+    core::phylo_kmer::pos_type get_end_pos() const noexcept;
+    core::phylo_kmer::score_type get_threshold() const noexcept;
 
 private:
     const node_entry* _entry;
+    core::phylo_kmer::score_type _threshold;
     core::phylo_kmer::pos_type _start;
     core::phylo_kmer::pos_type _end;
 };

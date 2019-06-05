@@ -21,7 +21,7 @@ public:
     node_entry& operator=(node_entry&&) = default;
     ~node_entry() noexcept = default;
 
-    const_iterator begin(size_t kmer_size) const;
+    const_iterator begin(size_t kmer_size, core::phylo_kmer::score_type threshold) const;
     const_iterator end() const;
 
     void push_back(rappas::row_type&& row);

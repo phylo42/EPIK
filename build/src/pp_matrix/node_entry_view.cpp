@@ -5,12 +5,12 @@
 
 using namespace core;
 
-phylo_kmer_iterator::phylo_kmer_iterator(const node_entry* entry, size_t kmer_size,
-                                         core::phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept
+phylo_kmer_iterator::phylo_kmer_iterator(const node_entry* entry, size_t kmer_size, phylo_kmer::score_type threshold,
+                                         phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept
     : _entry{ entry }
     , _kmer_size{ kmer_size }
     , _start_pos{ start_pos }
-    , _threshold{ core::score_threshold(kmer_size) }
+    , _threshold{ threshold }
     , _stack{ std::move(stack) }
 {
     /// stack can be empty for the end() method
@@ -108,14 +108,13 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
     return {};
 }
 
-node_entry_view::node_entry_view(const node_entry* entry, core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept
-    : _entry{ entry }
-    , _start{ start }
-    , _end{ end }
+node_entry_view::node_entry_view(const node_entry* entry, core::phylo_kmer::score_type threshold,
+    core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept
+    : _entry{ entry }, _threshold{ threshold }, _start{ start }, _end{ end }
 {}
 
 node_entry_view::node_entry_view(const node_entry_view& other) noexcept
-    : node_entry_view{ other._entry, other._start, other._end}
+    : node_entry_view{ other._entry, other._threshold, other._start, other._end}
 {}
 
 node_entry_view::const_iterator node_entry_view::begin() const
@@ -142,19 +141,19 @@ node_entry_view::const_iterator node_entry_view::begin() const
     }
 
     /// There is no point to iterate over the window if the first k-mer is already not good enough
-    if (kmer_score < score_threshold(kmer_size))
+    if (kmer_score < _threshold)
     {
         return end();
     }
     else
     {
-        return phylo_kmer_iterator{ _entry, kmer_size, _start, std::move(stack) };
+        return phylo_kmer_iterator{ _entry, kmer_size, _threshold, _start, std::move(stack) };
     }
 }
 
-node_entry_view::const_iterator node_entry_view::end() const
+node_entry_view::const_iterator node_entry_view::end() const noexcept
 {
-    return phylo_kmer_iterator{ _entry, 0, 0, {}};
+    return phylo_kmer_iterator{ _entry, 0, _threshold, 0, {}};
 }
 
 node_entry_view& node_entry_view::operator=(node_entry_view&& other) noexcept
@@ -171,19 +170,24 @@ node_entry_view& node_entry_view::operator=(node_entry_view&& other) noexcept
     return *this;
 }
 
-const node_entry* node_entry_view::get_entry() const
+const node_entry* node_entry_view::get_entry() const noexcept
 {
     return _entry;
 }
 
-core::phylo_kmer::pos_type node_entry_view::get_start_pos() const
+core::phylo_kmer::pos_type node_entry_view::get_start_pos() const noexcept
 {
     return _start;
 }
 
-core::phylo_kmer::pos_type node_entry_view::get_end_pos() const
+core::phylo_kmer::pos_type node_entry_view::get_end_pos() const noexcept
 {
     return _end;
+}
+
+core::phylo_kmer::score_type node_entry_view::get_threshold() const noexcept
+{
+    return _threshold;
 }
 
 bool operator==(const node_entry_view& a, const node_entry_view& b) noexcept

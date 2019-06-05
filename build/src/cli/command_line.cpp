@@ -31,6 +31,7 @@ namespace cli
     static std::string EXTENDED_MAPPING = "extended_mapping", EXTENDED_MAPPING_SHORT = "e";
     static std::string ARTREE_MAPPING = "artree_mapping", ARTREE_MAPPING_SHORT = "m";
     static std::string K = "k", K_SHORT = "k";
+    static std::string OMEGA="omega", OMEGA_SHORT="o";
     static std::string NUM_THREADS = "num_threads", NUM_THREADS_SHORT = "j";
 
     const po::options_description get_opt_description()
@@ -53,6 +54,8 @@ namespace cli
              "Ancestral reconstruction tree mapping file")
             ((K + "," + K_SHORT).c_str(), po::value<size_t>()->default_value(8),
              "k-mer length used at DB build")
+            ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<core::phylo_kmer::score_type>()->default_value(1.0),
+             "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
              "Number of threads");
         return desc;
@@ -92,6 +95,7 @@ namespace cli
             parameters.extended_mapping_file = vm[EXTENDED_MAPPING].as<fs::path>().string();
             parameters.artree_mapping_file = vm[ARTREE_MAPPING].as<fs::path>().string();
             parameters.kmer_size = vm[K].as<size_t>();
+            parameters.omega = vm[OMEGA].as<core::phylo_kmer::score_type>();
             parameters.num_threads = vm[NUM_THREADS].as<size_t>();
         }
         catch (const po::error& e)

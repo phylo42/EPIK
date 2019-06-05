@@ -4,6 +4,7 @@
 #include <boost/filesystem.hpp>
 #include <core/phylo_kmer_db.h>
 #include <core/serialization.h>
+#include <iomanip>
 #include "cli/command_line.h"
 #include "cli/exceptions.h"
 #include "build/db_builder.h"
@@ -23,9 +24,12 @@ return_code print_help()
 std::string generate_db_name(const core::phylo_kmer_db& db)
 {
     const auto kmer_size = db.kmer_size();
+    const auto omega = db.omega();
+    const auto threshold = core::score_threshold(omega, kmer_size);
 
     std::ostringstream out;
-    out << "DB_k" << kmer_size << "_w" << db.omega() << "_t" << core::score_threshold(kmer_size) << ".rps";
+    out << "DB_k" << kmer_size << "_w" << std::fixed << std::setprecision(2) << omega << "_t" <<
+        std::setprecision(4) << threshold << ".rps";
     return out.str();
 }
 
@@ -48,7 +52,7 @@ return_code run(const cli::cli_parameters& parameters)
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
-                                          parameters.kmer_size, parameters.num_threads);
+                                          parameters.kmer_size, parameters.omega, parameters.num_threads);
 
             const auto db_filename = fs::path(parameters.working_directory) / generate_db_name(db);
 
@@ -91,10 +95,11 @@ int main(int argc, const char* argv[])
         std::cerr << e.what() << std::endl;
         return 1;
     }
+    /*
     catch (...)
     {
         std::cerr << "Unexpected error. " << std::endl;
         return 1;
-    }
+    }*/
     return 0;
 }
