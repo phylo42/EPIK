@@ -1,7 +1,9 @@
 #include <iostream>
 #include <chrono>
+#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <core/phylo_kmer_db.h>
 #include <core/phylo_tree.h>
 #include <utils/io/file_io.h>
@@ -13,7 +15,7 @@ using std::string;
 using std::cout, std::endl;
 using std::to_string;
 using namespace core;
-
+namespace fs = boost::filesystem;
 
 
 namespace rappas
@@ -54,6 +56,9 @@ namespace rappas
         void run();
 
     private:
+        /// \brief Returns a filename for a hashmap of a given group
+        std::string group_hashmap_file(const branch_type& group) const;
+
         /// \brief Groups ghost nodes by corresponding original node id
         std::vector<id_group> group_ghost_ids(const std::vector<std::string>& ghost_ids) const;
 
@@ -70,7 +75,17 @@ namespace rappas
         /// \return A hash map with phylo-kmers stored and a number of explored phylo-kmers
         std::pair<branch_hash_map, size_t> explore_group(const proba_group& group);
 
+        /// \brief Saves a hash map to file
+        void save_hash_map(const branch_hash_map& map, const std::string& filename) const;
+
+        /// \brief Loads a hash map from file
+        branch_hash_map load_hash_map(const std::string& filename) const;
+
+        /// \brief Working and output directory
         string _working_directory;
+        /// \brief A subdirectory of _working_directory to store hashmaps
+        string _hashmaps_directory;
+
         string _ar_probabilities_file;
         string _original_tree_file;
         string _extended_tree_file;
@@ -81,7 +96,6 @@ namespace rappas
         core::phylo_kmer::score_type _omega;
         size_t _num_threads;
         phylo_kmer_db _phylo_kmer_db;
-        std::vector<branch_hash_map> _branch_maps;
 
         extended_mapping _extended_mapping;
         artree_label_mapping _artree_mapping;
@@ -94,6 +108,7 @@ db_builder::db_builder(const string& working_directory, const string& ar_probabi
     const string& original_tree_file, const string& extended_tree_file, const string& extended_mapping_file,
     const string& artree_mapping_file, size_t kmer_size, core::phylo_kmer::score_type omega, size_t num_threads)
     : _working_directory{ working_directory }
+    , _hashmaps_directory{ (fs::path{ working_directory } / fs::path{ "hashmaps" }).string() }
     , _ar_probabilities_file{ ar_probabilities_file }
     , _original_tree_file{ original_tree_file }
     , _extended_tree_file{ extended_tree_file }
@@ -107,11 +122,26 @@ db_builder::db_builder(const string& working_directory, const string& ar_probabi
     , _phylo_kmer_db{ kmer_size, omega, rappas::io::read_as_string(original_tree_file) }
 {}
 
+void create_directory(const std::string& dirname)
+{
+    /// Create if does not exist
+    if (!fs::is_directory(dirname) || !fs::exists(dirname))
+    {
+        if (!fs::create_directory(dirname))
+        {
+            throw new std::runtime_error("Cannot create directory " + dirname);
+        }
+    }
+}
+
 void db_builder::run()
 {
     /// Load .tsv files
     _extended_mapping = rappas::io::load_extended_mapping(_extended_mapping_file);
     _artree_mapping = rappas::io::load_artree_mapping(_artree_mapping_file);
+
+    /// create a temporary directory for hashmaps
+    create_directory(_hashmaps_directory);
 
     /// Load .newick files
     const auto original_tree = rappas::io::load_newick(_original_tree_file);
@@ -158,6 +188,11 @@ std::vector<std::string> get_ghost_ids(const phylo_tree& tree)
         }
     }
     return branch_ids;
+}
+
+std::string db_builder::group_hashmap_file(const branch_type& group) const
+{
+    return (fs::path{ _hashmaps_directory } / fs::path{ std::to_string(group) }).string();
 }
 
 std::vector<db_builder::id_group> db_builder::group_ghost_ids(const std::vector<std::string>& ghost_ids) const
@@ -215,9 +250,8 @@ size_t db_builder::explore_kmers(const phylo_tree& original_tree, const phylo_tr
     const auto node_groups = group_ghost_ids(get_ghost_ids(extended_tree));
 
     /// Process branches in parallel. Results of the branch-and-bound algorithm are stored
-    /// in a hash map for every group separately.
-    _branch_maps.resize(original_tree.get_node_count());
-    std::vector<phylo_kmer::branch_type> node_postorder_ids(original_tree.get_node_count());
+    /// in a hash map for every group separately on disk.
+    std::vector<phylo_kmer::branch_type> node_postorder_ids(node_groups.size());
 
     #pragma omp parallel for schedule(auto) reduction(+: count) num_threads(_num_threads)
     for (size_t i = 0; i < node_groups.size(); ++i)
@@ -238,23 +272,25 @@ size_t db_builder::explore_kmers(const phylo_tree& original_tree, const phylo_tr
         proba_group submatrices = get_submatrices(probas, node_group);
         size_t branch_count = 0;
 
-        /// Explore k-mers of a group and save results in a hash map
-        std::tie(_branch_maps[i], branch_count) = explore_group(submatrices);
+        /// Explore k-mers of a group and store results in a hash map
+        branch_hash_map group_hash_map;
+        std::tie(group_hash_map, branch_count) = explore_group(submatrices);
+
+        /// Save a hash map on disk
+        save_hash_map(group_hash_map, group_hashmap_file(original_node_postorder_id));
+
         count += branch_count;
     }
 
-    /// Merge hash maps in a final data structure
-    for (size_t i = 0; i < _branch_maps.size(); ++i)
+    /// Load hash maps and merge them
+    for (const auto& group_id : node_postorder_ids)
     {
-        auto& map = _branch_maps[i];
-        for (const auto& [key, score] : map)
+        const auto hash_map = load_hash_map(group_hashmap_file(group_id));
+        for (const auto& [key, score] : hash_map)
         {
-            _phylo_kmer_db.insert(key, { node_postorder_ids[i], score });
+            _phylo_kmer_db.insert(key, { group_id, score });
         }
-        /// Replace a map with an empty one to free memory
-        map = {};
     }
-
     return count;
 }
 
@@ -296,6 +332,68 @@ std::pair<db_builder::branch_hash_map, size_t> db_builder::explore_group(const p
 
     return { std::move(hash_map), count };
 }
+
+namespace boost
+{
+    namespace serialization
+    {
+        /// Serialize a hash map
+        template<class Archive>
+        inline void save(Archive& ar, const ::db_builder::branch_hash_map& map, const unsigned int /*version*/)
+        {
+            size_t map_size = map.size();
+            ar & map_size;
+
+            for (const auto& [key, score] : map)
+            {
+                ar & key & score;
+            }
+        }
+
+        /// Deserialize a hash map
+        template<class Archive>
+        inline void load(Archive& ar, ::db_builder::branch_hash_map& map, const unsigned int /*version*/)
+        {
+            size_t map_size = 0;
+            ar & map_size;
+
+            for (size_t i = 0; i < map_size; ++i)
+            {
+                ::core::phylo_kmer::key_type key = ::core::phylo_kmer::nan_key;
+                ::core::phylo_kmer::score_type score = ::core::phylo_kmer::nan_score;
+                ar & key & score;
+                map[key] = score;
+            }
+        }
+
+        // split non-intrusive serialization function member into separate
+        // non intrusive save/load member functions
+        template<class Archive>
+        inline void serialize(Archive& ar, ::db_builder::branch_hash_map& map, const unsigned int file_version)
+        {
+            boost::serialization::split_free(ar, map, file_version);
+        }
+    }
+}
+
+void db_builder::save_hash_map(const branch_hash_map& map, const std::string& filename) const
+{
+    std::ofstream ofs(filename);
+    boost::archive::binary_oarchive oa(ofs);
+    oa & map;
+}
+
+/// \brief Loads a hash map from file
+db_builder::branch_hash_map db_builder::load_hash_map(const std::string& filename) const
+{
+    std::ifstream ifs(filename);
+    boost::archive::binary_iarchive ia(ifs);
+
+    ::db_builder::branch_hash_map map;
+    ia & map;
+    return map;
+}
+
 
 namespace rappas
 {
