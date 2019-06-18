@@ -1,2 +1,11 @@
+0.1.1
+------
+- New construction algorithm: now the construction is done by completing two steps.
+In the first one, hashmaps of group nodes are built independently and stored on disk in ${workdir}/hashmaps.
+After, they are merged into a database hashmap.
+- AR Probability matrix is destroyed after the first stage of the algorithm.
+It makes the peak RAM consumption approximately to be max(proba matrix size, final database size).
+
 0.1.0
+------
 First released version.
