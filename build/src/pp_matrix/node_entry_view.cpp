@@ -2,11 +2,57 @@
 #include "node_entry_view.h"
 #include <cmath>
 #include <iostream>
+#include <algorithm>
 
 using namespace core;
+using namespace rappas::impl;
 
-phylo_kmer_iterator::phylo_kmer_iterator(const node_entry* entry, size_t kmer_size, phylo_kmer::score_type threshold,
-                                         phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept
+
+bnb_kmer_iterator make_bnb_end_iterator()
+{
+    return bnb_kmer_iterator();
+}
+
+bnb_kmer_iterator make_bnb_begin_iterator(const node_entry* entry, phylo_kmer::pos_type start, size_t kmer_size,
+                                          phylo_kmer::score_type threshold)
+{
+    bnb_kmer_iterator::stack_type stack;
+
+    /// Push a fake mmer to the bottom of the stack. We use it to reduce the number
+    /// of if statements in the operator++, and therefore to reduce the number of branch
+    /// mispredictions. It is also necessary to start branch-and-bound with every value
+    /// of the first column without adding new if statements.
+    stack.push_back(phylo_mmer{ { 0, 0.0 }, -1, 0, 0 });
+
+    /// Calculate the first k-mer
+    phylo_kmer::key_type kmer_key = 0;
+    phylo_kmer::score_type kmer_score = 0.0;
+    for (size_t i = 0; i < kmer_size; ++i)
+    {
+        const auto& ith_letter = entry->at(start + i, 0);
+        kmer_key = (kmer_key << bit_length<seq_type>()) | ith_letter.index;
+        kmer_score += ith_letter.score;
+
+        stack.push_back(phylo_mmer{ { kmer_key, kmer_score }, phylo_kmer::pos_type(i), 0, 0 });
+    }
+
+    /// There is no point to iterate over the window if the first k-mer is already not good enough
+    if (kmer_score < threshold)
+    {
+        return make_bnb_end_iterator();
+    }
+    else
+    {
+        return bnb_kmer_iterator{ entry, kmer_size, threshold, start, std::move(stack) };
+    }
+}
+
+bnb_kmer_iterator::bnb_kmer_iterator() noexcept
+    : _entry{ nullptr }, _kmer_size{ 0 }, _start_pos{ 0 }, _threshold{ 0.0 }, _stack{ }
+{}
+
+bnb_kmer_iterator::bnb_kmer_iterator(const node_entry* entry, size_t kmer_size, phylo_kmer::score_type threshold,
+                                     phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept
     : _entry{ entry }
     , _kmer_size{ kmer_size }
     , _start_pos{ start_pos }
@@ -20,8 +66,26 @@ phylo_kmer_iterator::phylo_kmer_iterator(const node_entry* entry, size_t kmer_si
     }
 }
 
-bool phylo_kmer_iterator::operator==(const phylo_kmer_iterator& rhs) const noexcept
+bnb_kmer_iterator& bnb_kmer_iterator::operator=(bnb_kmer_iterator&& rhs) noexcept
 {
+    if (*this != rhs)
+    {
+        _entry = rhs._entry;
+        _kmer_size = rhs._kmer_size;
+        _start_pos = rhs._start_pos;
+        _threshold = rhs._threshold;
+        _stack = std::move(rhs._stack);
+        _current = rhs._current;
+    }
+    return *this;
+}
+
+bool bnb_kmer_iterator::operator==(const bnb_kmer_iterator& rhs) const noexcept
+{
+    if (_entry != rhs._entry)
+    {
+        return false;
+    }
     if (_stack.empty())
     {
         return rhs._stack.empty();
@@ -33,28 +97,28 @@ bool phylo_kmer_iterator::operator==(const phylo_kmer_iterator& rhs) const noexc
     return _stack.back().mmer == rhs._stack.back().mmer;
 }
 
-bool phylo_kmer_iterator::operator!=(const phylo_kmer_iterator& rhs) const noexcept
+bool bnb_kmer_iterator::operator!=(const bnb_kmer_iterator& rhs) const noexcept
 {
     return !(*this == rhs);
 }
 
-phylo_kmer_iterator& phylo_kmer_iterator::operator++()
+bnb_kmer_iterator& bnb_kmer_iterator::operator++()
 {
     _current = next_phylokmer();
     return *this;
 }
 
-phylo_kmer_iterator::reference phylo_kmer_iterator::operator*()
+bnb_kmer_iterator::reference bnb_kmer_iterator::operator*() const noexcept
 {
     return _current.mmer;
 }
 
-phylo_kmer_iterator::pointer phylo_kmer_iterator::operator->()
+bnb_kmer_iterator::pointer bnb_kmer_iterator::operator->() const noexcept
 {
     return &(_current.mmer);
 }
 
-phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
+phylo_mmer bnb_kmer_iterator::next_phylokmer()
 {
     {
         const auto next_index = _stack.back().last_index + 1;
@@ -102,10 +166,126 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
             }
         }
     }
-    /// to clear the stack literally means
-    /// "*this = node_entry_view::end()"
-    _stack.clear();
+
+    *this = make_bnb_end_iterator();
     return {};
+}
+
+daq_kmer_iterator make_daq_end_iterator()
+{
+    return { nullptr, 0, 0, 0 };
+}
+
+bool kmer_score_comparator(const phylo_kmer& k1, const phylo_kmer& k2)
+{
+    return k1.score > k2.score;
+}
+
+daq_kmer_iterator::daq_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
+                                     core::phylo_kmer::pos_type start_pos) noexcept
+    : _entry{ entry }, _kmer_size{ kmer_size }, _left_part_size{ 0 }, _start_pos{ start_pos }, _threshold{ threshold }
+{
+    const auto halfsize = size_t{ kmer_size / 2 };
+    _left_part_size = (halfsize >= 1)
+        ? size_t{ kmer_size / 2 }
+        : kmer_size;
+
+    _left_iterator = make_bnb_begin_iterator(entry, start_pos, _left_part_size, threshold);
+
+    /// a workaround for end()
+    if (_left_part_size > 0)
+    {
+        auto it = (_left_part_size < kmer_size)
+            ? make_bnb_begin_iterator(entry, start_pos + _left_part_size, kmer_size - _left_part_size, threshold)
+            : make_bnb_end_iterator();
+        const auto end = make_bnb_end_iterator();
+        for (; it != end; ++it)
+        {
+            _right_halfmers.push_back(*it);
+        }
+        std::sort(_right_halfmers.begin(), _right_halfmers.end(), kmer_score_comparator);
+        _right_halfmer_it = _right_halfmers.begin();
+        _select_right_halfmers_bound();
+
+        _current = _next_phylokmer();
+    }
+}
+
+daq_kmer_iterator& daq_kmer_iterator::operator=(daq_kmer_iterator&& rhs) noexcept
+{
+    if (*this != rhs)
+    {
+        _entry = rhs._entry;
+        _kmer_size = rhs._kmer_size;
+        _left_part_size = rhs._left_part_size;
+        _start_pos = rhs._start_pos;
+        _threshold = rhs._threshold;
+        _current = rhs._current;
+        _left_iterator = std::move(rhs._left_iterator);
+        _right_halfmers = std::move(rhs._right_halfmers);
+        _right_halfmer_it = rhs._right_halfmer_it;
+        _last_right_halfmer_it = rhs._last_right_halfmer_it;
+    }
+    return *this;
+}
+
+bool daq_kmer_iterator::operator==(const daq_kmer_iterator& rhs) const noexcept
+{
+    return _entry == rhs._entry && _start_pos == rhs._start_pos && _kmer_size == rhs._kmer_size;
+}
+
+bool daq_kmer_iterator::operator!=(const daq_kmer_iterator& rhs) const noexcept
+{
+    return !(*this == rhs);
+}
+
+daq_kmer_iterator& daq_kmer_iterator::operator++()
+{
+    _current = _next_phylokmer();
+    return *this;
+}
+
+daq_kmer_iterator::reference daq_kmer_iterator::operator*() const noexcept
+{
+    return _current;
+}
+
+daq_kmer_iterator::pointer daq_kmer_iterator::operator->()  const noexcept
+{
+    return &_current;
+}
+
+phylo_kmer daq_kmer_iterator::_next_phylokmer()
+{
+    while (_right_halfmer_it == _last_right_halfmer_it)
+    {
+        ++_left_iterator;
+        _right_halfmer_it = _right_halfmers.begin();
+        _select_right_halfmers_bound();
+    }
+
+    if (_left_iterator != make_bnb_end_iterator())
+    {
+        const auto left_halfmer = *_left_iterator;
+        const auto right_halfmer = *_right_halfmer_it;
+        const auto full_key = (left_halfmer.key << ((_kmer_size - _left_part_size) * core::bit_length<core::seq_type>()))
+                              | right_halfmer.key;
+        const auto full_score = left_halfmer.score + right_halfmer.score;
+        ++_right_halfmer_it;
+        return { full_key, full_score };
+    }
+    else
+    {
+        *this = make_daq_end_iterator();
+        return {};
+    }
+}
+
+void daq_kmer_iterator::_select_right_halfmers_bound()
+{
+    const auto residual_threshold =  _threshold - _left_iterator->score;
+    _last_right_halfmer_it = ::std::lower_bound(_right_halfmers.begin(), _right_halfmers.end(),
+        phylo_kmer{ 0, residual_threshold }, kmer_score_comparator);
 }
 
 node_entry_view::node_entry_view(const node_entry* entry, core::phylo_kmer::score_type threshold,
@@ -120,40 +300,12 @@ node_entry_view::node_entry_view(const node_entry_view& other) noexcept
 node_entry_view::const_iterator node_entry_view::begin() const
 {
     const auto kmer_size = size_t{ (size_t)_end - _start };
-    phylo_kmer_iterator::stack_type stack;
-
-    /// Push a fake mmer to the bottom of the stack. We use it to reduce the number
-    /// of if statements in the operator++, and therefore to reduce the number of branch
-    /// mispredictions. It is also necessary to start branch-and-bound with every value
-    /// of the first column without adding new if statements.
-    stack.push_back(phylo_kmer_iterator::phylo_mmer{ { 0, 0.0 }, -1, 0, 0 });
-
-    /// Calculate the first k-mer
-    phylo_kmer::key_type kmer_key = 0;
-    phylo_kmer::score_type kmer_score = 0.0;
-    for (size_t i = 0; i < kmer_size; ++i)
-    {
-        const auto& ith_letter = _entry->at(_start + i, 0);
-        kmer_key = (kmer_key << core::bit_length<core::seq_type>()) | ith_letter.index;
-        kmer_score += ith_letter.score;
-
-        stack.push_back(phylo_kmer_iterator::phylo_mmer{ { kmer_key, kmer_score }, core::phylo_kmer::pos_type(i), 0, 0 });
-    }
-
-    /// There is no point to iterate over the window if the first k-mer is already not good enough
-    if (kmer_score < _threshold)
-    {
-        return end();
-    }
-    else
-    {
-        return phylo_kmer_iterator{ _entry, kmer_size, _threshold, _start, std::move(stack) };
-    }
+    return { _entry, kmer_size, _threshold, _start };
 }
 
 node_entry_view::const_iterator node_entry_view::end() const noexcept
 {
-    return phylo_kmer_iterator{ _entry, 0, _threshold, 0, {}};
+    return make_daq_end_iterator();
 }
 
 node_entry_view& node_entry_view::operator=(node_entry_view&& other) noexcept
