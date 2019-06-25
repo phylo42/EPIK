@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <core/seq.h>
 
 using namespace core;
 using namespace rappas::impl;
@@ -17,6 +18,7 @@ bnb_kmer_iterator make_bnb_begin_iterator(const node_entry* entry, phylo_kmer::p
                                           phylo_kmer::score_type threshold)
 {
     bnb_kmer_iterator::stack_type stack;
+    stack.reserve(kmer_size + 1);
 
     /// Push a fake mmer to the bottom of the stack. We use it to reduce the number
     /// of if statements in the operator++, and therefore to reduce the number of branch
@@ -171,7 +173,7 @@ phylo_mmer bnb_kmer_iterator::next_phylokmer()
     return {};
 }
 
-daq_kmer_iterator make_daq_end_iterator()
+dac_kmer_iterator make_daq_end_iterator()
 {
     return { nullptr, 0, 0, 0 };
 }
@@ -181,7 +183,7 @@ bool kmer_score_comparator(const phylo_kmer& k1, const phylo_kmer& k2)
     return k1.score > k2.score;
 }
 
-daq_kmer_iterator::daq_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
+dac_kmer_iterator::dac_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
                                      core::phylo_kmer::pos_type start_pos) noexcept
     : _entry{ entry }, _kmer_size{ kmer_size }, _left_part_size{ 0 }, _start_pos{ start_pos }, _threshold{ threshold }
 {
@@ -195,6 +197,7 @@ daq_kmer_iterator::daq_kmer_iterator(const node_entry* entry, size_t kmer_size, 
     /// a workaround for end()
     if (_left_part_size > 0)
     {
+        _right_halfmers.reserve(size_t(std::pow(seq_traits::alphabet_size, _kmer_size - _left_part_size)) / 2);
         auto it = (_left_part_size < kmer_size)
             ? make_bnb_begin_iterator(entry, start_pos + _left_part_size, kmer_size - _left_part_size, threshold)
             : make_bnb_end_iterator();
@@ -211,7 +214,7 @@ daq_kmer_iterator::daq_kmer_iterator(const node_entry* entry, size_t kmer_size, 
     }
 }
 
-daq_kmer_iterator& daq_kmer_iterator::operator=(daq_kmer_iterator&& rhs) noexcept
+dac_kmer_iterator& dac_kmer_iterator::operator=(dac_kmer_iterator&& rhs) noexcept
 {
     if (*this != rhs)
     {
@@ -229,33 +232,33 @@ daq_kmer_iterator& daq_kmer_iterator::operator=(daq_kmer_iterator&& rhs) noexcep
     return *this;
 }
 
-bool daq_kmer_iterator::operator==(const daq_kmer_iterator& rhs) const noexcept
+bool dac_kmer_iterator::operator==(const dac_kmer_iterator& rhs) const noexcept
 {
     return _entry == rhs._entry && _start_pos == rhs._start_pos && _kmer_size == rhs._kmer_size;
 }
 
-bool daq_kmer_iterator::operator!=(const daq_kmer_iterator& rhs) const noexcept
+bool dac_kmer_iterator::operator!=(const dac_kmer_iterator& rhs) const noexcept
 {
     return !(*this == rhs);
 }
 
-daq_kmer_iterator& daq_kmer_iterator::operator++()
+dac_kmer_iterator& dac_kmer_iterator::operator++()
 {
     _current = _next_phylokmer();
     return *this;
 }
 
-daq_kmer_iterator::reference daq_kmer_iterator::operator*() const noexcept
+dac_kmer_iterator::reference dac_kmer_iterator::operator*() const noexcept
 {
     return _current;
 }
 
-daq_kmer_iterator::pointer daq_kmer_iterator::operator->()  const noexcept
+dac_kmer_iterator::pointer dac_kmer_iterator::operator->()  const noexcept
 {
     return &_current;
 }
 
-phylo_kmer daq_kmer_iterator::_next_phylokmer()
+phylo_kmer dac_kmer_iterator::_next_phylokmer()
 {
     while (_right_halfmer_it == _last_right_halfmer_it)
     {
@@ -281,7 +284,7 @@ phylo_kmer daq_kmer_iterator::_next_phylokmer()
     }
 }
 
-void daq_kmer_iterator::_select_right_halfmers_bound()
+void dac_kmer_iterator::_select_right_halfmers_bound()
 {
     const auto residual_threshold =  _threshold - _left_iterator->score;
     _last_right_halfmer_it = ::std::lower_bound(_right_halfmers.begin(), _right_halfmers.end(),

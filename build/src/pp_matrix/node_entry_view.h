@@ -32,10 +32,8 @@ namespace rappas
 {
     namespace impl
     {
-        //template <typename T>
-        //using stack_type = boost::container::static_vector<T, core::seq_traits::max_kmer_length>;
         template <typename T>
-        using stack_type = std::vector<T>;
+        using stack_type = boost::container::static_vector<T, core::seq_traits::max_kmer_length>;
     }
 }
 #endif
@@ -102,7 +100,7 @@ namespace rappas
         };
 
         /// \brief Divide-and-conquer phylo-kmer iterator.
-        class daq_kmer_iterator
+        class dac_kmer_iterator
         {
         public:
             /// Member types
@@ -110,17 +108,17 @@ namespace rappas
             using reference = const core::phylo_kmer&;
             using pointer = const core::phylo_kmer*;
 
-            daq_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
+            dac_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
                               core::phylo_kmer::pos_type start_pos) noexcept;
-            daq_kmer_iterator(const daq_kmer_iterator&) = delete;
-            daq_kmer_iterator(daq_kmer_iterator&&) = default;
-            daq_kmer_iterator& operator=(const daq_kmer_iterator&) = delete;
-            daq_kmer_iterator& operator=(daq_kmer_iterator&& rhs) noexcept;
-            ~daq_kmer_iterator() noexcept = default;
+            dac_kmer_iterator(const dac_kmer_iterator&) = delete;
+            dac_kmer_iterator(dac_kmer_iterator&&) = default;
+            dac_kmer_iterator& operator=(const dac_kmer_iterator&) = delete;
+            dac_kmer_iterator& operator=(dac_kmer_iterator&& rhs) noexcept;
+            ~dac_kmer_iterator() noexcept = default;
 
-            bool operator==(const daq_kmer_iterator& rhs) const noexcept;
-            bool operator!=(const daq_kmer_iterator& rhs) const noexcept;
-            daq_kmer_iterator& operator++();
+            bool operator==(const dac_kmer_iterator& rhs) const noexcept;
+            bool operator!=(const dac_kmer_iterator& rhs) const noexcept;
+            dac_kmer_iterator& operator++();
 
             reference operator*() const noexcept;
             pointer operator->() const noexcept;
@@ -149,7 +147,7 @@ namespace rappas
 class node_entry_view final
 {
 public:
-    using const_iterator = rappas::impl::daq_kmer_iterator;
+    using const_iterator = rappas::impl::dac_kmer_iterator;
     using const_reference = const_iterator::reference;
 
     node_entry_view(const node_entry* entry, core::phylo_kmer::score_type threshold,
