@@ -44,7 +44,6 @@ namespace rappas
 {
     namespace impl
     {
-
         /// \brief Temporary data storage for mmers, m <= k. Used only in the branch-and-bound algorithm
         /// to generate phylo-kmers
         struct phylo_mmer
@@ -54,49 +53,6 @@ namespace rappas
             core::phylo_kmer::pos_type last_position;
             size_t last_index;
             size_t next_index;
-        };
-
-        /// \brief A forward access const iterator for phylo_kmer pairs [kmer value, score]. Iterates over
-        /// a fixed node_entry_view of size K. Implements a branch-and-bound approach to filter kmers by
-        /// threshold score value.
-        class bnb_kmer_iterator
-        {
-        public:
-
-            /// Member types
-            using iterator_category = std::forward_iterator_tag;
-            using reference = const core::phylo_kmer&;
-            using pointer = const core::phylo_kmer*;
-
-            /// A stack type. Boost::static_vector of fixed size (core::seq_traits::max_kmer_length) if
-            /// presented in boost, std::vector instead.
-            using stack_type = rappas::impl::stack_type<phylo_mmer>;
-
-            bnb_kmer_iterator() noexcept;
-            bnb_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
-                              core::phylo_kmer::pos_type start_pos, stack_type&& stack) noexcept;
-            bnb_kmer_iterator(const bnb_kmer_iterator&) = delete;
-            bnb_kmer_iterator(bnb_kmer_iterator&&) = default;
-            bnb_kmer_iterator& operator=(const bnb_kmer_iterator&) = delete;
-            bnb_kmer_iterator& operator=(bnb_kmer_iterator&& rhs) noexcept;
-            ~bnb_kmer_iterator() noexcept = default;
-
-            bool operator==(const bnb_kmer_iterator& rhs) const noexcept;
-            bool operator!=(const bnb_kmer_iterator& rhs) const noexcept;
-            bnb_kmer_iterator& operator++();
-
-            reference operator*() const noexcept;
-            pointer operator->() const noexcept;
-
-        private:
-            phylo_mmer next_phylokmer();
-
-            const node_entry* _entry;
-            size_t _kmer_size;
-            core::phylo_kmer::pos_type _start_pos;
-            core::phylo_kmer::score_type _threshold;
-            stack_type _stack;
-            phylo_mmer _current;
         };
 
         /// \brief Divide-and-conquer phylo-kmer iterator.
@@ -134,7 +90,9 @@ namespace rappas
             core::phylo_kmer::score_type _threshold;
             core::phylo_kmer _current;
 
-            bnb_kmer_iterator _left_iterator;
+            std::vector<core::phylo_kmer> _left_halfmers;
+            std::vector<core::phylo_kmer>::iterator _left_halfmer_it;
+
             std::vector<core::phylo_kmer> _right_halfmers;
             std::vector<core::phylo_kmer>::iterator _right_halfmer_it;
             std::vector<core::phylo_kmer>::iterator _last_right_halfmer_it;

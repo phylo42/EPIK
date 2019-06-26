@@ -356,10 +356,13 @@ std::pair<db_builder::branch_hash_map, size_t> db_builder::explore_group(const p
     for (auto node_entry_ref : group)
     {
         const auto& node_entry = node_entry_ref.get();
+        //std::cout << std::endl << "NODE " << node_entry.get_label() << std::endl;
         for (auto window = node_entry.begin(_kmer_size, threshold); window != node_entry.end(); ++window)
         {
+            //std::cout << std::endl << "WINDOW " << window->get_start_pos() << std::endl;
             for (const auto& kmer : *window)
             {
+                //std::cout << kmer.key << " " << core::decode_kmer(kmer.key, _kmer_size) << std::endl;
                 put(hash_map, kmer.key, kmer.score);
                 ++count;
             }
