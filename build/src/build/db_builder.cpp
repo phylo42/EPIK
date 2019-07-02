@@ -299,7 +299,7 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t> db_builder::explore_kme
     /// in a hash map for every group separately on disk.
     std::vector<phylo_kmer::branch_type> node_postorder_ids(node_groups.size());
 
-#ifndef _NDEBUG
+#ifndef _DEBUG
     #pragma omp parallel for schedule(auto) reduction(+: count) num_threads(_num_threads)
 #endif
     for (size_t i = 0; i < node_groups.size(); ++i)

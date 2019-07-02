@@ -141,11 +141,6 @@ phylo_kmer dac_kmer_iterator::_next_phylokmer()
                 ++_right_halfmer_it;
                 return { full_key, full_score };
             }
-            else
-            {
-                *this = make_dac_end_iterator();
-                return {};
-            }
         }
         else
         {
@@ -154,11 +149,9 @@ phylo_kmer dac_kmer_iterator::_next_phylokmer()
             return kmer;
         }
     }
-    else
-    {
-        *this = make_dac_end_iterator();
-        return {};
-    }
+
+    *this = make_dac_end_iterator();
+    return {};
 }
 
 void dac_kmer_iterator::_select_right_halfmers_bound()

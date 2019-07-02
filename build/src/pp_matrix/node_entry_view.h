@@ -4,11 +4,12 @@
 #include "row.h"
 #include <boost/version.hpp>
 
+
 /// static_vector has been accepted in boost only in v1.56. We check the version of boost library,
 /// and use std::vector if the library is too old.
 /// For our purposes, boost::static_vector is surely preferable due to its better performance.
 #if ((BOOST_VERSION / 100 % 1000) < 56)
-#define USE_NONSTATIC_VECTOR 1
+#define USE_NONSTATIC_VECTOR 0
 #endif
 
 #ifdef USE_NONSTATIC_VECTOR
@@ -20,20 +21,34 @@ namespace rappas
     namespace impl
     {
         template <class... Args>
-        using stack_type = std::vector<Args...>;
+        using vector_type = std::vector<Args...>;
     }
 }
 #else
 
+#include <cstdint>
 #include <boost/container/static_vector.hpp>
 
+/// https://stackoverflow.com/questions/17719674/c11-fast-constexpr-integer-powers
+constexpr int64_t ipow(int64_t base, int exp, int64_t result=1) noexcept
+{
+    return exp < 1 ? result : ipow(base * base, exp / 2, (exp % 2) ? result * base : result);
+}
+
+constexpr int64_t iceil(double arg) noexcept
+{
+    return int64_t(arg + 1);
+}
 
 namespace rappas
 {
     namespace impl
     {
-        template <typename T>
-        using stack_type = boost::container::static_vector<T, core::seq_traits::max_kmer_length>;
+        constexpr size_t vector_size = ipow(
+            core::seq_traits::alphabet_size,
+            iceil((double)core::seq_traits::max_kmer_length / 2.0));
+        template <class T>
+        using vector_type = boost::container::static_vector<T, vector_size>;
     }
 }
 #endif
@@ -90,12 +105,12 @@ namespace rappas
             core::phylo_kmer::score_type _threshold;
             core::phylo_kmer _current;
 
-            std::vector<core::phylo_kmer> _left_halfmers;
-            std::vector<core::phylo_kmer>::iterator _left_halfmer_it;
+            vector_type<core::phylo_kmer> _left_halfmers;
+            vector_type<core::phylo_kmer>::iterator _left_halfmer_it;
 
-            std::vector<core::phylo_kmer> _right_halfmers;
-            std::vector<core::phylo_kmer>::iterator _right_halfmer_it;
-            std::vector<core::phylo_kmer>::iterator _last_right_halfmer_it;
+            vector_type<core::phylo_kmer> _right_halfmers;
+            vector_type<core::phylo_kmer>::iterator _right_halfmer_it;
+            vector_type<core::phylo_kmer>::iterator _last_right_halfmer_it;
         };
     }
 }
