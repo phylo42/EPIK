@@ -54,7 +54,7 @@ namespace cli
              "Ancestral reconstruction tree mapping file")
             ((K + "," + K_SHORT).c_str(), po::value<size_t>()->default_value(8),
              "k-mer length used at DB build")
-            ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<core::phylo_kmer::score_type>()->default_value(1.0),
+            ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<core::phylo_kmer::score_type>()->default_value(1.5),
              "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
              "Number of threads");
