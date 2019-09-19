@@ -26,11 +26,9 @@ std::string generate_db_name(const core::phylo_kmer_db& db)
 {
     const auto kmer_size = db.kmer_size();
     const auto omega = db.omega();
-    const auto threshold = core::score_threshold(omega, kmer_size);
 
     std::ostringstream out;
-    out << "DB_k" << kmer_size << "_w" << std::fixed << std::setprecision(2) << omega << "_t" <<
-        std::setprecision(4) << threshold << ".rps";
+    out << "DB_k" << kmer_size << "_o" << omega << ".rps";
     return out.str();
 }
 

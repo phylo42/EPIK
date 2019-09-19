@@ -60,6 +60,7 @@ phylo_kmer_iterator::phylo_mmer phylo_kmer_iterator::next_phylokmer()
         const auto next_index = _stack.back().last_index + 1;
         _stack.pop_back();
         _stack.back().next_index = next_index;
+
     }
 
     /// until there is only the fake k-mer
