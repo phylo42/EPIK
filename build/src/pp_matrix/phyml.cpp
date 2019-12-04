@@ -1,7 +1,10 @@
 #include <iostream>
+#include <fstream>
 #include <csv-parser/csv.h>
 #include <numeric>
 #include <cmath>
+#include <string>
+#include <sstream>
 #include "phyml.h"
 #include "proba_matrix.h"
 
@@ -71,44 +74,62 @@ rappas::proba_matrix rappas::io::phyml_output_reader::read()
 
 rappas::proba_matrix rappas::io::phyml_output_reader::read_matrix()
 {
+    std::ios::sync_with_stdio(false);
+
     proba_matrix matrix;
+    std::ifstream infile(_file_name);
 
-    ::io::CSVReader<5,
-        ::io::trim_chars<' '>,
-        ::io::no_quote_escape<'\t'>,
-        ::io::throw_on_overflow,
-        ::io::single_and_empty_line_comment<'.'>> _in(_file_name);
-    _in.read_header(::io::ignore_extra_column, "NodeLabel", "A", "C", "G", "T");
+    bool is_header = true;
 
-    auto node_label = proba_matrix::NOT_A_LABEL;
-    core::phylo_kmer::score_type a, c, g, t;
-    while (_in.read_row(node_label, a, c, g, t))
+    std::string line;
+    while (std::getline(infile, line))
     {
-        if (node_label == proba_matrix::NOT_A_LABEL)
+        if (is_header)
         {
-            throw std::runtime_error("Node label value is too big: " + std::to_string(node_label));
-        }
-
-        /// log-transform the probabilities
-        auto new_row = row_type { { { a, 0 }, { c, 1 }, { g, 2 }, { t, 3 } } };
-        auto log = [](const proba_pair& p) { return proba_pair{ std::log10(p.score), p.index }; };
-        std::transform(begin(new_row), end(new_row), begin(new_row), log);
-
-        // sort them
-        auto compare = [](const proba_pair& p1, const proba_pair& p2) { return p1.score > p2.score; };
-        std::sort(begin(new_row), end(new_row), compare);
-
-        /// insert
-        auto it = matrix.find(node_label);
-        if (it != std::end(matrix))
-        {
-            it->second.push_back(std::move(new_row));
+            // if the line starts with 'Site', the header is finished
+            if (line.size() > 4 && line.rfind("Site", 0) == 0)
+            {
+                is_header = false;
+            }
         }
         else
         {
-            /// WARNING: it is cheap to copy new_row here in the case of DNA.
-            /// It is probably makes sense to move it in the case of amino acids though.
-            matrix[node_label] = proba_matrix::mapped_type{node_label, { new_row } };
+            size_t site = 0;
+            auto node_label = proba_matrix::NOT_A_LABEL;
+            core::phylo_kmer::score_type a, c, g, t;
+
+            std::istringstream iss(line);
+            if (!(iss >> site >> node_label >> a >> c >> g >> t))
+            {
+                throw std::runtime_error("Parsing error: could not parse the line " + line);
+            }
+
+            if (node_label == proba_matrix::NOT_A_LABEL)
+            {
+                throw std::runtime_error("Node label value is too big: " + std::to_string(node_label));
+            }
+
+            /// log-transform the probabilities
+            auto new_row = row_type { { { a, 0 }, { c, 1 }, { g, 2 }, { t, 3 } } };
+            auto log = [](const proba_pair& p) { return proba_pair{ std::log10(p.score), p.index }; };
+            std::transform(begin(new_row), end(new_row), begin(new_row), log);
+
+            // sort them
+            auto compare = [](const proba_pair& p1, const proba_pair& p2) { return p1.score > p2.score; };
+            std::sort(begin(new_row), end(new_row), compare);
+
+            /// insert
+            auto it = matrix.find(node_label);
+            if (it != std::end(matrix))
+            {
+                it->second.push_back(std::move(new_row));
+            }
+            else
+            {
+                /// WARNING: it is cheap to copy new_row here in the case of DNA.
+                /// It is probably makes sense to move it in the case of amino acids though.
+                matrix[node_label] = proba_matrix::mapped_type{node_label, { new_row } };
+            }
         }
     }
     return matrix;
@@ -134,7 +155,7 @@ namespace rappas
             ::io::CSVReader<2, ::io::trim_chars<' '>, ::io::no_quote_escape<'\t'>> in(file_name);
             in.read_header(::io::ignore_extra_column, "original_id", "extended_name");
             std::string extended_name;
-            branch_type original_id;
+            branch_type original_id = core::phylo_kmer::nan_branch;
             while (in.read_row(original_id, extended_name))
             {
                 mapping[extended_name] = original_id;
