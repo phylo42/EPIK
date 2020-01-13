@@ -351,7 +351,7 @@ std::pair<db_builder::branch_hash_map, size_t> db_builder::explore_group(const p
     branch_hash_map hash_map;
     size_t count = 0;
 
-    const auto threshold = core::score_threshold(_omega, _kmer_size);
+    const auto threshold = std::log10(core::score_threshold(_omega, _kmer_size));
 
     for (auto node_entry_ref : group)
     {

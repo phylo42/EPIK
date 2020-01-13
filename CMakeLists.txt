@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(rappas_build VERSION 0.1.1 LANGUAGES CXX)
+project(rappas_build VERSION 0.1.2 LANGUAGES CXX)
 
 # default build type Release
 if (NOT CMAKE_BUILD_TYPE)

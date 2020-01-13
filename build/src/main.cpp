@@ -27,8 +27,29 @@ std::string generate_db_name(const core::phylo_kmer_db& db)
     const auto kmer_size = db.kmer_size();
     const auto omega = db.omega();
 
+    /// RAPPAS has to support the following output name convention for omega:
+    /// o0.5,
+    /// o0.75
+    /// o1.25
+    /// o1.12345
+    /// o1.5
+    ///
+    /// BUT 2.0 not 2
+    ///     1.0 not 1
+    ///
+    /// Do not ask me why...
+
+    /// std::setprecision can not handle this case.
+    /// So we have to a trailing zero value for round values of omega
+    std::string omega_str = std::to_string(omega);
+    const auto last_zero = omega_str.find_last_not_of('0') + 1;
+    omega_str.erase(last_zero, omega_str.size() - last_zero);
+    if (static_cast<int>(omega) == omega) {
+        omega_str += "0";
+    }
+
     std::ostringstream out;
-    out << "DB_k" << kmer_size << "_o" << omega << ".rps";
+    out << "DB_k" << kmer_size << "_o" << omega_str << ".rps";
     return out.str();
 }
 
