@@ -1,16 +1,23 @@
+============================================================================================================
+v0.1.3
+- Changed the database name convention (omega parameter)
+- PhyML parser rolled back to slow and naive solution due to breaking updates in last PhyML versions
+
+============================================================================================================
 v0.1.2
 - The database name convention has changed to be consistent to the latest versions of RAPPASv1 (java)
 - The default omega value now is 1.5
 - Updated core to v0.1.7, which supports ambiguous bases
 
+============================================================================================================
 v0.1.1
-------
+
 - New construction algorithm: now the construction is done by completing two steps.
 In the first one, hashmaps of group nodes are built independently and stored on disk in ${workdir}/hashmaps.
 After, they are merged into a database hashmap.
 - AR Probability matrix is destroyed after the first stage of the algorithm.
 It makes the peak RAM consumption approximately to be max(proba matrix size, final database size).
 
+============================================================================================================
 v0.1.0
-------
 First released version.
