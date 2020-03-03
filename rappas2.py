@@ -37,10 +37,6 @@ ALL_MODELS = NUCL_MODELS + AMINO_MODELS
               required=True,
               help="Binary file for marginal AR, currently 'phyml' and "
                    "'baseml' (from PAML) are supported.")
-#@click.option('-d', '--database', 
-#              type=click.Path(exists=True),
-#              required=True,
-#              help="Output database file")
 @click.option('-r', '--refalign', 
               type=click.Path(exists=True),
               required=True,
@@ -187,29 +183,33 @@ def build(arbinary, #database,
         command.append("--no-reduction")
     if use_unrooted:
         command.append("--use_unrooted")
-
-    print(command)
     subprocess.call(command)
 
 
-#@click.option('-q', '--queries',
-#              type=str,
-#              help="""Fasta queries to place on the tree.
-#                      Must be a list of files separated by comma.""")
-#@click.option('--keep-at-most',
-#              type=int,
-#              default=7, show_default=True,
-#              help="Max number of placement per query kept in the jplace output.")
-#@click.option('--keep-factor',
-#              type=float, 
-#              default=0.01, show_default=True,
-#              help="""Report placement with likelihood_ratio higher
-#                      than (factor x best_likelihood_ratio). (p phase)""")
-#@click.option('--guppy-compat',
-#              is_flag=True,
-#              help="Ensures output is Guppy compatible.")
-#@click.option('--ambwithmax',
-#             )
+    if states == 'nucl':
+        rappas_bin = f"{current_dir}/bin/build/rappas-buildn"
+    else:
+        raise RuntimeError("Proteins are not supported yet.")
+
+    extended_tree = f"{workdir}/extended_trees/extended_tree_withBL.tree"
+    ar_seq_txt = f"{workdir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
+    extended_tree_node_mapping = f"{workdir}/extended_trees/extended_tree_node_mapping.tsv"
+    artree_id_mapping = f"{workdir}/AR/ARtree_id_mapping.tsv"
+
+    command = [
+        rappas_bin,
+        "-t", reftree,
+        "-x", extended_tree,
+        "-a", ar_seq_txt,
+        "-e", extended_tree_node_mapping,
+        "-m", artree_id_mapping,
+        "-w", workdir,
+        "-k", str(k),
+        "-o", str(omega),
+        "-j", str(threads)
+    ] 
+    subprocess.call(command)
+
 
 if __name__ == "__main__":
     rappas()
