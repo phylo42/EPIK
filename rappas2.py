@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 RAPPAS / RAPPAS2 wrapper script.
 
@@ -120,16 +121,20 @@ ALL_MODELS = NUCL_MODELS + AMINO_MODELS
               default=1.5, show_default=True,
               help="""Modifier levelling the threshold used during
                   phylo-kmer filtering, T=(omega/#states)^k""")
+@click.option('-u', '--mu',
+              type=float,
+              default=8, show_default=True,
+              help="""K-mer information threshold""")
 @click.option('--use-unrooted',
               is_flag=True,
               help="""Confirms you accept to use an unrooted reference
                   tree (option -t). The trifurcation described by the
                   newick file will be considered as root. Be aware that
                   meaningless roots may impact accuracy.""")
-#@click.option('--ardir'
-#             type=click.Path(exists=True, dir_okay=True, file_okay=False),
-#             help="""Skip ancestral sequence reconstruction, and 
-#                  uses outputs from the specified directory.""")
+@click.option('--ardir',
+             type=click.Path(exists=True, dir_okay=True, file_okay=False),
+             help="""Skip ancestral sequence reconstruction, and 
+                  uses outputs from the specified directory.""")
 @click.option('--threads',
              type=int,
              default=4, show_default=True,
@@ -139,7 +144,7 @@ def build(arbinary, #database,
           workdir, write_reduction, #dbfilename,
           alpha, categories, #ghosts,
           k, model, arparameters, convert_uo, force_root, #gap_jump_thresh,
-          no_reduction, ratio_reduction, omega, use_unrooted, #ardir,
+          no_reduction, ratio_reduction, omega, mu, use_unrooted, ardir,
           threads):
     """
     Builds a database of phylo k-mers.
@@ -168,6 +173,7 @@ def build(arbinary, #database,
         "--model", model,
         "--ratio-reduction", str(ratio_reduction),
         "--omega", str(omega),
+        "--ardir", ardir,
         "--threads", str(threads),
         "--aronly"
     ]
@@ -191,10 +197,14 @@ def build(arbinary, #database,
     else:
         raise RuntimeError("Proteins are not supported yet.")
 
-    extended_tree = f"{workdir}/extended_trees/extended_tree_withBL.tree"
-    ar_seq_txt = f"{workdir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
-    extended_tree_node_mapping = f"{workdir}/extended_trees/extended_tree_node_mapping.tsv"
-    artree_id_mapping = f"{workdir}/AR/ARtree_id_mapping.tsv"
+    rappas1_results_dir = workdir
+    if ardir:
+        rappas1_results_dir = os.path.join(ardir, "..")
+
+    extended_tree = f"{rappas1_results_dir}/extended_trees/extended_tree_withBL.tree"
+    ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
+    extended_tree_node_mapping = f"{rappas1_results_dir}/extended_trees/extended_tree_node_mapping.tsv"
+    artree_id_mapping = f"{rappas1_results_dir}/AR/ARtree_id_mapping.tsv"
 
     command = [
         rappas_bin,
@@ -206,8 +216,45 @@ def build(arbinary, #database,
         "-w", workdir,
         "-k", str(k),
         "-o", str(omega),
+        "-u", str(mu),
         "-j", str(threads)
     ] 
+    subprocess.call(command)
+
+
+
+@rappas.command()
+@click.option('-i', '--database',
+              required=True,
+              type=click.Path(dir_okay=False, file_okay=True, exists=True),
+              help="Input database.")
+@click.option('-o', '--outputdir',
+              required=True,
+              type=click.Path(dir_okay=True, file_okay=False),
+              help="Output directory.")
+@click.option('--threads',
+             type=int,
+             default=4, show_default=True,
+             help="Number of threads used.")
+@click.argument('input_files', type=click.Path(exists=True), nargs=-1)
+def place(database, outputdir, threads, input_files):
+    """
+    Places .fasta files using the input RAPPAS2 database.
+
+    \tpython rappas2.py place -i db.rps -o output file.fasta [file2.fasta ...]
+
+    """
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    #FIXME: make rappas-place part of rappas2
+    rappas_bin = f"{current_dir}/rappas-placen"
+
+    command = [
+        rappas_bin,
+        str(database),
+        str(outputdir),
+        str(threads)
+    ]
+    command.extend(input_files)
     subprocess.call(command)
 
 

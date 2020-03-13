@@ -33,6 +33,7 @@ namespace cli
     static std::string K = "k", K_SHORT = "k";
     static std::string OMEGA="omega", OMEGA_SHORT="o";
     static std::string NUM_THREADS = "num_threads", NUM_THREADS_SHORT = "j";
+    static std::string MU = "mu", MU_SHORT = "u";
 
     const po::options_description get_opt_description()
     {
@@ -57,7 +58,8 @@ namespace cli
             ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<core::phylo_kmer::score_type>()->default_value(1.5),
              "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
-             "Number of threads");
+             "Number of threads")
+            ((MU + "," + MU_SHORT).c_str(), po::value<double>()->default_value(8));
         return desc;
     }
 
@@ -97,6 +99,7 @@ namespace cli
             parameters.kmer_size = vm[K].as<size_t>();
             parameters.omega = vm[OMEGA].as<core::phylo_kmer::score_type>();
             parameters.num_threads = vm[NUM_THREADS].as<size_t>();
+            parameters.mu = vm[MU].as<double>();
         }
         catch (const po::error& e)
         {

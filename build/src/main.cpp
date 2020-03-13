@@ -72,7 +72,8 @@ return_code run(const cli::cli_parameters& parameters)
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
-                                          parameters.kmer_size, parameters.omega, parameters.num_threads);
+                                          parameters.kmer_size, parameters.omega, parameters.mu,
+                                          parameters.num_threads);
 
             const auto db_filename = fs::path(parameters.working_directory) / generate_db_name(db);
 

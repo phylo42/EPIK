@@ -29,6 +29,8 @@ namespace cli
         size_t kmer_size;
         core::phylo_kmer::score_type omega;
         size_t num_threads;
+
+        double mu;
     };
 
     const std::string get_option_list();
