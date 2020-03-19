@@ -11,6 +11,6 @@ if(NOT HASH_MAP)
     set(HASH_MAP "USE_SKA_BYTELL_HASH_MAP")
 endif()
 
-add_subdirectory(core)
+add_subdirectory(xpas)
 add_subdirectory(strasser)
 add_subdirectory(build)
