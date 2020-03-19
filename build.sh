@@ -1,7 +1,8 @@
-#!/bin/bash
+#! /bin/bash
 
 err_report() {
     echo "Error on line $1"
+    exit
 }
 
 trap 'err_report $LINENO' ERR
