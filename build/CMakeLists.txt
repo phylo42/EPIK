@@ -49,7 +49,7 @@ target_link_libraries(build_n
 # Turn on the warnings and treat them as errors
 target_compile_options(build_n
         PRIVATE
-            -Wall -Wextra -Werror #-Wpedantic
+            -Wall -Wextra #-Werror #-Wpedantic
         )
 
 target_compile_features(build_n
