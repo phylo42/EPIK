@@ -10,6 +10,7 @@
 #include "db_builder.h"
 #include "pp_matrix/proba_matrix.h"
 #include "pp_matrix/phyml.h"
+#include "utils/utils.h"
 
 using std::string;
 using std::cout, std::endl;
@@ -26,8 +27,8 @@ namespace rappas
         friend phylo_kmer_db build(const string& working_directory, const string& ar_probabilities_file,
                                    const string& original_tree_file, const string& extended_tree_file,
                                    const string& extended_mapping_file, const string& artree_mapping_file,
-                                   size_t kmer_size, core::phylo_kmer::score_type omega, double mu,
-                                   size_t num_threads);
+                                   size_t kmer_size, core::phylo_kmer::score_type omega, filter_type filter,
+                                   double mu, size_t num_threads);
     public:
         /// Member types
         /// \brief A hash map to store all the phylo-kmers, placed to one original node
@@ -45,7 +46,8 @@ namespace rappas
         db_builder(const string& working_directory, const string& ar_probabilities_file,
                    const string& original_tree_file, const string& extended_tree_file,
                    const string& extended_mapping_file, const string& artree_mapping_file,
-                   size_t kmer_size, core::phylo_kmer::score_type omega, double mu, size_t num_threads);
+                   size_t kmer_size, core::phylo_kmer::score_type omega, filter_type filter,
+                   double mu, size_t num_threads);
         db_builder(const db_builder&) = delete;
         db_builder(db_builder&&) = delete;
         db_builder& operator=(const db_builder&) = delete;
@@ -110,6 +112,8 @@ namespace rappas
 
         size_t _kmer_size;
         core::phylo_kmer::score_type _omega;
+
+        filter_type _filter;
         double _mu;
 
         size_t _num_threads;
@@ -124,9 +128,9 @@ using namespace rappas;
 
 db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file,
                        const string& original_tree_file, const string& extended_tree_file,
-                       const string& extended_mapping_file,
-                       const string& artree_mapping_file, size_t kmer_size, core::phylo_kmer::score_type omega,
-                       double mu, size_t num_threads)
+                       const string& extended_mapping_file, const string& artree_mapping_file,
+                       size_t kmer_size, core::phylo_kmer::score_type omega,
+                       filter_type filter, double mu, size_t num_threads)
     : _working_directory{working_directory}
     ,_hashmaps_directory{(fs::path{working_directory} / fs::path{"hashmaps"}).string()}
     , _ar_probabilities_file{ar_probabilities_file}
@@ -136,7 +140,8 @@ db_builder::db_builder(const string& working_directory, const string& ar_probabi
     , _artree_mapping_file{artree_mapping_file}
     , _kmer_size{kmer_size}
     , _omega{omega}
-    , _mu(mu)
+    , _filter{filter}
+    , _mu{mu}
     , _num_threads{num_threads}
     /// I do not like reading a file here, but it seems to be better than having something like "set_tree"
     /// in the public interface of the phylo_kmer_db class.
@@ -207,6 +212,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 
     phylo_kmer_db temp_db(_phylo_kmer_db.kmer_size(), _phylo_kmer_db.omega(), "");
 
+    std::cout << "Calculating entropy..." << std::endl;
     /// Load hash maps and merge them
     for (const auto group_id : group_ids)
     {
@@ -217,7 +223,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
         }
     }
 
-    hash_map<phylo_kmer::key_type, double> entropy_stats;
+    hash_map<phylo_kmer::key_type, double> filter_stats;
     for (const auto& [key, entries] : temp_db)
     {
         // calculate the score sum to normalize scores
@@ -228,34 +234,90 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
             score_sum += score;
         }
 
-        for (const auto& [branch, log_score] : entries)
+        // Entropy
+        if (_filter == filter_type::entropy)
         {
-            double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
-            double ent_i = - score * std::log2(score);
+            std::cout << "Filtering by entropy" << std::endl;
+            for (const auto& [branch, log_score] : entries)
+            {
+                double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
+                double target_value = -score * std::log2(score);
 
-            if (entropy_stats.find(key) == entropy_stats.end())
-            {
-                entropy_stats[key] = ent_i;
-            }
-            else
-            {
-                entropy_stats[key] += ent_i;
+                if (filter_stats.find(key) == filter_stats.end())
+                {
+                    filter_stats[key] = target_value;
+                }
+                else
+                {
+                    filter_stats[key] += target_value;
+                }
             }
         }
+        else if (_filter == filter_type::max_deviation)
+        {
+            std::cout << "Filtering by max deviation" << std::endl;
+            double mean_score = 0;
+            for (const auto& [branch, log_score] : entries)
+            {
+                double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
+                mean_score += score;
+            }
+            mean_score /= entries.size();
+
+            double max_diff = 0;
+            for (const auto& [branch, log_score] : entries)
+            {
+                double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
+                max_diff = std::max(max_diff, std::abs(score - mean_score));
+            }
+
+            filter_stats[key] = max_diff;
+        }
     }
-/*
-    for (const auto& [key, entropy] : entropy_stats)
+
+    for (const auto& [key, stats] : filter_stats)
     {
-        std::cout << key << ": " << entropy << std::endl;
-    }*/
+        std::cout << stats << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Filtering phylo k-mers..." << std::endl;
+
+    /// copy entropy values into a vector
+    std::vector<phylo_kmer::score_type> filter_values;
+    filter_values.reserve(filter_stats.size());
+    for (const auto& entry : filter_stats)
+    {
+        filter_values.push_back(entry.second);
+    }
+    /// sort it to calculate percentile
+    std::sort(filter_values.begin(), filter_values.end());
+    //const auto quantile = utils::quantile(entropy_values, static_cast<phylo_kmer::score_type>(_mu));
+    const auto qth_element = filter_values.size() * (1 - _mu);
+    std::nth_element(filter_values.begin(), filter_values.begin() + qth_element, filter_values.end());
+    const auto quantile = filter_values[qth_element];
+
+    std::cout << "Filter threshold value: " << quantile << std::endl;
+
+    size_t counter = 0;
+    for (const auto& [key, value] : filter_stats)
+    {
+        if (value >= quantile)
+        {
+            ++counter;
+        }
+    }
+    std::cout << counter << " out of " << filter_values.size() <<
+              " (" << ((float)counter) / filter_values.size() << ")" << std::endl;
 
     /// filter k-mers by entropy value
+    std::cout << "Merging hash maps..." << std::endl;
     for (const auto group_id : group_ids)
     {
         const auto hash_map = load_hash_map(group_hashmap_file(group_id));
         for (const auto& [key, score] : hash_map)
         {
-            if (entropy_stats[key] >= _mu)
+            if (filter_values[key] >= quantile)
             {
                 _phylo_kmer_db.insert(key, {group_id, score});
             }
@@ -351,7 +413,7 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t> db_builder::explore_kme
     std::vector<phylo_kmer::branch_type> node_postorder_ids(node_groups.size());
 
 #ifndef _DEBUG
-    #pragma omp parallel for schedule(auto) reduction(+: count) num_threads(_num_threads)
+    //#pragma omp parallel for schedule(auto) reduction(+: count) num_threads(_num_threads)
 #endif
     for (size_t i = 0; i < node_groups.size(); ++i)
     {
@@ -490,10 +552,10 @@ namespace rappas
     phylo_kmer_db build(const std::string& working_directory, const std::string& ar_probabilities_file,
                         const std::string& original_tree_file, const std::string& extended_tree_file,
                         const std::string& extended_mapping_file, const std::string& artree_mapping_file,
-                        size_t kmer_size, core::phylo_kmer::score_type omega, double mu, size_t num_threads)
+                        size_t kmer_size, core::phylo_kmer::score_type omega, filter_type filter, double mu, size_t num_threads)
     {
         db_builder builder(working_directory, ar_probabilities_file, original_tree_file, extended_tree_file,
-                           extended_mapping_file, artree_mapping_file, kmer_size, omega, mu, num_threads);
+                           extended_mapping_file, artree_mapping_file, kmer_size, omega, filter, mu, num_threads);
         builder.run();
         return std::move(builder._phylo_kmer_db);
     }

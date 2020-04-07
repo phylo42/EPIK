@@ -15,6 +15,7 @@ __license__ = "MIT"
 import os
 import click
 import subprocess
+from pathlib import Path
 
 
 @click.group()
@@ -121,9 +122,12 @@ ALL_MODELS = NUCL_MODELS + AMINO_MODELS
               default=1.5, show_default=True,
               help="""Modifier levelling the threshold used during
                   phylo-kmer filtering, T=(omega/#states)^k""")
+@click.option('--filter',
+              type=click.Choice(["entropy", "max-deviation", "max-difference"]),
+              default="entropy", show_default=True)
 @click.option('-u', '--mu',
               type=float,
-              default=8, show_default=True,
+              default=0.5, show_default=True,
               help="""K-mer information threshold""")
 @click.option('--use-unrooted',
               is_flag=True,
@@ -144,7 +148,8 @@ def build(arbinary, #database,
           workdir, write_reduction, #dbfilename,
           alpha, categories, #ghosts,
           k, model, arparameters, convert_uo, force_root, #gap_jump_thresh,
-          no_reduction, ratio_reduction, omega, mu, use_unrooted, ardir,
+          no_reduction, ratio_reduction, omega,
+          filter, mu, use_unrooted, ardir,
           threads):
     """
     Builds a database of phylo k-mers.
@@ -154,29 +159,33 @@ def build(arbinary, #database,
     \tpython rappas2.py build -s [nucl|amino] -b ARbinary -w workdir -r alignment.fasta -t tree.newick
 
     """
+    # create working directory
+    Path(workdir).mkdir(parents=True, exist_ok=True)
+
     current_dir = os.path.dirname(os.path.realpath(__file__))
     rappas_jar = f"{current_dir}/rappas/dist/RAPPAS.jar"
 
     command = [
         "java", "-Xms2G", "-Xmx32G", "-jar", rappas_jar,
         "--phase", "b",
-        "--arbinary", arbinary,
+        "--arbinary", str(arbinary),
         #"--database", database,
-        "--refalign", refalign,
-        "--reftree", reftree,
+        "--refalign", str(refalign),
+        "--reftree", str(reftree),
         "--states", states,
         "--verbosity", str(verbosity),
-        "--workdir", workdir,
+        "--workdir", str(workdir),
         "--alpha", str(alpha),
         "--categories", str(categories),
         "--k", str(k),
         "--model", model,
         "--ratio-reduction", str(ratio_reduction),
         "--omega", str(omega),
-        "--ardir", ardir,
         "--threads", str(threads),
         "--aronly"
     ]
+    if ardir:
+        command.extend(["--ardir", ardir])
     if write_reduction:
         command.append("--write-reduction")
     if arparameters:
@@ -189,37 +198,39 @@ def build(arbinary, #database,
         command.append("--no-reduction")
     if use_unrooted:
         command.append("--use_unrooted")
-    subprocess.call(command)
+    return_code = subprocess.call(command)
 
+    # run rappas2 if RAPPAS succeed
+    if return_code == 0:
+        if states == 'nucl':
+            rappas_bin = f"{current_dir}/bin/build/rappas-buildn"
+        else:
+            raise RuntimeError("Proteins are not supported yet.")
 
-    if states == 'nucl':
-        rappas_bin = f"{current_dir}/bin/build/rappas-buildn"
-    else:
-        raise RuntimeError("Proteins are not supported yet.")
+        rappas1_results_dir = workdir
+        if ardir:
+            rappas1_results_dir = os.path.join(ardir, "..")
 
-    rappas1_results_dir = workdir
-    if ardir:
-        rappas1_results_dir = os.path.join(ardir, "..")
+        extended_tree = f"{rappas1_results_dir}/extended_trees/extended_tree_withBL.tree"
+        ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
+        extended_tree_node_mapping = f"{rappas1_results_dir}/extended_trees/extended_tree_node_mapping.tsv"
+        artree_id_mapping = f"{rappas1_results_dir}/AR/ARtree_id_mapping.tsv"
 
-    extended_tree = f"{rappas1_results_dir}/extended_trees/extended_tree_withBL.tree"
-    ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
-    extended_tree_node_mapping = f"{rappas1_results_dir}/extended_trees/extended_tree_node_mapping.tsv"
-    artree_id_mapping = f"{rappas1_results_dir}/AR/ARtree_id_mapping.tsv"
-
-    command = [
-        rappas_bin,
-        "-t", reftree,
-        "-x", extended_tree,
-        "-a", ar_seq_txt,
-        "-e", extended_tree_node_mapping,
-        "-m", artree_id_mapping,
-        "-w", workdir,
-        "-k", str(k),
-        "-o", str(omega),
-        "-u", str(mu),
-        "-j", str(threads)
-    ] 
-    subprocess.call(command)
+        command = [
+            rappas_bin,
+            "-t", str(reftree),
+            "-x", extended_tree,
+            "-a", ar_seq_txt,
+            "-e", extended_tree_node_mapping,
+            "-m", artree_id_mapping,
+            "-w", str(workdir),
+            "-k", str(k),
+            "-o", str(omega),
+            "--" + filter,
+            "-u", str(mu),
+            "-j", str(threads)
+        ]
+        subprocess.call(command)
 
 
 
