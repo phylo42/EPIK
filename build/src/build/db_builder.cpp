@@ -7,6 +7,7 @@
 #include <core/phylo_kmer_db.h>
 #include <core/phylo_tree.h>
 #include <utils/io/file_io.h>
+#include <core/newick.h>
 #include "db_builder.h"
 #include "pp_matrix/proba_matrix.h"
 #include "pp_matrix/phyml.h"
@@ -206,6 +207,16 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t, unsigned long> db_build
     return { group_ids, num_tuples, elapsed_time };
 }
 
+double shannon(double x)
+{
+    return - x * std::log2(x);
+}
+
+core::phylo_kmer::score_type logscore_to_score(core::phylo_kmer::score_type log_score)
+{
+    return std::min(std::pow(10, log_score), 1.0);
+}
+
 unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_type>& group_ids)
 {
     const auto begin = std::chrono::steady_clock::now();
@@ -223,43 +234,48 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
         }
     }
 
+    const auto tree = rappas::io::parse_newick(_phylo_kmer_db.tree());
+    const auto threshold = core::score_threshold(_phylo_kmer_db.omega(), _phylo_kmer_db.kmer_size());
+
     hash_map<phylo_kmer::key_type, double> filter_stats;
     for (const auto& [key, entries] : temp_db)
     {
-        // calculate the score sum to normalize scores
+        /// calculate the score sum to normalize scores
         double score_sum = 0;
         for (const auto& [_, log_score] : entries)
         {
-            double score = std::min(std::pow(10, log_score), 1.0);
-            score_sum += score;
+            score_sum += logscore_to_score(log_score);
         }
 
-        // Entropy
+        /// do not forget the branches that are not stored in the database,
+        /// they suppose to have the threshold score
+        score_sum += static_cast<float>(tree.get_node_count() - entries.size()) * threshold;
+
+        /// Entropy
         if (_filter == filter_type::entropy)
         {
             std::cout << "Filtering by entropy" << std::endl;
             for (const auto& [branch, log_score] : entries)
             {
-                double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
-                double target_value = -score * std::log2(score);
+                const auto weighted_score = logscore_to_score(log_score) / score_sum;
+                const auto target_value = shannon(weighted_score);
+                const auto target_threshold = shannon(threshold);
 
                 if (filter_stats.find(key) == filter_stats.end())
                 {
-                    filter_stats[key] = target_value;
+                    filter_stats[key] = static_cast<float>(tree.get_node_count()) * target_threshold;
                 }
-                else
-                {
-                    filter_stats[key] += target_value;
-                }
+                filter_stats[key] = filter_stats[key] - target_threshold + target_value;
             }
         }
+        /// Maximum deviation
         else if (_filter == filter_type::max_deviation)
         {
             std::cout << "Filtering by max deviation" << std::endl;
             double mean_score = 0;
             for (const auto& [branch, log_score] : entries)
             {
-                double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
+                double score = logscore_to_score(log_score) / score_sum;
                 mean_score += score;
             }
             mean_score /= entries.size();
