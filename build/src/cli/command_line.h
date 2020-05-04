@@ -4,7 +4,7 @@
 #include <exception>
 #include <string>
 #include <map>
-#include <core/phylo_kmer.h>
+#include <xpas/phylo_kmer.h>
 
 namespace cli
 {
@@ -27,7 +27,7 @@ namespace cli
 
         // algo options
         size_t kmer_size;
-        core::phylo_kmer::score_type omega;
+        xpas::phylo_kmer::score_type omega;
         size_t num_threads;
 
         // k-mer filtering paramaters, mutually exclusive

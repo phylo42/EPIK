@@ -2,10 +2,8 @@
 #include <sstream>
 #include <chrono>
 #include <boost/filesystem.hpp>
-#include <chrono>
-#include <core/phylo_kmer_db.h>
-#include <core/serialization.h>
-#include <iomanip>
+#include <xpas/phylo_kmer_db.h>
+#include <xpas/serialization.h>
 #include "cli/command_line.h"
 #include "cli/exceptions.h"
 #include "build/db_builder.h"
@@ -22,7 +20,7 @@ return_code print_help()
     return return_code::help;
 }
 
-std::string generate_db_name(const core::phylo_kmer_db& db)
+std::string generate_db_name(const xpas::phylo_kmer_db& db)
 {
     const auto kmer_size = db.kmer_size();
     const auto omega = db.omega();
@@ -63,9 +61,9 @@ return_code run(const cli::cli_parameters& parameters)
         }
         case cli::build:
         {
-            if (parameters.kmer_size > core::seq_traits::max_kmer_length)
+            if (parameters.kmer_size > xpas::seq_traits::max_kmer_length)
             {
-                std::cerr << "Maximum k-mer size allowed: " << core::seq_traits::max_kmer_length << std::endl;
+                std::cerr << "Maximum k-mer size allowed: " << xpas::seq_traits::max_kmer_length << std::endl;
                 return return_code::argument_error;
             }
 
@@ -101,7 +99,7 @@ return_code run(const cli::cli_parameters& parameters)
 
             std::cout << "Saving database to: " << db_filename.string() << "..." << std::endl;
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-            core::save(db, db_filename.string());
+            xpas::save(db, db_filename.string());
             std::cout << "Time (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - begin).count() << std::endl << std::endl;
 
@@ -138,11 +136,5 @@ int main(int argc, const char* argv[])
         std::cerr << e.what() << std::endl;
         return 1;
     }
-    /*
-    catch (...)
-    {
-        std::cerr << "Unexpected error. " << std::endl;
-        return 1;
-    }*/
     return 0;
 }

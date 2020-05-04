@@ -52,7 +52,7 @@ namespace cli
              "Ancestral reconstruction tree mapping file")
             ((K + "," + K_SHORT).c_str(), po::value<size_t>()->default_value(8),
              "k-mer length used at DB build")
-            ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<core::phylo_kmer::score_type>()->default_value(1.5),
+            ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<xpas::phylo_kmer::score_type>()->default_value(1.5),
              "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
              "Number of threads")
@@ -99,7 +99,7 @@ namespace cli
             parameters.extended_mapping_file = vm[EXTENDED_MAPPING].as<fs::path>().string();
             parameters.artree_mapping_file = vm[ARTREE_MAPPING].as<fs::path>().string();
             parameters.kmer_size = vm[K].as<size_t>();
-            parameters.omega = vm[OMEGA].as<core::phylo_kmer::score_type>();
+            parameters.omega = vm[OMEGA].as<xpas::phylo_kmer::score_type>();
             parameters.num_threads = vm[NUM_THREADS].as<size_t>();
             parameters.mu = vm[MU].as<double>();
             parameters.no_filter = no_filter_flag;

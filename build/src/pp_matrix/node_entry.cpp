@@ -7,9 +7,9 @@ node_entry::node_entry(branch_type _id, vector_type&& rows)
     , _rows{ std::move(rows) }
 {}
 
-node_entry::const_iterator node_entry::begin(size_t kmer_size, core::phylo_kmer::score_type threshold) const
+node_entry::const_iterator node_entry::begin(size_t kmer_size, xpas::phylo_kmer::score_type threshold) const
 {
-    return { { this, threshold, 0, core::phylo_kmer::pos_type(kmer_size) } };
+    return { { this, threshold, 0, xpas::phylo_kmer::pos_type(kmer_size) } };
 }
 
 node_entry::const_iterator node_entry::end() const
