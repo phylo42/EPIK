@@ -1,5 +1,7 @@
 #include <iostream>
+#include <unordered_set>
 #include <chrono>
+#include <random>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -221,119 +223,259 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 {
     const auto begin = std::chrono::steady_clock::now();
 
-    phylo_kmer_db temp_db(_phylo_kmer_db.kmer_size(), _phylo_kmer_db.omega(), "");
-
-    std::cout << "Calculating entropy..." << std::endl;
-    /// Load hash maps and merge them
-    for (const auto group_id : group_ids)
+    if (_filter == filter_type::entropy)
     {
-        const auto hash_map = load_hash_map(group_hashmap_file(group_id));
-        for (const auto& [key, score] : hash_map)
-        {
-            temp_db.insert(key, {group_id, score});
-        }
+        std::cout << "Filtering by entropy" << std::endl;
+    }
+    else if (_filter == filter_type::max_deviation)
+    {
+        std::cout << "Filtering by max deviation" << std::endl;
+    }
+    else if (_filter == filter_type::max_difference)
+    {
+        std::cout << "Filtering by max difference..." << std::endl;
+    }
+    else if (_filter == filter_type::random)
+    {
+        std::cout << "Random filtering..." << std::endl;
+    }
+    else
+    {
+        std::cout << "No filtering." << std::endl;
     }
 
-    const auto tree = rappas::io::parse_newick(_phylo_kmer_db.tree());
-    const auto threshold = core::score_threshold(_phylo_kmer_db.omega(), _phylo_kmer_db.kmer_size());
-
-    hash_map<phylo_kmer::key_type, double> filter_stats;
-    for (const auto& [key, entries] : temp_db)
+    if (_filter == filter_type::entropy || _filter == filter_type::max_deviation || _filter == filter_type::max_difference)
     {
-        /// calculate the score sum to normalize scores
-        double score_sum = 0;
-        for (const auto& [_, log_score] : entries)
+        phylo_kmer_db temp_db(_phylo_kmer_db.kmer_size(), _phylo_kmer_db.omega(), "");
+
+        std::cout << "Calculating entropy..." << std::endl;
+        /// Load hash maps and merge them
+        for (const auto group_id : group_ids)
         {
-            score_sum += logscore_to_score(log_score);
+            const auto hash_map = load_hash_map(group_hashmap_file(group_id));
+            for (const auto& [key, score] : hash_map)
+            {
+                temp_db.insert(key, {group_id, score});
+            }
         }
 
-        /// do not forget the branches that are not stored in the database,
-        /// they suppose to have the threshold score
-        score_sum += static_cast<float>(tree.get_node_count() - entries.size()) * threshold;
+        const auto tree = rappas::io::parse_newick(_phylo_kmer_db.tree());
+        const auto threshold = core::score_threshold(_phylo_kmer_db.omega(), _phylo_kmer_db.kmer_size());
 
-        /// Entropy
+
+        hash_map<phylo_kmer::key_type, double> filter_stats;
+        for (const auto& [key, entries] : temp_db)
+        {
+            /// calculate the score sum to normalize scores
+            double score_sum = 0;
+            for (const auto& [_, log_score] : entries)
+            {
+                score_sum += logscore_to_score(log_score);
+            }
+
+            /// do not forget the branches that are not stored in the database,
+            /// they suppose to have the threshold score
+            score_sum += static_cast<float>(tree.get_node_count() - entries.size()) * threshold;
+
+            /// Entropy
+            if (_filter == filter_type::entropy)
+            {
+                for (const auto& [branch, log_score] : entries)
+                {
+                    const auto weighted_score = logscore_to_score(log_score) / score_sum;
+                    const auto target_value = shannon(weighted_score);
+                    const auto weighted_threshold = threshold / score_sum;
+                    const auto target_threshold = shannon(weighted_threshold);
+
+                    if (filter_stats.find(key) == filter_stats.end())
+                    {
+                        filter_stats[key] = static_cast<float>(tree.get_node_count()) * target_threshold;
+                    }
+                    filter_stats[key] = filter_stats[key] - target_threshold + target_value;
+                }
+            }
+            /// Maximum deviation
+            else if (_filter == filter_type::max_deviation)
+            {
+                double mean_score = 0;
+                for (const auto& [branch, log_score] : entries)
+                {
+                    double score = logscore_to_score(log_score) / score_sum;
+                    mean_score += score;
+                }
+                mean_score /= entries.size();
+
+                double max_diff = 0;
+                for (const auto& [branch, log_score] : entries)
+                {
+                    double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
+                    max_diff = std::max(max_diff, std::abs(score - mean_score));
+                }
+
+                filter_stats[key] = max_diff;
+            }
+            else if (_filter == filter_type::max_difference)
+            {
+                double min_score = std::numeric_limits<double>::max();
+                double max_score = std::numeric_limits<double>::min();
+                for (const auto& [branch, log_score] : entries)
+                {
+                    double score = logscore_to_score(log_score) / score_sum;
+                    if (score < min_score)
+                    {
+                        min_score = score;
+                    }
+                    if (score > max_score)
+                    {
+                        max_score = score;
+                    }
+                }
+                filter_stats[key] = std::abs(max_score - min_score);
+            }
+        }
+
+        for (const auto& [key, stats] : filter_stats)
+        {
+            //std::cout << stats << " ";
+        }
+        std::cout << std::endl << std::endl;
+
+        std::cout << "Filtering phylo k-mers..." << std::endl;
+
+        /// copy entropy values into a vector
+        std::vector<phylo_kmer::score_type> filter_values;
+        filter_values.reserve(filter_stats.size());
+        for (const auto& entry : filter_stats)
+        {
+            filter_values.push_back(entry.second);
+        }
+
+        size_t counter = 0;
         if (_filter == filter_type::entropy)
         {
-            std::cout << "Filtering by entropy" << std::endl;
-            for (const auto& [branch, log_score] : entries)
-            {
-                const auto weighted_score = logscore_to_score(log_score) / score_sum;
-                const auto target_value = shannon(weighted_score);
-                const auto target_threshold = shannon(threshold);
+            std::cout << "Partial sort..." << std::endl;
+            const auto qth_element = filter_values.size() * _mu;
+            std::nth_element(filter_values.begin(), filter_values.begin() + qth_element, filter_values.end());
+            const auto quantile = filter_values[qth_element];
 
-                if (filter_stats.find(key) == filter_stats.end())
+            std::cout << "Filter threshold value: " << quantile << std::endl;
+
+            for (const auto& [key, value] : filter_stats)
+            {
+                if (value <= quantile)
                 {
-                    filter_stats[key] = static_cast<float>(tree.get_node_count()) * target_threshold;
+                    ++counter;
                 }
-                filter_stats[key] = filter_stats[key] - target_threshold + target_value;
             }
-        }
-        /// Maximum deviation
-        else if (_filter == filter_type::max_deviation)
-        {
-            std::cout << "Filtering by max deviation" << std::endl;
-            double mean_score = 0;
-            for (const auto& [branch, log_score] : entries)
+            std::cout << counter << " out of " << filter_values.size() <<
+                      " (" << ((float)counter) / filter_values.size() << ")" << std::endl;
+
+            std::cout << "Merging hash maps..." << std::endl;
+            for (const auto group_id : group_ids)
             {
-                double score = logscore_to_score(log_score) / score_sum;
-                mean_score += score;
+                const auto hash_map = load_hash_map(group_hashmap_file(group_id));
+                for (const auto& [key, score] : hash_map)
+                {
+                    if (filter_values[key] <= quantile)
+                    {
+                        _phylo_kmer_db.insert(key, {group_id, score});
+                        //std::cout << filter_values[key] << " ";
+                    }
+                }
             }
-            mean_score /= entries.size();
+            std::cout << std::endl;
 
-            double max_diff = 0;
-            for (const auto& [branch, log_score] : entries)
+        }
+        else if (_filter == filter_type::max_deviation || _filter == filter_type::max_difference)
+        {
+            const auto qth_element = filter_values.size() * (1 - _mu);
+            std::nth_element(filter_values.begin(), filter_values.begin() + qth_element, filter_values.end());
+            const auto quantile = filter_values[qth_element];
+
+            std::cout << "Filter threshold value: " << quantile << std::endl;
+
+            for (const auto& [key, value] : filter_stats)
             {
-                double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
-                max_diff = std::max(max_diff, std::abs(score - mean_score));
+                if (value >= quantile)
+                {
+                    ++counter;
+                }
             }
 
-            filter_stats[key] = max_diff;
+            std::cout << counter << " out of " << filter_values.size() <<
+                      " (" << ((float)counter) / filter_values.size() << ")" << std::endl;
+
+            std::cout << "Merging hash maps..." << std::endl;
+            for (const auto group_id : group_ids)
+            {
+                const auto hash_map = load_hash_map(group_hashmap_file(group_id));
+                for (const auto& [key, score] : hash_map)
+                {
+                    if (filter_values[key] >= quantile)
+                    {
+                        _phylo_kmer_db.insert(key, {group_id, score});
+                        //std::cout << score << " ";
+                    }
+                }
+            }
+            std::cout << std::endl;
         }
     }
-
-    for (const auto& [key, stats] : filter_stats)
+    else if (_filter == filter_type::random)
     {
-        std::cout << stats << " ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Filtering phylo k-mers..." << std::endl;
-
-    /// copy entropy values into a vector
-    std::vector<phylo_kmer::score_type> filter_values;
-    filter_values.reserve(filter_stats.size());
-    for (const auto& entry : filter_stats)
-    {
-        filter_values.push_back(entry.second);
-    }
-    /// sort it to calculate percentile
-    std::sort(filter_values.begin(), filter_values.end());
-    //const auto quantile = utils::quantile(entropy_values, static_cast<phylo_kmer::score_type>(_mu));
-    const auto qth_element = filter_values.size() * (1 - _mu);
-    std::nth_element(filter_values.begin(), filter_values.begin() + qth_element, filter_values.end());
-    const auto quantile = filter_values[qth_element];
-
-    std::cout << "Filter threshold value: " << quantile << std::endl;
-
-    size_t counter = 0;
-    for (const auto& [key, value] : filter_stats)
-    {
-        if (value >= quantile)
+        /// create a hash map which contains boolean values
+        /// which tell if we keep corresponding k-mers.
+        hash_map<phylo_kmer::key_type, bool> keep_keys;
+        for (const auto group_id : group_ids)
         {
-            ++counter;
+            const auto hash_map = load_hash_map(group_hashmap_file(group_id));
+            for (const auto& [key, _] : hash_map)
+            {
+                keep_keys[key] = true;
+            }
         }
-    }
-    std::cout << counter << " out of " << filter_values.size() <<
-              " (" << ((float)counter) / filter_values.size() << ")" << std::endl;
 
-    /// filter k-mers by entropy value
-    std::cout << "Merging hash maps..." << std::endl;
-    for (const auto group_id : group_ids)
-    {
-        const auto hash_map = load_hash_map(group_hashmap_file(group_id));
-        for (const auto& [key, score] : hash_map)
+        std::default_random_engine generator;
+        std::uniform_real_distribution<double> distribution(0, 1);
+
+        /// update keep_keys randomly
+        for (auto& [key, _] : keep_keys)
         {
-            if (filter_values[key] >= quantile)
+            keep_keys[key] = distribution(generator) <= _mu;
+        }
+
+        /// Load hash maps and merge them
+        std::cout << "Merging hash maps..." << std::endl;
+        for (const auto group_id : group_ids)
+        {
+            const auto hash_map = load_hash_map(group_hashmap_file(group_id));
+            for (const auto& [key, score] : hash_map)
+            {
+                if (keep_keys[key])
+                {
+                    _phylo_kmer_db.insert(key, {group_id, score});
+                }
+            }
+        }
+
+        size_t counter = 0;
+        for (auto& [_, keep] : keep_keys)
+        {
+            if (keep)
+            {
+                counter++;
+            }
+        }
+        std::cout << counter << " out of " << keep_keys.size() <<
+                  " (" << ((float)counter) / keep_keys.size() << ")" << std::endl;
+    }
+    else
+    {
+        std::cout << "Merging hash maps..." << std::endl;
+        for (const auto group_id : group_ids)
+        {
+            const auto hash_map = load_hash_map(group_hashmap_file(group_id));
+            for (const auto& [key, score] : hash_map)
             {
                 _phylo_kmer_db.insert(key, {group_id, score});
             }
@@ -428,9 +570,9 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t> db_builder::explore_kme
     /// in a hash map for every group separately on disk.
     std::vector<phylo_kmer::branch_type> node_postorder_ids(node_groups.size());
 
-#ifndef _DEBUG
+//#ifndef _DEBUG
     //#pragma omp parallel for schedule(auto) reduction(+: count) num_threads(_num_threads)
-#endif
+//#endif
     for (size_t i = 0; i < node_groups.size(); ++i)
     {
         const auto& node_group = node_groups[i];

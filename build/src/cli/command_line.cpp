@@ -20,13 +20,17 @@ namespace cli
     static std::string OMEGA="omega", OMEGA_SHORT="o";
     static std::string NUM_THREADS = "num_threads", NUM_THREADS_SHORT = "j";
     static std::string MU = "mu", MU_SHORT = "u";
+    static std::string NO_FILTER = "no-filter";
     static std::string ENTROPY = "entropy";
     static std::string MAXDEVIATION = "max-deviation";
-    static std::string MAXDIFF = "max-diff";
+    static std::string MAXDIFF = "max-difference";
+    static std::string RANDOM = "random";
 
-    bool entropy_flag = true;
-    bool max_deviation_flag = false;
-    bool max_difference_flag = false;
+    bool no_filter_flag = true;
+    bool entropy_flag = false;
+    bool max_deviation_filter_flag = false;
+    bool max_difference_filter_flag = false;
+    bool random_filter_flag = false;
 
     po::options_description get_opt_description()
     {
@@ -52,9 +56,11 @@ namespace cli
              "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
              "Number of threads")
+            ((NO_FILTER).c_str(), po::bool_switch(&no_filter_flag))
             ((ENTROPY).c_str(), po::bool_switch(&entropy_flag))
-            ((MAXDEVIATION).c_str(), po::bool_switch(&max_deviation_flag))
-            ((MAXDIFF).c_str(), po::bool_switch(&max_difference_flag))
+            ((MAXDEVIATION).c_str(), po::bool_switch(&max_deviation_filter_flag))
+            ((MAXDIFF).c_str(), po::bool_switch(&max_difference_filter_flag))
+            ((RANDOM).c_str(), po::bool_switch(&random_filter_flag))
             ((MU + "," + MU_SHORT).c_str(), po::value<double>()->default_value(0.8));
         return desc;
     }
@@ -96,9 +102,11 @@ namespace cli
             parameters.omega = vm[OMEGA].as<core::phylo_kmer::score_type>();
             parameters.num_threads = vm[NUM_THREADS].as<size_t>();
             parameters.mu = vm[MU].as<double>();
+            parameters.no_filter = no_filter_flag;
             parameters.entropy_filter = entropy_flag;
-            parameters.maxdev_filter = max_deviation_flag;
-            parameters.maxdiff_filter = max_difference_flag;
+            parameters.maxdev_filter = max_deviation_filter_flag;
+            parameters.maxdiff_filter = max_difference_filter_flag;
+            parameters.random_filter = random_filter_flag;
         }
         catch (const po::error& e)
         {

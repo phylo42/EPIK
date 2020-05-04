@@ -33,6 +33,18 @@ AMINO_MODELS = ['LG', 'WAG', 'JTT', 'Dayhoff', 'DCMut', 'CpREV', 'mMtREV', 'MtMa
 ALL_MODELS = NUCL_MODELS + AMINO_MODELS
 
 
+KMER_FILTERS = ["no-filter", "entropy", "max-deviation", "max-difference", "random"]
+
+
+
+def validate_filter(ctx, param, value):
+    value = value.lower()
+    if value not in KMER_FILTERS:
+        valid_values = ', '.join(v for v in KMER_FILTERS)
+        raise click.BadParameter('Filter must be one of: ' + valid_values)
+    return value
+
+
 @rappas.command()
 @click.option('-b', '--arbinary',
               type=click.Path(exists=True),
@@ -123,12 +135,12 @@ ALL_MODELS = NUCL_MODELS + AMINO_MODELS
               help="""Modifier levelling the threshold used during
                   phylo-kmer filtering, T=(omega/#states)^k""")
 @click.option('--filter',
-              type=click.Choice(["entropy", "max-deviation", "max-difference"]),
-              default="entropy", show_default=True)
+              callback=validate_filter,
+              default="no-filter", show_default=True)
 @click.option('-u', '--mu',
               type=float,
               default=0.5, show_default=True,
-              help="""K-mer information threshold""")
+              help="""K-mer filter threshold""")
 @click.option('--use-unrooted',
               is_flag=True,
               help="""Confirms you accept to use an unrooted reference
@@ -166,7 +178,7 @@ def build(arbinary, #database,
     rappas_jar = f"{current_dir}/rappas/dist/RAPPAS.jar"
 
     command = [
-        "java", "-Xms2G", "-Xmx32G", "-jar", rappas_jar,
+        "java", "-Xmx1G", "-jar", rappas_jar,
         "--phase", "b",
         "--arbinary", str(arbinary),
         #"--database", database,
@@ -226,11 +238,14 @@ def build(arbinary, #database,
             "-w", str(workdir),
             "-k", str(k),
             "-o", str(omega),
-            "--" + filter,
+            "--" + filter.lower(),
             "-u", str(mu),
             "-j", str(threads)
         ]
         subprocess.call(command)
+
+        hashmaps_dir = f"{workdir}/hashmaps"
+        subprocess.call(["rm", "-r", hashmaps_dir])
 
 
 

@@ -82,6 +82,14 @@ return_code run(const cli::cli_parameters& parameters)
             {
                 filter = rappas::filter_type::max_difference;
             }
+            else if (parameters.random_filter)
+            {
+                filter = rappas::filter_type::random;
+            }
+            else
+            {
+                filter = rappas::filter_type::no_filter;
+            }
 
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,

@@ -31,9 +31,11 @@ namespace cli
         size_t num_threads;
 
         // k-mer filtering paramaters, mutually exclusive
+        bool no_filter;
         bool entropy_filter;
         bool maxdev_filter;
         bool maxdiff_filter;
+        bool random_filter;
 
         // k-mer filtering threshold
         double mu;
