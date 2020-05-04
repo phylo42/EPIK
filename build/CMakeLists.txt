@@ -42,16 +42,16 @@ target_link_libraries(build_n
             Boost::iostreams
             OpenMP::OpenMP_CXX
             strasser::csv_parser
-            rappas::core_n
-            rappas::utils
+            xpas::dna
+            xpas::utils
         )
 
 # Turn on the warnings and treat them as errors
 target_compile_options(build_n
-        PRIVATE
-            -Wall -Wextra #-Werror #-Wpedantic
-        )
+    PRIVATE
+        -Wall -Wextra #-Werror #-Wpedantic
+    )
 
 target_compile_features(build_n
-        PUBLIC
-            cxx_std_17)
+    PUBLIC
+        cxx_std_17)

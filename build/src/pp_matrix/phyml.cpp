@@ -96,7 +96,7 @@ rappas::proba_matrix rappas::io::phyml_output_reader::read_matrix()
         {
             size_t site = 0;
             auto node_label = proba_matrix::NOT_A_LABEL;
-            core::phylo_kmer::score_type a, c, g, t;
+            xpas::phylo_kmer::score_type a, c, g, t;
 
             std::istringstream iss(line);
             if (!(iss >> site >> node_label >> a >> c >> g >> t))
@@ -136,52 +136,49 @@ rappas::proba_matrix rappas::io::phyml_output_reader::read_matrix()
 }
 
 
-namespace rappas
+namespace rappas::io
 {
-    namespace io
+    rappas::proba_matrix load_phyml_probas(const std::string& file_name)
     {
-        rappas::proba_matrix load_phyml_probas(const std::string& file_name)
+        phyml_output_reader reader(file_name);
+        return reader.read();
+    }
+
+    /// \brief Reads a "extended_tree_node_mapping.tsv" file produced by the old RAPPAS.
+    extended_mapping load_extended_mapping(const std::string& file_name)
+    {
+        cout << "Loading a node mapping: " + file_name << endl;
+        extended_mapping mapping;
+
+        ::io::CSVReader<2, ::io::trim_chars<' '>, ::io::no_quote_escape<'\t'>> in(file_name);
+        in.read_header(::io::ignore_extra_column, "original_id", "extended_name");
+        std::string extended_name;
+        branch_type original_id = xpas::phylo_kmer::nan_branch;
+        while (in.read_row(original_id, extended_name))
         {
-            phyml_output_reader reader(file_name);
-            return reader.read();
+            mapping[extended_name] = original_id;
         }
+        cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
+        return mapping;
+    }
 
-        /// \brief Reads a "extended_tree_node_mapping.tsv" file produced by the old RAPPAS.
-        extended_mapping load_extended_mapping(const std::string& file_name)
+    /// \brief Reads a "ARtree_id_mapping.tsv" file produced by the old RAPPAS.
+    artree_label_mapping load_artree_mapping(const std::string& file_name)
+    {
+        cout << "Loading a node mapping: " + file_name << endl;
+        artree_label_mapping mapping;
+
+        ::io::CSVReader<2, ::io::trim_chars<' '>, ::io::no_quote_escape<'\t'>> in(file_name);
+        in.read_header(::io::ignore_extra_column, "extended_label", "ARtree_label");
+        std::string extended_label, artree_label;
+        while (in.read_row(extended_label, artree_label))
         {
-            cout << "Loading a node mapping: " + file_name << endl;
-            extended_mapping mapping;
-
-            ::io::CSVReader<2, ::io::trim_chars<' '>, ::io::no_quote_escape<'\t'>> in(file_name);
-            in.read_header(::io::ignore_extra_column, "original_id", "extended_name");
-            std::string extended_name;
-            branch_type original_id = core::phylo_kmer::nan_branch;
-            while (in.read_row(original_id, extended_name))
+            if (is_number(artree_label))
             {
-                mapping[extended_name] = original_id;
+                mapping[extended_label] = xpas::phylo_kmer::branch_type(std::stoul(artree_label));
             }
-            cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
-            return mapping;
         }
-
-        /// \brief Reads a "ARtree_id_mapping.tsv" file produced by the old RAPPAS.
-        artree_label_mapping load_artree_mapping(const std::string& file_name)
-        {
-            cout << "Loading a node mapping: " + file_name << endl;
-            artree_label_mapping mapping;
-
-            ::io::CSVReader<2, ::io::trim_chars<' '>, ::io::no_quote_escape<'\t'>> in(file_name);
-            in.read_header(::io::ignore_extra_column, "extended_label", "ARtree_label");
-            std::string extended_label, artree_label;
-            while (in.read_row(extended_label, artree_label))
-            {
-                if (is_number(artree_label))
-                {
-                    mapping[extended_label] = core::phylo_kmer::branch_type(std::stoul(artree_label));
-                }
-            }
-            cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
-            return mapping;
-        }
+        cout << "Loaded " << mapping.size() << " mapped ids." << endl << endl;
+        return mapping;
     }
 }

@@ -3,9 +3,9 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
-#include <core/seq.h>
+#include <xpas/seq.h>
 
-using namespace core;
+using namespace xpas;
 using namespace rappas::impl;
 
 dac_kmer_iterator make_dac_end_iterator()
@@ -18,8 +18,8 @@ bool kmer_score_comparator(const phylo_kmer& k1, const phylo_kmer& k2)
     return k1.score > k2.score;
 }
 
-dac_kmer_iterator::dac_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
-                                     core::phylo_kmer::pos_type start_pos) noexcept
+dac_kmer_iterator::dac_kmer_iterator(const node_entry* entry, size_t kmer_size, xpas::phylo_kmer::score_type threshold,
+                                     xpas::phylo_kmer::pos_type start_pos) noexcept
     : _entry{ entry }, _kmer_size{ kmer_size }, _left_part_size{ 0 }, _start_pos{ start_pos }, _threshold{ threshold }
 {
     const auto halfsize = size_t{ kmer_size / 2 };
@@ -135,7 +135,7 @@ phylo_kmer dac_kmer_iterator::_next_phylokmer()
                 const auto left_halfmer = *_left_halfmer_it;
                 const auto right_halfmer = *_right_halfmer_it;
                 const auto full_key =
-                    (left_halfmer.key << ((_kmer_size - _left_part_size) * core::bit_length<core::seq_type>()))
+                    (left_halfmer.key << ((_kmer_size - _left_part_size) * xpas::bit_length<xpas::seq_type>()))
                     | right_halfmer.key;
                 const auto full_score = left_halfmer.score + right_halfmer.score;
                 ++_right_halfmer_it;
@@ -161,8 +161,8 @@ void dac_kmer_iterator::_select_right_halfmers_bound()
         phylo_kmer{ 0, residual_threshold }, kmer_score_comparator);
 }
 
-node_entry_view::node_entry_view(const node_entry* entry, core::phylo_kmer::score_type threshold,
-    core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept
+node_entry_view::node_entry_view(const node_entry* entry, xpas::phylo_kmer::score_type threshold,
+                                 xpas::phylo_kmer::pos_type start, xpas::phylo_kmer::pos_type end) noexcept
     : _entry{ entry }, _threshold{ threshold }, _start{ start }, _end{ end }
 {}
 
@@ -200,17 +200,17 @@ const node_entry* node_entry_view::get_entry() const noexcept
     return _entry;
 }
 
-core::phylo_kmer::pos_type node_entry_view::get_start_pos() const noexcept
+xpas::phylo_kmer::pos_type node_entry_view::get_start_pos() const noexcept
 {
     return _start;
 }
 
-core::phylo_kmer::pos_type node_entry_view::get_end_pos() const noexcept
+xpas::phylo_kmer::pos_type node_entry_view::get_end_pos() const noexcept
 {
     return _end;
 }
 
-core::phylo_kmer::score_type node_entry_view::get_threshold() const noexcept
+xpas::phylo_kmer::score_type node_entry_view::get_threshold() const noexcept
 {
     return _threshold;
 }

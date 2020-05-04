@@ -1,10 +1,8 @@
 #include <set>
-#include <iostream>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
 #include "command_line.h"
-#include "../return.h"
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
@@ -34,7 +32,7 @@ namespace cli
     static std::string OMEGA="omega", OMEGA_SHORT="o";
     static std::string NUM_THREADS = "num_threads", NUM_THREADS_SHORT = "j";
 
-    const po::options_description get_opt_description()
+    po::options_description get_opt_description()
     {
         po::options_description desc("General options");
         desc.add_options()
@@ -54,21 +52,21 @@ namespace cli
              "Ancestral reconstruction tree mapping file")
             ((K + "," + K_SHORT).c_str(), po::value<size_t>()->default_value(8),
              "k-mer length used at DB build")
-            ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<core::phylo_kmer::score_type>()->default_value(1.5),
+            ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<xpas::phylo_kmer::score_type>()->default_value(1.5),
              "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
              "Number of threads");
         return desc;
     }
 
-    const std::string get_option_list()
+    std::string get_option_list()
     {
         std::stringstream ss;
         ss << get_opt_description();
         return ss.str();
     }
 
-    const cli_parameters process_command_line(int argc, const char* argv[])
+    cli_parameters process_command_line(int argc, const char* argv[])
     {
         cli_parameters parameters;
         try
@@ -95,7 +93,7 @@ namespace cli
             parameters.extended_mapping_file = vm[EXTENDED_MAPPING].as<fs::path>().string();
             parameters.artree_mapping_file = vm[ARTREE_MAPPING].as<fs::path>().string();
             parameters.kmer_size = vm[K].as<size_t>();
-            parameters.omega = vm[OMEGA].as<core::phylo_kmer::score_type>();
+            parameters.omega = vm[OMEGA].as<xpas::phylo_kmer::score_type>();
             parameters.num_threads = vm[NUM_THREADS].as<size_t>();
         }
         catch (const po::error& e)

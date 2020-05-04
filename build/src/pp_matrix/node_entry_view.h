@@ -45,8 +45,8 @@ namespace rappas
     namespace impl
     {
         constexpr size_t vector_size = ipow(
-            core::seq_traits::alphabet_size,
-            iceil((double)core::seq_traits::max_kmer_length / 2.0));
+                xpas::seq_traits::alphabet_size,
+            iceil((double)xpas::seq_traits::max_kmer_length / 2.0));
         template <class T>
         using vector_type = boost::container::static_vector<T, vector_size>;
     }
@@ -63,9 +63,9 @@ namespace rappas
         /// to generate phylo-kmers
         struct phylo_mmer
         {
-            core::phylo_kmer mmer;
+            xpas::phylo_kmer mmer;
             /// a position of the last letter
-            core::phylo_kmer::pos_type last_position;
+            xpas::phylo_kmer::pos_type last_position;
             size_t last_index;
             size_t next_index;
         };
@@ -76,11 +76,11 @@ namespace rappas
         public:
             /// Member types
             using iterator_category = std::forward_iterator_tag;
-            using reference = const core::phylo_kmer&;
-            using pointer = const core::phylo_kmer*;
+            using reference = const xpas::phylo_kmer&;
+            using pointer = const xpas::phylo_kmer*;
 
-            dac_kmer_iterator(const node_entry* entry, size_t kmer_size, core::phylo_kmer::score_type threshold,
-                              core::phylo_kmer::pos_type start_pos) noexcept;
+            dac_kmer_iterator(const node_entry* entry, size_t kmer_size, xpas::phylo_kmer::score_type threshold,
+                              xpas::phylo_kmer::pos_type start_pos) noexcept;
             dac_kmer_iterator(const dac_kmer_iterator&) = delete;
             dac_kmer_iterator(dac_kmer_iterator&&) = default;
             dac_kmer_iterator& operator=(const dac_kmer_iterator&) = delete;
@@ -95,22 +95,22 @@ namespace rappas
             pointer operator->() const noexcept;
 
         private:
-            core::phylo_kmer _next_phylokmer();
+            xpas::phylo_kmer _next_phylokmer();
             void _select_right_halfmers_bound();
 
             const node_entry* _entry;
             size_t _kmer_size;
             size_t _left_part_size;
-            core::phylo_kmer::pos_type _start_pos;
-            core::phylo_kmer::score_type _threshold;
-            core::phylo_kmer _current;
+            xpas::phylo_kmer::pos_type _start_pos;
+            xpas::phylo_kmer::score_type _threshold;
+            xpas::phylo_kmer _current;
 
-            vector_type<core::phylo_kmer> _left_halfmers;
-            vector_type<core::phylo_kmer>::iterator _left_halfmer_it;
+            vector_type<xpas::phylo_kmer> _left_halfmers;
+            vector_type<xpas::phylo_kmer>::iterator _left_halfmer_it;
 
-            vector_type<core::phylo_kmer> _right_halfmers;
-            vector_type<core::phylo_kmer>::iterator _right_halfmer_it;
-            vector_type<core::phylo_kmer>::iterator _last_right_halfmer_it;
+            vector_type<xpas::phylo_kmer> _right_halfmers;
+            vector_type<xpas::phylo_kmer>::iterator _right_halfmer_it;
+            vector_type<xpas::phylo_kmer>::iterator _last_right_halfmer_it;
         };
     }
 }
@@ -123,8 +123,8 @@ public:
     using const_iterator = rappas::impl::dac_kmer_iterator;
     using const_reference = const_iterator::reference;
 
-    node_entry_view(const node_entry* entry, core::phylo_kmer::score_type threshold,
-        core::phylo_kmer::pos_type start, core::phylo_kmer::pos_type end) noexcept;
+    node_entry_view(const node_entry* entry, xpas::phylo_kmer::score_type threshold,
+                    xpas::phylo_kmer::pos_type start, xpas::phylo_kmer::pos_type end) noexcept;
     node_entry_view(const node_entry_view& other) noexcept;
     node_entry_view(node_entry_view&&) = delete;
     node_entry_view& operator=(const node_entry_view&) = delete;
@@ -135,15 +135,15 @@ public:
     const_iterator end() const noexcept;
 
     const node_entry* get_entry() const noexcept;
-    core::phylo_kmer::pos_type get_start_pos() const noexcept;
-    core::phylo_kmer::pos_type get_end_pos() const noexcept;
-    core::phylo_kmer::score_type get_threshold() const noexcept;
+    xpas::phylo_kmer::pos_type get_start_pos() const noexcept;
+    xpas::phylo_kmer::pos_type get_end_pos() const noexcept;
+    xpas::phylo_kmer::score_type get_threshold() const noexcept;
 
 private:
     const node_entry* _entry;
-    core::phylo_kmer::score_type _threshold;
-    core::phylo_kmer::pos_type _start;
-    core::phylo_kmer::pos_type _end;
+    xpas::phylo_kmer::score_type _threshold;
+    xpas::phylo_kmer::pos_type _start;
+    xpas::phylo_kmer::pos_type _end;
 };
 
 bool operator==(const node_entry_view& a, const node_entry_view& b) noexcept;
