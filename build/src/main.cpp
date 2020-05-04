@@ -69,10 +69,33 @@ return_code run(const cli::cli_parameters& parameters)
                 return return_code::argument_error;
             }
 
+            rappas::filter_type filter = rappas::filter_type::entropy;
+            if (parameters.entropy_filter)
+            {
+                filter = rappas::filter_type::entropy;
+            }
+            else if (parameters.maxdev_filter)
+            {
+                filter = rappas::filter_type::max_deviation;
+            }
+            else if (parameters.maxdiff_filter)
+            {
+                filter = rappas::filter_type::max_difference;
+            }
+            else if (parameters.random_filter)
+            {
+                filter = rappas::filter_type::random;
+            }
+            else
+            {
+                filter = rappas::filter_type::no_filter;
+            }
+
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
-                                          parameters.kmer_size, parameters.omega, parameters.num_threads);
+                                          parameters.kmer_size, parameters.omega, filter, parameters.mu,
+                                          parameters.num_threads);
 
             const auto db_filename = fs::path(parameters.working_directory) / generate_db_name(db);
 

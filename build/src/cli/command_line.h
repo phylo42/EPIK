@@ -29,10 +29,20 @@ namespace cli
         size_t kmer_size;
         core::phylo_kmer::score_type omega;
         size_t num_threads;
+
+        // k-mer filtering paramaters, mutually exclusive
+        bool no_filter;
+        bool entropy_filter;
+        bool maxdev_filter;
+        bool maxdiff_filter;
+        bool random_filter;
+
+        // k-mer filtering threshold
+        double mu;
     };
 
-    const std::string get_option_list();
-    const cli_parameters process_command_line(int argc, const char* argv[]);
+    std::string get_option_list();
+    cli_parameters process_command_line(int argc, const char* argv[]);
 }
 
 #endif

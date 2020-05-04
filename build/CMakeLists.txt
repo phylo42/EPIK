@@ -9,7 +9,7 @@ find_package(OpenMP REQUIRED)
 
 ######################################################################################################
 # Application target and properties
-add_executable(build_n "")
+add_executable(build_n "" src/utils/utils.h)
 set_target_properties(build_n PROPERTIES OUTPUT_NAME rappas-buildn)
 
 target_sources(build_n
