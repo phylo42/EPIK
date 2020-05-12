@@ -570,10 +570,10 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t> db_builder::explore_kme
     /// in a hash map for every group separately on disk.
     std::vector<phylo_kmer::branch_type> node_postorder_ids(node_groups.size());
 
-#ifdef NDEBUG
-    #pragma omp parallel for schedule(auto) reduction(+: count) default(none) num_threads(_num_threads) \
-        shared(node_groups, original_tree, ghosts_per_node, node_postorder_ids, probas)
-#endif
+//#ifdef NDEBUG
+//    #pragma omp parallel for schedule(auto) reduction(+: count) num_threads(_num_threads) \
+//        shared(original_tree, node_postorder_ids, probas)
+//#endif
     for (size_t i = 0; i < node_groups.size(); ++i)
     {
         const auto& node_group = node_groups[i];
