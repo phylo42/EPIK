@@ -271,8 +271,7 @@ def place(database, outputdir, threads, input_files):
 
     """
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    #FIXME: make rappas-place part of rappas2
-    rappas_bin = f"{current_dir}/rappas-placen"
+    rappas_bin = f"{current_dir}/bin/place/rappas-placen"
 
     command = [
         rappas_bin,
