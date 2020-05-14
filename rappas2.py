@@ -13,6 +13,7 @@ __license__ = "MIT"
 
 
 import os
+from os import path
 import click
 import subprocess
 from pathlib import Path
@@ -174,43 +175,59 @@ def build(arbinary, #database,
     # create working directory
     Path(workdir).mkdir(parents=True, exist_ok=True)
 
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    rappas_jar = f"{current_dir}/rappas/dist/RAPPAS.jar"
-
-    command = [
-        "java", "-Xmx1G", "-jar", rappas_jar,
-        "--phase", "b",
-        "--arbinary", str(arbinary),
-        #"--database", database,
-        "--refalign", str(refalign),
-        "--reftree", str(reftree),
-        "--states", states,
-        "--verbosity", str(verbosity),
-        "--workdir", str(workdir),
-        "--alpha", str(alpha),
-        "--categories", str(categories),
-        "--k", str(k),
-        "--model", model,
-        "--ratio-reduction", str(ratio_reduction),
-        "--omega", str(omega),
-        "--threads", str(threads),
-        "--aronly"
-    ]
+    rappas1_results_dir = workdir
     if ardir:
-        command.extend(["--ardir", ardir])
-    if write_reduction:
-        command.append("--write-reduction")
-    if arparameters:
-        command.extend(["--arparameters", arparameters])
-    if convert_uo:
-        command.append("--convertUO")
-    if force_root:
-        command.append("--force-root")
-    if no_reduction:
-        command.append("--no-reduction")
-    if use_unrooted:
-        command.append("--use_unrooted")
-    return_code = subprocess.call(command)
+        rappas1_results_dir = os.path.join(ardir, "..")
+
+    # auxilary files produced by RAPPAS
+    extended_tree = f"{rappas1_results_dir}/extended_trees/extended_tree_withBL.tree"
+    ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
+    extended_tree_node_mapping = f"{rappas1_results_dir}/extended_trees/extended_tree_node_mapping.tsv"
+    artree_id_mapping = f"{rappas1_results_dir}/AR/ARtree_id_mapping.tsv"
+
+    # check if auxilary files are alredy present
+    files_required = [extended_tree, ar_seq_txt, extended_tree_node_mapping, artree_id_mapping]
+
+    # if not, run RAPPAS1
+    return_code = 0
+    if not all(path.exists(f) for f in files_required):
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        rappas_jar = f"{current_dir}/rappas/dist/RAPPAS.jar"
+
+        command = [
+            "java", "-Xmx1G", "-jar", rappas_jar,
+            "--phase", "b",
+            "--arbinary", str(arbinary),
+            #"--database", database,
+            "--refalign", str(refalign),
+            "--reftree", str(reftree),
+            "--states", states,
+            "--verbosity", str(verbosity),
+            "--workdir", str(workdir),
+            "--alpha", str(alpha),
+            "--categories", str(categories),
+            "--k", str(k),
+            "--model", model,
+            "--ratio-reduction", str(ratio_reduction),
+            "--omega", str(omega),
+            "--threads", str(threads),
+            "--aronly"
+        ]
+        if ardir:
+            command.extend(["--ardir", ardir])
+        if write_reduction:
+            command.append("--write-reduction")
+        if arparameters:
+            command.extend(["--arparameters", arparameters])
+        if convert_uo:
+            command.append("--convertUO")
+        if force_root:
+            command.append("--force-root")
+        if no_reduction:
+            command.append("--no-reduction")
+        if use_unrooted:
+            command.append("--use_unrooted")
+        return_code = subprocess.call(command)
 
     # run rappas2 if RAPPAS succeed
     if return_code == 0:
@@ -218,15 +235,6 @@ def build(arbinary, #database,
             rappas_bin = f"{current_dir}/bin/build/rappas-buildn"
         else:
             raise RuntimeError("Proteins are not supported yet.")
-
-        rappas1_results_dir = workdir
-        if ardir:
-            rappas1_results_dir = os.path.join(ardir, "..")
-
-        extended_tree = f"{rappas1_results_dir}/extended_trees/extended_tree_withBL.tree"
-        ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
-        extended_tree_node_mapping = f"{rappas1_results_dir}/extended_trees/extended_tree_node_mapping.tsv"
-        artree_id_mapping = f"{rappas1_results_dir}/AR/ARtree_id_mapping.tsv"
 
         command = [
             rappas_bin,
