@@ -187,11 +187,11 @@ def build(arbinary, #database,
 
     # check if auxilary files are alredy present
     files_required = [extended_tree, ar_seq_txt, extended_tree_node_mapping, artree_id_mapping]
+    current_dir = os.path.dirname(os.path.realpath(__file__))
 
     # if not, run RAPPAS1
     return_code = 0
     if not all(path.exists(f) for f in files_required):
-        current_dir = os.path.dirname(os.path.realpath(__file__))
         rappas_jar = f"{current_dir}/rappas/dist/RAPPAS.jar"
 
         command = [
