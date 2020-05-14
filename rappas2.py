@@ -152,6 +152,10 @@ def validate_filter(ctx, param, value):
              type=click.Path(exists=True, dir_okay=True, file_okay=False),
              help="""Skip ancestral sequence reconstruction, and 
                   uses outputs from the specified directory.""")
+@click.option('--aronly',
+             type=bool,
+             default=False, show_default=True,
+             help="Dev option. Run only ancestral reconstruction and tree extension. No database will be built")
 @click.option('--threads',
              type=int,
              default=4, show_default=True,
@@ -163,7 +167,7 @@ def build(arbinary, #database,
           k, model, arparameters, convert_uo, force_root, #gap_jump_thresh,
           no_reduction, ratio_reduction, omega,
           filter, mu, use_unrooted, ardir,
-          threads):
+          threads, aronly):
     """
     Builds a database of phylo k-mers.
 
@@ -229,6 +233,15 @@ def build(arbinary, #database,
             command.append("--use_unrooted")
         return_code = subprocess.call(command)
 
+    # exit for --aronly
+    if aronly:
+        print("AR only requested. No database was built")
+        return
+
+    # exit if RAPPAS failed
+    if return_code != 0:
+        raise RuntimeError(f"RAPPAS failed with exit code {return_code}.")
+
     # run rappas2 if RAPPAS succeed
     if return_code == 0:
         if states == 'nucl':
@@ -254,7 +267,6 @@ def build(arbinary, #database,
 
         hashmaps_dir = f"{workdir}/hashmaps"
         subprocess.call(["rm", "-r", hashmaps_dir])
-
 
 
 @rappas.command()
