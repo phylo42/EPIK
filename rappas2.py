@@ -14,6 +14,7 @@ __license__ = "MIT"
 
 import os
 from os import path
+from pathlib import Path
 import click
 import subprocess
 from pathlib import Path
@@ -153,7 +154,7 @@ def validate_filter(ctx, param, value):
              help="""Skip ancestral sequence reconstruction, and 
                   uses outputs from the specified directory.""")
 @click.option('--aronly',
-             type=bool,
+             is_flag=True,
              default=False, show_default=True,
              help="Dev option. Run only ancestral reconstruction and tree extension. No database will be built")
 @click.option('--threads',
@@ -181,7 +182,7 @@ def build(arbinary, #database,
 
     rappas1_results_dir = workdir
     if ardir:
-        rappas1_results_dir = os.path.join(ardir, "..")
+        rappas1_results_dir = Path(ardir).parent
 
     # auxilary files produced by RAPPAS
     extended_tree = f"{rappas1_results_dir}/extended_trees/extended_tree_withBL.tree"
@@ -199,7 +200,8 @@ def build(arbinary, #database,
         rappas_jar = f"{current_dir}/rappas/dist/RAPPAS.jar"
 
         command = [
-            "java", "-Xmx1G", "-jar", rappas_jar,
+            "java", #"-Xmx1G",
+            "-jar", rappas_jar,
             "--phase", "b",
             "--arbinary", str(arbinary),
             #"--database", database,
