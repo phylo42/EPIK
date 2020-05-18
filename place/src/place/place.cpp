@@ -159,9 +159,24 @@ placed_sequence placer::place_seq(std::string_view seq) const
     for (xpas::phylo_kmer::branch_type i = 0; i < num_branch_nodes; ++i)
     {
         /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
-        /// not pre-order ones
-        const auto distal_length = (*_original_tree.get_by_postorder_id(i))->get_branch_length() / 2;
-        placements.push_back({ i, sequence_log_threshold, 0.0, 0, distal_length, 0.0 });
+        /// not the pre-order ones
+        const auto node = _original_tree.get_by_postorder_id(i);
+        if (!node)
+        {
+            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(i));
+        }
+
+        const auto distal_length = (*node)->get_branch_length() / 2;
+
+        /// For pendant_length, calculate the total branch length in the whole subtree
+        xpas::phylo_node::branch_length_type total_subtree_branch_lenght = 0;
+        for (const auto& subtree_node : xpas::visit_subtree(*node))
+        {
+            total_subtree_branch_lenght += subtree_node.get_branch_length();
+        }
+        const auto pendant_length = total_subtree_branch_lenght + distal_length;
+
+        placements.push_back({ i, sequence_log_threshold, 0.0, 0, distal_length, pendant_length});
     }
 
     /// Query every k-mer that has no more than one ambiguous character
