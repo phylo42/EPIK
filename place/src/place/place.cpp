@@ -134,7 +134,7 @@ std::vector<placement> select_best_placements(const std::vector<placement>& plac
     result.resize(std::distance(result.begin(), it));
 
     /// Partially select best keep_at_most placements
-    const size_t return_size = std::min(keep_at_most, placements.size());
+    const size_t return_size = std::min(keep_at_most, result.size());
     std::partial_sort(std::begin(result), std::begin(result) + return_size, std::end(result), compare_placed_branches);
     return { std::begin(result), std::begin(result) + return_size };
 }
