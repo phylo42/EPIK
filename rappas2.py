@@ -247,7 +247,7 @@ def build(arbinary, #database,
     # run rappas2 if RAPPAS succeed
     if return_code == 0:
         if states == 'nucl':
-            rappas_bin = f"{current_dir}/bin/build/rappas-buildn"
+            rappas_bin = f"{current_dir}/bin/build/rappas-build-dna"
         else:
             raise RuntimeError("Proteins are not supported yet.")
 
@@ -293,7 +293,7 @@ def place(database, outputdir, threads, input_files):
 
     """
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    rappas_bin = f"{current_dir}/bin/place/rappas-placen"
+    rappas_bin = f"{current_dir}/bin/place/rappas-place-dna"
 
     command = [
         rappas_bin,
