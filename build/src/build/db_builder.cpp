@@ -235,6 +235,10 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
     {
         std::cout << "Filtering by max difference..." << std::endl;
     }
+    else if (_filter == filter_type::standard_deviation)
+    {
+        std::cout << "Filtering by standand deviation..." << std::endl;
+    }
     else if (_filter == filter_type::random)
     {
         std::cout << "Random filtering..." << std::endl;
@@ -244,11 +248,10 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
         std::cout << "No filtering." << std::endl;
     }
 
-    if (_filter == filter_type::entropy || _filter == filter_type::max_deviation || _filter == filter_type::max_difference)
+    if (_filter == filter_type::entropy || _filter == filter_type::max_deviation
+        || _filter == filter_type::max_difference || _filter == filter_type::standard_deviation)
     {
         phylo_kmer_db temp_db(_phylo_kmer_db.kmer_size(), _phylo_kmer_db.omega(), "");
-
-        std::cout << "Calculating entropy..." << std::endl;
         /// Load hash maps and merge them
         for (const auto group_id : group_ids)
         {
@@ -261,7 +264,6 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 
         const auto tree = xpas::io::parse_newick(_phylo_kmer_db.tree());
         const auto threshold = xpas::score_threshold(_phylo_kmer_db.omega(), _phylo_kmer_db.kmer_size());
-
 
         hash_map<phylo_kmer::key_type, double> filter_stats;
         for (const auto& [key, entries] : temp_db)
@@ -314,6 +316,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 
                 filter_stats[key] = max_diff;
             }
+            /// Max difference
             else if (_filter == filter_type::max_difference)
             {
                 double min_score = std::numeric_limits<double>::max();
@@ -331,6 +334,28 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
                     }
                 }
                 filter_stats[key] = std::abs(max_score - min_score);
+            }
+            /// Standard deviation
+            else if (_filter == filter_type::standard_deviation)
+            {
+                double mean_score = 0;
+                for (const auto& [branch, log_score] : entries)
+                {
+                    double score = logscore_to_score(log_score) / score_sum;
+                    mean_score += score;
+                }
+                mean_score /= entries.size();
+
+                double sd = 0;
+                int count = 0;
+                for (const auto& [branch, log_score] : entries)
+                {
+                    double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
+                    sd += std::abs(score - mean_score);
+                    ++count;
+                }
+
+                filter_stats[key] = sd / static_cast<double>(count);
             }
         }
 
@@ -386,7 +411,8 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
             std::cout << std::endl;
 
         }
-        else if (_filter == filter_type::max_deviation || _filter == filter_type::max_difference)
+        else if (_filter == filter_type::max_deviation || _filter == filter_type::max_difference
+                || _filter == filter_type::standard_deviation)
         {
             const auto qth_element = filter_values.size() * (1 - _mu);
             std::nth_element(filter_values.begin(), filter_values.begin() + qth_element, filter_values.end());

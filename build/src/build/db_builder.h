@@ -12,10 +12,11 @@ namespace rappas
 {
     enum class filter_type
     {
-        no_filter = 0,
+        no_filter,
         entropy,
         max_deviation,
         max_difference,
+        standard_deviation,
         random
     };
 
