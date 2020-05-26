@@ -134,7 +134,7 @@ std::vector<placement> select_best_placements(const std::vector<placement>& plac
     result.resize(std::distance(result.begin(), it));
 
     /// Partially select best keep_at_most placements
-    const size_t return_size = std::min(keep_at_most, placements.size());
+    const size_t return_size = std::min(keep_at_most, result.size());
     std::partial_sort(std::begin(result), std::begin(result) + return_size, std::end(result), compare_placed_branches);
     return { std::begin(result), std::begin(result) + return_size };
 }
@@ -170,12 +170,21 @@ placed_sequence placer::place_seq(std::string_view seq) const
 
         /// For pendant_length, calculate the total branch length in the whole subtree
         xpas::phylo_node::branch_length_type total_subtree_branch_lenght = 0;
+        size_t num_subtree_nodes = 0;
         for (const auto& subtree_node : xpas::visit_subtree(*node))
         {
             total_subtree_branch_lenght += subtree_node.get_branch_length();
+            ++num_subtree_nodes;
         }
-        const auto pendant_length = total_subtree_branch_lenght + distal_length;
 
+        /// calculate the mean branch length in the subtree (excluding the branch with this post-order id)
+        auto mean_subtree_branch_length = 0.0f;
+        if (num_subtree_nodes > 1)
+        {
+            mean_subtree_branch_length = (total_subtree_branch_lenght - (*node)->get_branch_length()) / (num_subtree_nodes - 1.0f);
+        }
+
+        const auto pendant_length = mean_subtree_branch_length + distal_length;
         placements.push_back({ i, sequence_log_threshold, 0.0, 0, distal_length, pendant_length});
     }
 
