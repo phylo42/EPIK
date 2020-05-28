@@ -133,8 +133,19 @@ std::vector<placement> select_best_placements(const std::vector<placement>& plac
                            [](const placement& pb){ return pb.count > 0; } );
     result.resize(std::distance(result.begin(), it));
 
+
     /// Partially select best keep_at_most placements
-    const size_t return_size = std::min(keep_at_most, result.size());
+    size_t return_size = std::min(keep_at_most, result.size());
+
+    /// if no single query k-mer was found, all counts are zeros, and
+    /// we take just first keep_at_most branches
+    if (return_size == 0)
+    {
+        return_size = std::min(keep_at_most, placements.size());
+        result.resize(return_size);
+        std::copy(placements.begin(), placements.end(), result.begin());
+
+    }
     std::partial_sort(std::begin(result), std::begin(result) + return_size, std::end(result), compare_placed_branches);
     return { std::begin(result), std::begin(result) + return_size };
 }
