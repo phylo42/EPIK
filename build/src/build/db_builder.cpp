@@ -237,7 +237,11 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
     }
     else if (_filter == filter_type::standard_deviation)
     {
-        std::cout << "Filtering by standand deviation..." << std::endl;
+        std::cout << "Filtering by standard deviation..." << std::endl;
+    }
+    else if (_filter == filter_type::log_standard_deviation)
+    {
+        std::cout << "Filtering by standad deviation of logs..." << std::endl;
     }
     else if (_filter == filter_type::random)
     {
@@ -249,7 +253,8 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
     }
 
     if (_filter == filter_type::entropy || _filter == filter_type::max_deviation
-        || _filter == filter_type::max_difference || _filter == filter_type::standard_deviation)
+        || _filter == filter_type::max_difference || _filter == filter_type::standard_deviation
+        || _filter == filter_type::log_standard_deviation)
     {
         phylo_kmer_db temp_db(_phylo_kmer_db.kmer_size(), _phylo_kmer_db.omega(), "");
         /// Load hash maps and merge them
@@ -270,14 +275,17 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
         {
             /// calculate the score sum to normalize scores
             double score_sum = 0;
+            double log_score_sum = 0;
             for (const auto& [_, log_score] : entries)
             {
                 score_sum += logscore_to_score(log_score);
+                log_score_sum += log_score;
             }
 
             /// do not forget the branches that are not stored in the database,
             /// they suppose to have the threshold score
             score_sum += static_cast<float>(tree.get_node_count() - entries.size()) * threshold;
+            log_score_sum += static_cast<float>(tree.get_node_count() - entries.size()) * std::log10(threshold);
 
             /// Entropy
             if (_filter == filter_type::entropy)
@@ -302,7 +310,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
                 double mean_score = 0;
                 for (const auto& [branch, log_score] : entries)
                 {
-                    double score = logscore_to_score(log_score) / score_sum;
+                    double score = logscore_to_score(log_score);
                     mean_score += score;
                 }
                 mean_score /= entries.size();
@@ -341,7 +349,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
                 double mean_score = 0;
                 for (const auto& [branch, log_score] : entries)
                 {
-                    double score = logscore_to_score(log_score) / score_sum;
+                    double score = logscore_to_score(log_score);
                     mean_score += score;
                 }
                 mean_score /= entries.size();
@@ -357,11 +365,32 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 
                 filter_stats[key] = sd / static_cast<double>(count);
             }
+            /// Standard deviation of logs
+            else if (_filter == filter_type::log_standard_deviation)
+            {
+                double mean_score = 0;
+                for (const auto& [branch, log_score] : entries)
+                {
+                    mean_score += log_score / log_score_sum;
+                }
+                mean_score /= entries.size();
+
+                double sd = 0;
+                int count = 0;
+                for (const auto& [branch, log_score] : entries)
+                {
+                    double score = std::min(log_score, 0.0f) / log_score_sum;
+                    sd += std::abs(score - mean_score);
+                    ++count;
+                }
+
+                filter_stats[key] = sd / static_cast<double>(count);
+            }
         }
 
         for (const auto& [key, stats] : filter_stats)
         {
-            //std::cout << stats << " ";
+            std::cout << stats << " ";
         }
         std::cout << std::endl << std::endl;
 
@@ -412,7 +441,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 
         }
         else if (_filter == filter_type::max_deviation || _filter == filter_type::max_difference
-                || _filter == filter_type::standard_deviation)
+                || _filter == filter_type::standard_deviation || _filter == filter_type::log_standard_deviation)
         {
             const auto qth_element = filter_values.size() * (1 - _mu);
             std::nth_element(filter_values.begin(), filter_values.begin() + qth_element, filter_values.end());

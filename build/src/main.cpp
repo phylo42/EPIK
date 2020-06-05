@@ -69,6 +69,10 @@ rappas::filter_type get_filter_type(const cli::cli_parameters& parameters)
     {
         return rappas::filter_type::standard_deviation;
     }
+    else if (parameters.log_std_dev_filter)
+    {
+        return rappas::filter_type::log_standard_deviation;
+    }
     else if (parameters.random_filter)
     {
         return rappas::filter_type::random;

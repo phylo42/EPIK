@@ -17,6 +17,7 @@ namespace rappas
         max_deviation,
         max_difference,
         standard_deviation,
+        log_standard_deviation,
         random
     };
 

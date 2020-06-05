@@ -25,6 +25,7 @@ namespace cli
     static std::string MAX_DEVIATION = "max-deviation";
     static std::string MAX_DIFF = "max-difference";
     static std::string STD_DEVIATION = "sd";
+    static std::string LOG_STD_DEVIATION = "log-sd";
     static std::string RANDOM = "random";
 
     bool no_filter_flag = true;
@@ -33,6 +34,7 @@ namespace cli
     bool max_difference_filter_flag = false;
     bool random_filter_flag = false;
     bool std_deviation_filter_flag = false;
+    bool log_std_deviation_filter_flag = false;
 
     po::options_description get_opt_description()
     {
@@ -63,6 +65,7 @@ namespace cli
             ((MAX_DEVIATION).c_str(), po::bool_switch(&max_deviation_filter_flag))
             ((MAX_DIFF).c_str(), po::bool_switch(&max_difference_filter_flag))
             ((STD_DEVIATION).c_str(), po::bool_switch(&std_deviation_filter_flag))
+            ((LOG_STD_DEVIATION).c_str(), po::bool_switch(&log_std_deviation_filter_flag))
             ((RANDOM).c_str(), po::bool_switch(&random_filter_flag))
             ((MU + "," + MU_SHORT).c_str(), po::value<double>()->default_value(0.8));
         return desc;
@@ -111,6 +114,7 @@ namespace cli
             parameters.maxdiff_filter = max_difference_filter_flag;
             parameters.random_filter = random_filter_flag;
             parameters.std_dev_filter = std_deviation_filter_flag;
+            parameters.log_std_dev_filter = log_std_deviation_filter_flag;
         }
         catch (const po::error& e)
         {

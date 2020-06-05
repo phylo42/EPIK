@@ -37,6 +37,7 @@ namespace cli
         bool maxdiff_filter;
         bool random_filter;
         bool std_dev_filter;
+        bool log_std_dev_filter;
 
         // k-mer filtering threshold
         double mu;
