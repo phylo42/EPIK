@@ -57,13 +57,21 @@ rappas::filter_type get_filter_type(const cli::cli_parameters& parameters)
     {
         return rappas::filter_type::entropy;
     }
-    else if (parameters.maxdev_filter)
+    else if (parameters.max_dev_filter)
     {
         return rappas::filter_type::max_deviation;
     }
-    else if (parameters.maxdiff_filter)
+    else if (parameters.log_max_dev_filter)
+    {
+        return rappas::filter_type::log_max_deviation;
+    }
+    else if (parameters.max_diff_filter)
     {
         return rappas::filter_type::max_difference;
+    }
+    else if (parameters.log_max_diff_filter)
+    {
+        return rappas::filter_type::log_max_difference;
     }
     else if (parameters.std_dev_filter)
     {

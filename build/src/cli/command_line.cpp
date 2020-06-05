@@ -23,7 +23,9 @@ namespace cli
     static std::string NO_FILTER = "no-filter";
     static std::string ENTROPY = "entropy";
     static std::string MAX_DEVIATION = "max-deviation";
+    static std::string LOG_MAX_DEVIATION = "log-max-deviation";
     static std::string MAX_DIFF = "max-difference";
+    static std::string LOG_MAX_DIFF = "log-max-difference";
     static std::string STD_DEVIATION = "sd";
     static std::string LOG_STD_DEVIATION = "log-sd";
     static std::string RANDOM = "random";
@@ -31,10 +33,12 @@ namespace cli
     bool no_filter_flag = true;
     bool entropy_flag = false;
     bool max_deviation_filter_flag = false;
+    bool log_max_deviation_filter_flag = false;
     bool max_difference_filter_flag = false;
-    bool random_filter_flag = false;
+    bool log_max_difference_filter_flag = false;
     bool std_deviation_filter_flag = false;
     bool log_std_deviation_filter_flag = false;
+    bool random_filter_flag = false;
 
     po::options_description get_opt_description()
     {
@@ -63,7 +67,9 @@ namespace cli
             ((NO_FILTER).c_str(), po::bool_switch(&no_filter_flag))
             ((ENTROPY).c_str(), po::bool_switch(&entropy_flag))
             ((MAX_DEVIATION).c_str(), po::bool_switch(&max_deviation_filter_flag))
+            ((LOG_MAX_DEVIATION).c_str(), po::bool_switch(&log_max_deviation_filter_flag))
             ((MAX_DIFF).c_str(), po::bool_switch(&max_difference_filter_flag))
+            ((LOG_MAX_DIFF).c_str(), po::bool_switch(&log_max_difference_filter_flag))
             ((STD_DEVIATION).c_str(), po::bool_switch(&std_deviation_filter_flag))
             ((LOG_STD_DEVIATION).c_str(), po::bool_switch(&log_std_deviation_filter_flag))
             ((RANDOM).c_str(), po::bool_switch(&random_filter_flag))
@@ -110,8 +116,10 @@ namespace cli
             parameters.mu = vm[MU].as<double>();
             parameters.no_filter = no_filter_flag;
             parameters.entropy_filter = entropy_flag;
-            parameters.maxdev_filter = max_deviation_filter_flag;
-            parameters.maxdiff_filter = max_difference_filter_flag;
+            parameters.max_dev_filter = max_deviation_filter_flag;
+            parameters.log_max_dev_filter = log_max_deviation_filter_flag;
+            parameters.max_diff_filter = max_difference_filter_flag;
+            parameters.log_max_diff_filter = log_max_difference_filter_flag;
             parameters.random_filter = random_filter_flag;
             parameters.std_dev_filter = std_deviation_filter_flag;
             parameters.log_std_dev_filter = log_std_deviation_filter_flag;

@@ -13,7 +13,6 @@
 #include "db_builder.h"
 #include "pp_matrix/proba_matrix.h"
 #include "pp_matrix/phyml.h"
-#include "utils/utils.h"
 
 using std::string;
 using std::cout, std::endl;
@@ -231,9 +230,17 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
     {
         std::cout << "Filtering by max deviation" << std::endl;
     }
+    else if (_filter == filter_type::log_max_deviation)
+    {
+        std::cout << "Filtering by max deviation of logs..." << std::endl;
+    }
     else if (_filter == filter_type::max_difference)
     {
         std::cout << "Filtering by max difference..." << std::endl;
+    }
+    else if (_filter == filter_type::log_max_difference)
+    {
+        std::cout << "Filtering by max difference of logs..." << std::endl;
     }
     else if (_filter == filter_type::standard_deviation)
     {
@@ -241,7 +248,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
     }
     else if (_filter == filter_type::log_standard_deviation)
     {
-        std::cout << "Filtering by standad deviation of logs..." << std::endl;
+        std::cout << "Filtering by standard deviation of logs..." << std::endl;
     }
     else if (_filter == filter_type::random)
     {
@@ -252,9 +259,10 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
         std::cout << "No filtering." << std::endl;
     }
 
-    if (_filter == filter_type::entropy || _filter == filter_type::max_deviation
-        || _filter == filter_type::max_difference || _filter == filter_type::standard_deviation
-        || _filter == filter_type::log_standard_deviation)
+    if (_filter == filter_type::entropy
+        || _filter == filter_type::max_deviation || _filter == filter_type::log_max_deviation
+        || _filter == filter_type::max_difference || _filter == filter_type::log_max_difference
+        || _filter == filter_type::standard_deviation || _filter == filter_type::log_standard_deviation)
     {
         phylo_kmer_db temp_db(_phylo_kmer_db.kmer_size(), _phylo_kmer_db.omega(), "");
         /// Load hash maps and merge them
@@ -269,6 +277,7 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 
         const auto tree = xpas::io::parse_newick(_phylo_kmer_db.tree());
         const auto threshold = xpas::score_threshold(_phylo_kmer_db.omega(), _phylo_kmer_db.kmer_size());
+        const auto log_threshold = std::log10(threshold);
 
         hash_map<phylo_kmer::key_type, double> filter_stats;
         for (const auto& [key, entries] : temp_db)
@@ -284,42 +293,50 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
 
             /// do not forget the branches that are not stored in the database,
             /// they suppose to have the threshold score
-            score_sum += static_cast<float>(tree.get_node_count() - entries.size()) * threshold;
-            log_score_sum += static_cast<float>(tree.get_node_count() - entries.size()) * std::log10(threshold);
+            score_sum += static_cast<double>(tree.get_node_count() - entries.size()) * threshold;
+            log_score_sum += static_cast<double>(tree.get_node_count() - entries.size()) * log_threshold;
 
             /// Entropy
             if (_filter == filter_type::entropy)
             {
+                const auto weighted_threshold = threshold / score_sum;
+                const auto target_threshold = shannon(weighted_threshold);
+
                 for (const auto& [branch, log_score] : entries)
                 {
                     const auto weighted_score = logscore_to_score(log_score) / score_sum;
                     const auto target_value = shannon(weighted_score);
-                    const auto weighted_threshold = threshold / score_sum;
-                    const auto target_threshold = shannon(weighted_threshold);
 
                     if (filter_stats.find(key) == filter_stats.end())
                     {
-                        filter_stats[key] = static_cast<float>(tree.get_node_count()) * target_threshold;
+                        filter_stats[key] = static_cast<double>(tree.get_node_count()) * target_threshold;
                     }
                     filter_stats[key] = filter_stats[key] - target_threshold + target_value;
                 }
             }
-            /// Maximum deviation
+            /// Maximum absolute deviation
             else if (_filter == filter_type::max_deviation)
             {
-                double mean_score = 0;
-                for (const auto& [branch, log_score] : entries)
-                {
-                    double score = logscore_to_score(log_score);
-                    mean_score += score;
-                }
-                mean_score /= entries.size();
+                const double mean_score = score_sum / tree.get_node_count();
 
                 double max_diff = 0;
                 for (const auto& [branch, log_score] : entries)
                 {
-                    double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
+                    double score = std::min(std::pow(10, log_score), 1.0);
                     max_diff = std::max(max_diff, std::abs(score - mean_score));
+                }
+
+                filter_stats[key] = max_diff;
+            }
+            /// Maximum absolute deviation of logs
+            else if (_filter == filter_type::log_max_deviation)
+            {
+                const double mean_log_score = log_score_sum / tree.get_node_count();
+
+                double max_diff = 0;
+                for (const auto& [branch, log_score] : entries)
+                {
+                    max_diff = std::max(max_diff, std::abs(log_score - mean_log_score));
                 }
 
                 filter_stats[key] = max_diff;
@@ -328,63 +345,71 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
             else if (_filter == filter_type::max_difference)
             {
                 double min_score = std::numeric_limits<double>::max();
-                double max_score = std::numeric_limits<double>::min();
+                double max_score = std::numeric_limits<double>::lowest();
                 for (const auto& [branch, log_score] : entries)
                 {
-                    double score = logscore_to_score(log_score) / score_sum;
-                    if (score < min_score)
-                    {
-                        min_score = score;
-                    }
-                    if (score > max_score)
-                    {
-                        max_score = score;
-                    }
+                    double score = logscore_to_score(log_score);
+                    min_score = std::min(min_score, score);
+                    max_score = std::max(max_score, score);
+                }
+
+                if (entries.size() < tree.get_node_count())
+                {
+                    min_score = std::min(min_score, static_cast<double>(threshold));
+                    max_score = std::max(max_score, static_cast<double>(threshold));
+                }
+
+                filter_stats[key] = std::abs(max_score - min_score);
+            }
+            /// Max difference of logs
+            else if (_filter == filter_type::log_max_difference)
+            {
+                double min_score = std::numeric_limits<double>::max();
+                double max_score = std::numeric_limits<double>::lowest();
+                for (const auto& [branch, log_score] : entries)
+                {
+                    min_score = std::min(min_score, static_cast<double>(log_score));
+                    max_score = std::max(max_score, static_cast<double>(log_score));
+                }
+
+                if (entries.size() < tree.get_node_count())
+                {
+                    min_score = std::min(min_score, static_cast<double>(log_threshold));
+                    max_score = std::max(max_score, static_cast<double>(log_threshold));
                 }
                 filter_stats[key] = std::abs(max_score - min_score);
             }
             /// Standard deviation
             else if (_filter == filter_type::standard_deviation)
             {
-                double mean_score = 0;
-                for (const auto& [branch, log_score] : entries)
-                {
-                    double score = logscore_to_score(log_score);
-                    mean_score += score;
-                }
-                mean_score /= entries.size();
+                const double mean_score = score_sum / tree.get_node_count();
 
                 double sd = 0;
-                int count = 0;
                 for (const auto& [branch, log_score] : entries)
                 {
-                    double score = std::min(std::pow(10, log_score), 1.0) / score_sum;
-                    sd += std::abs(score - mean_score);
-                    ++count;
+                    double score = std::min(std::pow(10, log_score), 1.0);
+                    sd += (score - mean_score) * (score - mean_score);
                 }
 
-                filter_stats[key] = sd / static_cast<double>(count);
+                sd += static_cast<double>(tree.get_node_count() - entries.size()) *
+                    (threshold - mean_score) * (threshold - mean_score);
+                filter_stats[key] = std::sqrt(sd / tree.get_node_count());
+                std::cout << std::sqrt(sd / tree.get_node_count()) << std::endl;
             }
             /// Standard deviation of logs
             else if (_filter == filter_type::log_standard_deviation)
             {
-                double mean_score = 0;
-                for (const auto& [branch, log_score] : entries)
-                {
-                    mean_score += log_score / log_score_sum;
-                }
-                mean_score /= entries.size();
+                const double mean_log_score = log_score_sum / tree.get_node_count();
 
                 double sd = 0;
-                int count = 0;
                 for (const auto& [branch, log_score] : entries)
                 {
-                    double score = std::min(log_score, 0.0f) / log_score_sum;
-                    sd += std::abs(score - mean_score);
-                    ++count;
+                    sd += (log_score - mean_log_score) * (log_score - mean_log_score);
                 }
-
-                filter_stats[key] = sd / static_cast<double>(count);
+                sd += static_cast<double>(tree.get_node_count() - entries.size()) *
+                    (log_threshold - mean_log_score) * (log_threshold - mean_log_score);
+                filter_stats[key] = std::sqrt(sd / tree.get_node_count());
+                std::cout << std::sqrt(sd / tree.get_node_count()) << std::endl;
             }
         }
 
@@ -440,7 +465,8 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
             std::cout << std::endl;
 
         }
-        else if (_filter == filter_type::max_deviation || _filter == filter_type::max_difference
+        else if (_filter == filter_type::max_deviation || _filter == filter_type::log_max_deviation
+                || _filter == filter_type::max_difference || _filter == filter_type::log_max_difference
                 || _filter == filter_type::standard_deviation || _filter == filter_type::log_standard_deviation)
         {
             const auto qth_element = filter_values.size() * (1 - _mu);

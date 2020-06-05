@@ -33,11 +33,14 @@ namespace cli
         // k-mer filtering paramaters, mutually exclusive
         bool no_filter;
         bool entropy_filter;
-        bool maxdev_filter;
-        bool maxdiff_filter;
+        bool max_dev_filter;
+        bool log_max_dev_filter;
+        bool max_diff_filter;
+        bool log_max_diff_filter;
         bool random_filter;
         bool std_dev_filter;
         bool log_std_dev_filter;
+
 
         // k-mer filtering threshold
         double mu;

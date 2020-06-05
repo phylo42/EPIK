@@ -15,7 +15,9 @@ namespace rappas
         no_filter,
         entropy,
         max_deviation,
+        log_max_deviation,
         max_difference,
+        log_max_difference,
         standard_deviation,
         log_standard_deviation,
         random

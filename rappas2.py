@@ -35,7 +35,7 @@ AMINO_MODELS = ['LG', 'WAG', 'JTT', 'Dayhoff', 'DCMut', 'CpREV', 'mMtREV', 'MtMa
 ALL_MODELS = NUCL_MODELS + AMINO_MODELS
 
 
-KMER_FILTERS = ["no-filter", "entropy", "max-deviation", "max-difference", "random"]
+KMER_FILTERS = ["no-filter", "entropy", "max-deviation", "log-max-deviation", "max-difference", "log-max-difference", "sd", "log-sd", "random"]
 
 
 
@@ -265,6 +265,7 @@ def build(arbinary, #database,
             "-u", str(mu),
             "-j", str(threads)
         ]
+        print(" ".join(s for s in command))
         subprocess.call(command)
 
         hashmaps_dir = f"{workdir}/hashmaps"
