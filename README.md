@@ -2,6 +2,20 @@
 This is the new version of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
 ## Installation
+
+### Prerequisites
+
+- Java v11 and Ant
+- Boost Libraries >=1.65
+- CMake >= 3.10
+- GCC compiler must support c++17
+
+In debian, these can be installed with:
+```
+sudo apt install build-essential cmake libboost-all-dev openjdk-11-jdk ant
+```
+
+### Clone and build
 ```
 git clone --recursive https://github.com/phylo42/rappas2.git
 cd rappas2
