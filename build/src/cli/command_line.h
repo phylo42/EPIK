@@ -29,6 +29,21 @@ namespace cli
         size_t kmer_size;
         xpas::phylo_kmer::score_type omega;
         size_t num_threads;
+
+        // k-mer filtering paramaters, mutually exclusive
+        bool no_filter;
+        bool entropy_filter;
+        bool max_dev_filter;
+        bool log_max_dev_filter;
+        bool max_diff_filter;
+        bool log_max_diff_filter;
+        bool random_filter;
+        bool std_dev_filter;
+        bool log_std_dev_filter;
+
+
+        // k-mer filtering threshold
+        double mu;
     };
 
     std::string get_option_list();

@@ -9,10 +9,10 @@ find_package(OpenMP REQUIRED)
 
 ######################################################################################################
 # Application target and properties
-add_executable(build_n "")
-set_target_properties(build_n PROPERTIES OUTPUT_NAME rappas-buildn)
+add_executable(build_dna "" src/utils/utils.h)
+set_target_properties(build_dna PROPERTIES OUTPUT_NAME rappas-build-dna)
 
-target_sources(build_n
+target_sources(build_dna
         PRIVATE
             # cli
             src/cli/command_line.cpp
@@ -30,12 +30,12 @@ target_sources(build_n
             src/main.cpp
         )
 
-target_include_directories(build_n
+target_include_directories(build_dna
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
 )
 
-target_link_libraries(build_n
+target_link_libraries(build_dna
         PRIVATE
             Boost::program_options
             Boost::filesystem
@@ -47,11 +47,11 @@ target_link_libraries(build_n
         )
 
 # Turn on the warnings and treat them as errors
-target_compile_options(build_n
+target_compile_options(build_dna
     PRIVATE
         -Wall -Wextra #-Werror #-Wpedantic
     )
 
-target_compile_features(build_n
+target_compile_features(build_dna
     PUBLIC
         cxx_std_17)

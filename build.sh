@@ -16,5 +16,5 @@ cd ../
 
 # Compile rappas2
 mkdir -p bin && cd bin
-cmake -DHASH_MAP="USE_TSL_HOPSCOTCH_MAP" -DCMAKE_CXX_FLAGS="-O3" ..
+cmake -DHASH_MAP="USE_TSL_HOPSCOTCH_MAP" -DCMAKE_CXX_FLAGS="-O3" -DCMAKE_BUILD_TYPE=Release ..
 make -j4

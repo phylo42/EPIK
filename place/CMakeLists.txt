@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 ######################################################################################################
 # Application target and properties
-add_executable(place_n "")
-set_target_properties(place_n PROPERTIES OUTPUT_NAME rappas-placen)
+add_executable(place_dna "")
+set_target_properties(place_dna PROPERTIES OUTPUT_NAME rappas-place-dna)
 
-target_sources(place_n
+target_sources(place_dna
         PRIVATE
             src/main.cpp
             src/place/place.cpp
@@ -14,7 +14,7 @@ target_sources(place_n
 
 ######################################################################################################
 find_package(RapidJSON REQUIRED)
-target_include_directories(place_n
+target_include_directories(place_dna
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
             ${RapidJSON_INCLUDE_DIRS}
@@ -26,7 +26,7 @@ find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
 find_package(OpenMP REQUIRED)
 find_package(QuadMath REQUIRED)
 
-target_link_libraries(place_n
+target_link_libraries(place_dna
     PRIVATE
         xpas::dna
         Boost::program_options
@@ -37,11 +37,11 @@ target_link_libraries(place_n
 )
 
 # Turn on the warnings and treat them as errors
-target_compile_options(place_n
+target_compile_options(place_dna
     PRIVATE
         -Wall -Wextra -Werror
 )
 
-target_compile_features(place_n
+target_compile_features(place_dna
     PUBLIC
         cxx_std_17)

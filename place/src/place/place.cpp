@@ -133,8 +133,19 @@ std::vector<placement> select_best_placements(const std::vector<placement>& plac
                            [](const placement& pb){ return pb.count > 0; } );
     result.resize(std::distance(result.begin(), it));
 
+
     /// Partially select best keep_at_most placements
-    const size_t return_size = std::min(keep_at_most, placements.size());
+    size_t return_size = std::min(keep_at_most, result.size());
+
+    /// if no single query k-mer was found, all counts are zeros, and
+    /// we take just first keep_at_most branches
+    if (return_size == 0)
+    {
+        return_size = std::min(keep_at_most, placements.size());
+        result.resize(return_size);
+        std::copy(placements.begin(), placements.end(), result.begin());
+
+    }
     std::partial_sort(std::begin(result), std::begin(result) + return_size, std::end(result), compare_placed_branches);
     return { std::begin(result), std::begin(result) + return_size };
 }
@@ -159,9 +170,33 @@ placed_sequence placer::place_seq(std::string_view seq) const
     for (xpas::phylo_kmer::branch_type i = 0; i < num_branch_nodes; ++i)
     {
         /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
-        /// not pre-order ones
-        const auto distal_length = (*_original_tree.get_by_postorder_id(i))->get_branch_length() / 2;
-        placements.push_back({ i, sequence_log_threshold, 0.0, 0, distal_length, 0.0 });
+        /// not the pre-order ones
+        const auto node = _original_tree.get_by_postorder_id(i);
+        if (!node)
+        {
+            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(i));
+        }
+
+        const auto distal_length = (*node)->get_branch_length() / 2;
+
+        /// For pendant_length, calculate the total branch length in the whole subtree
+        xpas::phylo_node::branch_length_type total_subtree_branch_lenght = 0;
+        size_t num_subtree_nodes = 0;
+        for (const auto& subtree_node : xpas::visit_subtree(*node))
+        {
+            total_subtree_branch_lenght += subtree_node.get_branch_length();
+            ++num_subtree_nodes;
+        }
+
+        /// calculate the mean branch length in the subtree (excluding the branch with this post-order id)
+        auto mean_subtree_branch_length = 0.0f;
+        if (num_subtree_nodes > 1)
+        {
+            mean_subtree_branch_length = (total_subtree_branch_lenght - (*node)->get_branch_length()) / (num_subtree_nodes - 1.0f);
+        }
+
+        const auto pendant_length = mean_subtree_branch_length + distal_length;
+        placements.push_back({ i, sequence_log_threshold, 0.0, 0, distal_length, pendant_length});
     }
 
     /// Query every k-mer that has no more than one ambiguous character
