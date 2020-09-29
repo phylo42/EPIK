@@ -2,56 +2,15 @@
 #define RAPPAS_CPP_NODE_ENTRY_VIEW_H
 
 #include "row.h"
-#include <boost/version.hpp>
-
-
-/// static_vector has been accepted in boost only in v1.56. We check the version of boost library,
-/// and use std::vector if the library is too old.
-/// For our purposes, boost::static_vector is surely preferable due to its better performance.
-#if ((BOOST_VERSION / 100 % 1000) < 56)
-#define USE_NONSTATIC_VECTOR 0
-#endif
-
-#ifdef USE_NONSTATIC_VECTOR
-#include <vector>
-#pragma message("Boost is too old and does not provide static_vector. Using std::vector instead.")
 
 namespace rappas
 {
     namespace impl
     {
-        template <class... Args>
-        using vector_type = std::vector<Args...>;
+        template<class T>
+        using vector_type = std::vector<T>;
     }
 }
-#else
-
-#include <cstdint>
-#include <boost/container/static_vector.hpp>
-
-/// https://stackoverflow.com/questions/17719674/c11-fast-constexpr-integer-powers
-constexpr int64_t ipow(int64_t base, int exp, int64_t result=1) noexcept
-{
-    return exp < 1 ? result : ipow(base * base, exp / 2, (exp % 2) ? result * base : result);
-}
-
-constexpr int64_t iceil(double arg) noexcept
-{
-    return int64_t(arg + 1);
-}
-
-namespace rappas
-{
-    namespace impl
-    {
-        constexpr size_t vector_size = ipow(
-                xpas::seq_traits::alphabet_size,
-            iceil((double)xpas::seq_traits::max_kmer_length / 2.0));
-        template <class T>
-        using vector_type = boost::container::static_vector<T, vector_size>;
-    }
-}
-#endif
 
 class node_entry;
 

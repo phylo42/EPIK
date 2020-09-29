@@ -51,44 +51,6 @@ std::string generate_db_name(const xpas::phylo_kmer_db& db)
     return out.str();
 }
 
-rappas::filter_type get_filter_type(const cli::cli_parameters& parameters)
-{
-    if (parameters.entropy_filter)
-    {
-        return rappas::filter_type::entropy;
-    }
-    else if (parameters.max_dev_filter)
-    {
-        return rappas::filter_type::max_deviation;
-    }
-    else if (parameters.log_max_dev_filter)
-    {
-        return rappas::filter_type::log_max_deviation;
-    }
-    else if (parameters.max_diff_filter)
-    {
-        return rappas::filter_type::max_difference;
-    }
-    else if (parameters.log_max_diff_filter)
-    {
-        return rappas::filter_type::log_max_difference;
-    }
-    else if (parameters.std_dev_filter)
-    {
-        return rappas::filter_type::standard_deviation;
-    }
-    else if (parameters.log_std_dev_filter)
-    {
-        return rappas::filter_type::log_standard_deviation;
-    }
-    else if (parameters.random_filter)
-    {
-        return rappas::filter_type::random;
-    }
-
-    return rappas::filter_type::no_filter;
-}
-
 return_code run(const cli::cli_parameters& parameters)
 {
     switch (parameters.action)
@@ -105,12 +67,11 @@ return_code run(const cli::cli_parameters& parameters)
                 return return_code::argument_error;
             }
 
-            const auto filter_type = get_filter_type(parameters);
-
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
-                                          parameters.kmer_size, parameters.omega, filter_type, parameters.mu,
+                                          parameters.kmer_size, parameters.omega,
+                                          rappas::filter_type::no_filter, parameters.mu,
                                           parameters.num_threads);
 
             const auto db_filename = fs::path(parameters.working_directory) / generate_db_name(db);
