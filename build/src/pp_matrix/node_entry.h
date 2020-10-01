@@ -14,7 +14,7 @@ public:
     using vector_type = std::vector<rappas::row_type>;
 
     explicit node_entry() noexcept = default;
-    node_entry(rappas::branch_type _id, vector_type&& rows);
+    node_entry(std::string _id, vector_type&& rows);
     node_entry(const node_entry&) = delete;
     node_entry(node_entry&&) = default;
     node_entry& operator=(const node_entry&) = delete;
@@ -27,12 +27,12 @@ public:
     void push_back(rappas::row_type&& row);
 
     size_t get_alignment_size() const;
-    rappas::branch_type get_label() const;
+    std::string get_label() const;
 
     const rappas::proba_pair& at(size_t position, size_t variant) const;
 
 private:
-    rappas::branch_type _branch_label;
+    std::string _branch_label;
     vector_type _rows;
 };
 

@@ -12,7 +12,7 @@
 #include <xpas/newick.h>
 #include "db_builder.h"
 #include "pp_matrix/proba_matrix.h"
-#include "pp_matrix/phyml.h"
+#include "pp_matrix/ar.h"
 
 using std::string;
 using std::cout, std::endl;
@@ -196,8 +196,8 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t, unsigned long> db_build
     const auto original_tree = xpas::io::load_newick(_original_tree_file);
     const auto extended_tree = xpas::io::load_newick(_extended_tree_file);
 
-    /// Load PhyML output
-    const auto proba_matrix = rappas::io::load_phyml_probas(_ar_probabilities_file);
+    /// Load ancestral reconstruction output
+    const auto proba_matrix = rappas::io::load_ar(_ar_probabilities_file);
 
     /// Run the branch and bound algorithm
     std::cout << "Building database..." << std::endl;
@@ -299,7 +299,8 @@ db_builder::proba_group db_builder::get_submatrices(const proba_matrix& probas, 
         }
         else
         {
-            std::cerr << "Internal error: could not find " << artree_node_label << " node." << std::endl;
+            throw std::runtime_error("Internal error: could not find " + artree_node_label + " node. "
+                                     "Make sure it is in the ARTree_id_mapping file.");
         }
     }
 

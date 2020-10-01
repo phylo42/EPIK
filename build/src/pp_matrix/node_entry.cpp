@@ -2,8 +2,8 @@
 
 using namespace rappas;
 
-node_entry::node_entry(branch_type _id, vector_type&& rows)
-    : _branch_label{ _id }
+node_entry::node_entry(std::string _id, vector_type&& rows)
+    : _branch_label{ std::move(_id) }
     , _rows{ std::move(rows) }
 {}
 
@@ -27,7 +27,7 @@ size_t node_entry::get_alignment_size() const
     return _rows.size();
 }
 
-branch_type node_entry::get_label() const
+std::string node_entry::get_label() const
 {
     return _branch_label;
 }

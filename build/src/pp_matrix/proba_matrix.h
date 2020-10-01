@@ -19,7 +19,7 @@ namespace rappas
         static const branch_type NOT_A_LABEL = std::numeric_limits<branch_type>::max();
 
         /// a map for a fast access to a submatrix by branch node label
-        using storage = std::unordered_map<branch_type, node_entry>;
+        using storage = std::unordered_map<std::string, node_entry>;
         using iterator = typename storage::iterator;
         using const_iterator = typename storage::const_iterator;
         using mapped_type = storage::mapped_type;
@@ -36,10 +36,10 @@ namespace rappas
         size_t num_sites() const;
 
         // Lookup
-        mapped_type& operator[](branch_type id);
-        const mapped_type& at(branch_type id) const;
-        iterator find(const branch_type& id);
-        const_iterator find(const branch_type& id) const;
+        mapped_type& operator[](const std::string& ar_label);
+        const mapped_type& at(const std::string& ar_label) const;
+        iterator find(const std::string& ar_label);
+        const_iterator find(const std::string& ar_label) const;
 
         /// iterators
         iterator begin();
