@@ -139,6 +139,7 @@ def validate_filter(ctx, param, value):
 @click.option('--filter',
               callback=validate_filter,
               default="no-filter", show_default=True)
+@click.option('-f', type=float, default=1.0)
 @click.option('-u', '--mu',
               type=float,
               default=0.5, show_default=True,
@@ -167,7 +168,7 @@ def build(arbinary, #database,
           alpha, categories, #ghosts,
           k, model, arparameters, convert_uo, force_root, #gap_jump_thresh,
           no_reduction, ratio_reduction, omega,
-          filter, mu, use_unrooted, ardir,
+          filter, f, mu, use_unrooted, ardir,
           threads, aronly):
     """
     Builds a database of phylo k-mers.
