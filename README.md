@@ -12,7 +12,7 @@ This is the new version of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
 In debian, these can be installed with:
 ```
-sudo apt install build-essential cmake libboost-all-dev openjdk-11-jdk ant
+sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev openjdk-11-jdk ant
 ```
 
 ### Clone and build
