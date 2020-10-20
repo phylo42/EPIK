@@ -51,7 +51,9 @@ view_iterator& view_iterator::operator++()
     auto entry = _view.get_entry();
     if (size_t(_view.get_end_pos()) < entry->get_alignment_size())
     {
-        _view = { node_entry_view{ entry, _view.get_threshold(), _view.get_start_pos() + 1, _view.get_end_pos() + 1 } };
+        const xpas::phylo_kmer::pos_type start = _view.get_start_pos() + 1;
+        const xpas::phylo_kmer::pos_type end = _view.get_end_pos() + 1;
+        _view = { node_entry_view{ entry, _view.get_threshold(), start, end } };
     }
     else
     {

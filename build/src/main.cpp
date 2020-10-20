@@ -51,6 +51,16 @@ std::string generate_db_name(const xpas::phylo_kmer_db& db)
     return out.str();
 }
 
+void check_parameters(const cli::cli_parameters& parameters)
+{
+#ifndef KEEP_POSITIONS
+       if (parameters.merge_branches)
+       {
+           throw std::runtime_error("--merge-branches is only supported for xpas compiled with the KEEP_POSITIONS flag.");
+       }
+#endif
+}
+
 return_code run(const cli::cli_parameters& parameters)
 {
     switch (parameters.action)
@@ -70,7 +80,7 @@ return_code run(const cli::cli_parameters& parameters)
             const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
-                                          parameters.kmer_size, parameters.omega,
+                                          parameters.merge_branches, parameters.kmer_size, parameters.omega,
                                           rappas::filter_type::no_filter, parameters.mu,
                                           parameters.num_threads);
 
@@ -98,6 +108,7 @@ int main(int argc, const char* argv[])
     try
     {
         const cli::cli_parameters parameters = cli::process_command_line(argc, argv);
+        check_parameters(parameters);
         run(parameters);
     }
     catch (const conflicting_options& e)

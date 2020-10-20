@@ -212,11 +212,20 @@ placed_sequence placer::place_seq(std::string_view seq) const
             /// Update placements if found
             if (auto entries = _db.search(key); entries)
             {
+#ifdef KEEP_POSITIONS
+                for (const auto& [postorder_node_id, score, position] : *entries)
+                {
+                    (void)position;
+                    placements[postorder_node_id].count += 1;
+                    placements[postorder_node_id].score += score - _log_threshold;
+                }
+#else
                 for (const auto& [postorder_node_id, score] : *entries)
                 {
                     placements[postorder_node_id].count += 1;
                     placements[postorder_node_id].score += score - _log_threshold;
                 }
+#endif
             }
         }
         /// treat ambiguities with mean
@@ -229,6 +238,16 @@ placed_sequence placer::place_seq(std::string_view seq) const
             {
                 if (auto entries = _db.search(key); entries)
                 {
+#ifdef KEEP_POSITIONS
+                    for (const auto& [postorder_node_id, score, position] : *entries)
+                    {
+                        (void)position;
+                        l_amb.insert(postorder_node_id);
+
+                        ambiguous_placements[postorder_node_id].count += 1;
+                        ambiguous_placements[postorder_node_id].score += std::pow(10, score);
+                    }
+#else
                     for (const auto& [postorder_node_id, score] : *entries)
                     {
                         l_amb.insert(postorder_node_id);
@@ -236,6 +255,7 @@ placed_sequence placer::place_seq(std::string_view seq) const
                         ambiguous_placements[postorder_node_id].count += 1;
                         ambiguous_placements[postorder_node_id].score += std::pow(10, score);
                     }
+#endif
                 }
             }
 

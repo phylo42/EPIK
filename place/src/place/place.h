@@ -4,14 +4,9 @@
 #include <vector>
 #include <unordered_map>
 #include <xpas/phylo_kmer.h>
+#include <xpas/phylo_kmer_db.h>
 #include <xpas/phylo_tree.h>
 #include <boost/multiprecision/float128.hpp>
-
-namespace xpas
-{
-    class phylo_kmer_db;
-    class phylo_tree;
-}
 
 namespace xpas::io
 {

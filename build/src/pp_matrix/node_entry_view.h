@@ -22,7 +22,7 @@ namespace rappas
         /// to generate phylo-kmers
         struct phylo_mmer
         {
-            xpas::phylo_kmer mmer;
+            xpas::unpositioned_phylo_kmer mmer;
             /// a position of the last letter
             xpas::phylo_kmer::pos_type last_position;
             size_t last_index;
@@ -35,8 +35,8 @@ namespace rappas
         public:
             /// Member types
             using iterator_category = std::forward_iterator_tag;
-            using reference = const xpas::phylo_kmer&;
-            using pointer = const xpas::phylo_kmer*;
+            using reference = const xpas::unpositioned_phylo_kmer&;
+            using pointer = const xpas::unpositioned_phylo_kmer*;
 
             dac_kmer_iterator(const node_entry* entry, size_t kmer_size, xpas::phylo_kmer::score_type threshold,
                               xpas::phylo_kmer::pos_type start_pos) noexcept;
@@ -54,7 +54,7 @@ namespace rappas
             pointer operator->() const noexcept;
 
         private:
-            xpas::phylo_kmer _next_phylokmer();
+            xpas::unpositioned_phylo_kmer _next_phylokmer();
             void _select_right_halfmers_bound();
 
             const node_entry* _entry;
@@ -62,14 +62,14 @@ namespace rappas
             size_t _left_part_size;
             xpas::phylo_kmer::pos_type _start_pos;
             xpas::phylo_kmer::score_type _threshold;
-            xpas::phylo_kmer _current;
+            xpas::unpositioned_phylo_kmer _current;
 
-            vector_type<xpas::phylo_kmer> _left_halfmers;
-            vector_type<xpas::phylo_kmer>::iterator _left_halfmer_it;
+            vector_type<xpas::unpositioned_phylo_kmer> _left_halfmers;
+            vector_type<xpas::unpositioned_phylo_kmer>::iterator _left_halfmer_it;
 
-            vector_type<xpas::phylo_kmer> _right_halfmers;
-            vector_type<xpas::phylo_kmer>::iterator _right_halfmer_it;
-            vector_type<xpas::phylo_kmer>::iterator _last_right_halfmer_it;
+            vector_type<xpas::unpositioned_phylo_kmer> _right_halfmers;
+            vector_type<xpas::unpositioned_phylo_kmer>::iterator _right_halfmer_it;
+            vector_type<xpas::unpositioned_phylo_kmer>::iterator _last_right_halfmer_it;
         };
     }
 }

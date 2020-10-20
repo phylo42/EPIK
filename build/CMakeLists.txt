@@ -25,7 +25,7 @@ target_sources(build_dna
             src/pp_matrix/proba_matrix.cpp
             src/pp_matrix/node_entry.cpp
             src/pp_matrix/node_entry_view.cpp
-        src/pp_matrix/ar.cpp
+            src/pp_matrix/ar.cpp
 
             src/main.cpp
         )

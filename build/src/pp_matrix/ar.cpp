@@ -318,7 +318,7 @@ namespace rappas::io
         ::io::CSVReader<2, ::io::trim_chars<' '>, ::io::no_quote_escape<'\t'>> in(file_name);
         in.read_header(::io::ignore_extra_column, "original_id", "extended_name");
         std::string extended_name;
-        branch_type original_id = xpas::phylo_kmer::nan_branch;
+        branch_type original_id = xpas::phylo_kmer::na_branch;
         while (in.read_row(original_id, extended_name))
         {
             mapping[extended_name] = original_id;

@@ -30,6 +30,8 @@ namespace cli
         xpas::phylo_kmer::score_type omega;
         size_t num_threads;
 
+        bool merge_branches;
+
         // k-mer filtering paramaters, mutually exclusive
         bool no_filter;
         bool entropy_filter;

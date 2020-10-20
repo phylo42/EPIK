@@ -29,6 +29,7 @@ namespace cli
     static std::string STD_DEVIATION = "sd";
     static std::string LOG_STD_DEVIATION = "log-sd";
     static std::string RANDOM = "random";
+    static std::string MERGE_BRANCHES = "merge-branches";
 
     bool no_filter_flag = true;
     bool entropy_flag = false;
@@ -39,6 +40,7 @@ namespace cli
     bool std_deviation_filter_flag = false;
     bool log_std_deviation_filter_flag = false;
     bool random_filter_flag = false;
+    bool merge_branches_flag = false;
 
     po::options_description get_opt_description()
     {
@@ -64,6 +66,7 @@ namespace cli
              "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
              "Number of threads")
+            ((MERGE_BRANCHES).c_str(), po::bool_switch(&merge_branches_flag))
             ((NO_FILTER).c_str(), po::bool_switch(&no_filter_flag))
             ((ENTROPY).c_str(), po::bool_switch(&entropy_flag))
             ((MAX_DEVIATION).c_str(), po::bool_switch(&max_deviation_filter_flag))
@@ -123,6 +126,7 @@ namespace cli
             parameters.random_filter = random_filter_flag;
             parameters.std_dev_filter = std_deviation_filter_flag;
             parameters.log_std_dev_filter = log_std_deviation_filter_flag;
+            parameters.merge_branches = merge_branches_flag;
         }
         catch (const po::error& e)
         {

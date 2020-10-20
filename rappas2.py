@@ -150,6 +150,13 @@ def validate_filter(ctx, param, value):
                   tree (option -t). The trifurcation described by the
                   newick file will be considered as root. Be aware that
                   meaningless roots may impact accuracy.""")
+@click.option('--merge-branches',
+              is_flag=True,
+              default=False,
+              help="""Builds a databases of phylo k-mers, merging phylo
+                  k-mers of different branches. Thus, for every k-mer
+                  the only one maximum score among all the branches
+                  will be saved.""")
 @click.option('--ardir',
              type=click.Path(exists=True, dir_okay=True, file_okay=False),
              help="""Skip ancestral sequence reconstruction, and 
@@ -168,7 +175,8 @@ def build(arbinary, #database,
           alpha, categories, #ghosts,
           k, model, arparameters, convert_uo, force_root, #gap_jump_thresh,
           no_reduction, ratio_reduction, omega,
-          filter, f, mu, use_unrooted, ardir,
+          filter, f, mu, use_unrooted, merge_branches,
+          ardir,
           threads, aronly):
     """
     Builds a database of phylo k-mers.
@@ -187,7 +195,15 @@ def build(arbinary, #database,
 
     # auxilary files produced by RAPPAS
     extended_tree = f"{rappas1_results_dir}/extended_trees/extended_tree_withBL.tree"
-    ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
+    
+    # figure out which AR software is used, to pick up the right file
+    if "phyml" in arbinary.lower():
+        ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip_phyml_ancestral_seq.txt"
+    elif "raxml" in arbinary.lower():
+        ar_seq_txt = f"{rappas1_results_dir}/AR/extended_align.phylip.raxml.ancestralProbs"
+    else:
+        raise RuntimeError("Unknown ancestral reconstruction software. Supported software: PhyML, RAXML-NG")
+    
     extended_tree_node_mapping = f"{rappas1_results_dir}/extended_trees/extended_tree_node_mapping.tsv"
     artree_id_mapping = f"{rappas1_results_dir}/AR/ARtree_id_mapping.tsv"
 
@@ -250,7 +266,7 @@ def build(arbinary, #database,
         if states == 'nucl':
             rappas_bin = f"{current_dir}/bin/build/rappas-build-dna"
         else:
-            raise RuntimeError("Proteins are not supported yet.")
+            rappas_bin = f"{current_dir}/bin/build/rappas-build-aa"
 
         command = [
             rappas_bin,
@@ -266,11 +282,15 @@ def build(arbinary, #database,
             "-u", str(mu),
             "-j", str(threads)
         ]
+
+        if merge_branches:
+            command.append("--merge-branches")
+
         print(" ".join(s for s in command))
         subprocess.call(command)
 
         hashmaps_dir = f"{workdir}/hashmaps"
-        subprocess.call(["rm", "-r", hashmaps_dir])
+        subprocess.call(["rm", "-rf", hashmaps_dir])
 
 
 @rappas.command()
@@ -278,6 +298,11 @@ def build(arbinary, #database,
               required=True,
               type=click.Path(dir_okay=False, file_okay=True, exists=True),
               help="Input database.")
+@click.option('-s', '--states',
+              type=click.Choice(['nucl', 'amino']),
+              default='nucl', show_default=True,
+              required=True,
+              help="States used in analysis.")
 @click.option('-o', '--outputdir',
               required=True,
               type=click.Path(dir_okay=True, file_okay=False),
@@ -287,15 +312,20 @@ def build(arbinary, #database,
              default=4, show_default=True,
              help="Number of threads used.")
 @click.argument('input_files', type=click.Path(exists=True), nargs=-1)
-def place(database, outputdir, threads, input_files):
+def place(database, states, outputdir, threads, input_files):
     """
     Places .fasta files using the input RAPPAS2 database.
 
-    \tpython rappas2.py place -i db.rps -o output file.fasta [file2.fasta ...]
+    \tpython rappas2.py place -s [nucl|amino] -i db.rps -o output file.fasta [file2.fasta ...]
 
     """
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    rappas_bin = f"{current_dir}/bin/place/rappas-place-dna"
+
+    if states == 'nucl':
+        rappas_bin = f"{current_dir}/bin/place/rappas-place-dna"
+    else:
+        rappas_bin = f"{current_dir}/bin/place/rappas-place-aa"
+    
 
     command = [
         rappas_bin,

@@ -29,12 +29,23 @@ namespace rappas
         friend phylo_kmer_db build(const string& working_directory, const string& ar_probabilities_file,
                                    const string& original_tree_file, const string& extended_tree_file,
                                    const string& extended_mapping_file, const string& artree_mapping_file,
-                                   size_t kmer_size, xpas::phylo_kmer::score_type omega, filter_type filter,
-                                   double mu, size_t num_threads);
+                                   bool merge_branches, size_t kmer_size, xpas::phylo_kmer::score_type omega,
+                                   filter_type filter, double mu, size_t num_threads);
     public:
         /// Member types
         /// \brief A hash map to store all the phylo-kmers, placed to one original node
+#ifdef KEEP_POSITIONS
+
+        struct score_pos_pair
+        {
+            phylo_kmer::score_type score;
+            phylo_kmer::pos_type position;
+        };
+
+        using branch_hash_map = hash_map<phylo_kmer::key_type, score_pos_pair>;
+#else
         using branch_hash_map = hash_map<phylo_kmer::key_type, phylo_kmer::score_type>;
+#endif
 
         /// \brief A group of node ids that must be processed together. We group together
         ///        the extended node ids that correspond to the same original node ids
@@ -48,8 +59,8 @@ namespace rappas
         db_builder(const string& working_directory, const string& ar_probabilities_file,
                    const string& original_tree_file, const string& extended_tree_file,
                    const string& extended_mapping_file, const string& artree_mapping_file,
-                   size_t kmer_size, xpas::phylo_kmer::score_type omega, filter_type filter,
-                   double mu, size_t num_threads);
+                   bool merge_branches, size_t kmer_size, xpas::phylo_kmer::score_type omega,
+                   filter_type filter, double mu, size_t num_threads);
         db_builder(const db_builder&) = delete;
         db_builder(db_builder&&) = delete;
         db_builder& operator=(const db_builder&) = delete;
@@ -112,6 +123,8 @@ namespace rappas
         string _extended_mapping_file;
         string _artree_mapping_file;
 
+        bool _merge_branches;
+
         size_t _kmer_size;
         xpas::phylo_kmer::score_type _omega;
 
@@ -131,23 +144,24 @@ using namespace rappas;
 db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file,
                        const string& original_tree_file, const string& extended_tree_file,
                        const string& extended_mapping_file, const string& artree_mapping_file,
-                       size_t kmer_size, xpas::phylo_kmer::score_type omega,
+                       bool merge_branches, size_t kmer_size, xpas::phylo_kmer::score_type omega,
                        filter_type filter, double mu, size_t num_threads)
-    : _working_directory{working_directory}
-    ,_hashmaps_directory{(fs::path{working_directory} / fs::path{"hashmaps"}).string()}
-    , _ar_probabilities_file{ar_probabilities_file}
-    , _original_tree_file{original_tree_file}
-    , _extended_tree_file{extended_tree_file}
-    , _extended_mapping_file{extended_mapping_file}
-    , _artree_mapping_file{artree_mapping_file}
-    , _kmer_size{kmer_size}
-    , _omega{omega}
-    , _filter{filter}
-    , _mu{mu}
-    , _num_threads{num_threads}
+    : _working_directory{ working_directory }
+    ,_hashmaps_directory{ (fs::path{working_directory} / fs::path{"hashmaps"}).string() }
+    , _ar_probabilities_file{ ar_probabilities_file }
+    , _original_tree_file{ original_tree_file }
+    , _extended_tree_file{ extended_tree_file }
+    , _extended_mapping_file{ extended_mapping_file }
+    , _artree_mapping_file{ artree_mapping_file }
+    , _merge_branches{ merge_branches }
+    , _kmer_size{ kmer_size }
+    , _omega{ omega }
+    , _filter{ filter }
+    , _mu{ mu }
+    , _num_threads{ num_threads }
     /// I do not like reading a file here, but it seems to be better than having something like "set_tree"
     /// in the public interface of the phylo_kmer_db class.
-    , _phylo_kmer_db{kmer_size, omega, xpas::io::read_as_string(original_tree_file)}
+    , _phylo_kmer_db{ kmer_size, omega, xpas::io::read_as_string(original_tree_file) }
 {
 }
 
@@ -158,7 +172,7 @@ void create_directory(const std::string& dirname)
     {
         if (!fs::create_directory(dirname))
         {
-            throw new std::runtime_error("Cannot create directory " + dirname);
+            throw std::runtime_error("Cannot create directory " + dirname);
         }
     }
 }
@@ -227,10 +241,53 @@ unsigned long db_builder::merge_hashmaps(const std::vector<phylo_kmer::branch_ty
     for (const auto group_id : group_ids)
     {
         const auto hash_map = load_hash_map(group_hashmap_file(group_id));
-        for (const auto& [key, score] : hash_map)
+
+#ifdef KEEP_POSITIONS
+        if (_merge_branches)
         {
-            _phylo_kmer_db.insert(key, {group_id, score});
+            for (const auto& [key, score_pos_pair] : hash_map)
+            {
+                const auto& [score, position] = score_pos_pair;
+                if (auto entries = _phylo_kmer_db.search(key); entries)
+                {
+                    /// If there are entries, there must be only one because
+                    /// we always take maximum score among different branches.
+                    /// So this loop will have only one iteration
+                    for (const auto& [old_node, old_score, old_position] : *entries)
+                    {
+                        if (old_score < score)
+                        {
+                            _phylo_kmer_db.replace(key, { group_id, score, position });
+                        }
+                    }
+                }
+                else
+                {
+                    _phylo_kmer_db.unsafe_insert(key, { group_id, score, position });
+                }
+            }
         }
+        else
+        {
+            for (const auto& [key, score_pos_pair] : hash_map)
+            {
+                const auto& [score, position] = score_pos_pair;
+                _phylo_kmer_db.unsafe_insert(key, { group_id, score, position });
+            }
+        }
+#else
+        if (_merge_branches)
+        {
+            throw std::runtime_error("--merge-branches is only supported for xpas compiled with the KEEP_POSITIONS flag.");
+        }
+        else
+        {
+            for (const auto& [key, score] : hash_map)
+            {
+                _phylo_kmer_db.unsafe_insert(key, { group_id, score });
+            }
+        }
+#endif
     }
 
     const auto end = std::chrono::steady_clock::now();
@@ -355,18 +412,60 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t> db_builder::explore_kme
 }
 
 /// \brief Puts a key-value pair in a hash map. Used to process branches in parallel
-void put(db_builder::branch_hash_map& map, phylo_kmer::key_type key, phylo_kmer::score_type score)
+#ifdef KEEP_POSITIONS
+void put(db_builder::branch_hash_map& map, const phylo_kmer& kmer)
 {
-    if (auto it = map.find(key); it != map.end())
+    if (auto it = map.find(kmer.key); it != map.end())
     {
-        if (it->second < score)
+        if (it->second.score < kmer.score)
         {
-            map[key] = score;
+            map[kmer.key] = { kmer.score, kmer.position };
         }
     }
     else
     {
-        map[key] = score;
+        map[kmer.key] = { kmer.score, kmer.position };
+    }
+}
+
+std::pair<db_builder::branch_hash_map, size_t> db_builder::explore_group(const proba_group& group)
+{
+    branch_hash_map hash_map;
+    size_t count = 0;
+
+    const auto threshold = std::log10(xpas::score_threshold(_omega, _kmer_size));
+
+    for (auto node_entry_ref : group)
+    {
+        const auto& node_entry = node_entry_ref.get();
+        for (auto window = node_entry.begin(_kmer_size, threshold); window != node_entry.end(); ++window)
+        {
+            const auto position = window->get_start_pos();
+            for (const auto& kmer : *window)
+            {
+                phylo_kmer positioned_kmer = { kmer.key, kmer.score, position };
+                put(hash_map, positioned_kmer);
+                ++count;
+            }
+        }
+    }
+
+    return {std::move(hash_map), count};
+}
+#else
+
+void put(db_builder::branch_hash_map& map, const phylo_kmer& kmer)
+{
+    if (auto it = map.find(kmer.key); it != map.end())
+    {
+        if (it->second < kmer.score)
+        {
+            map[kmer.key] = kmer.score;
+        }
+    }
+    else
+    {
+        map[kmer.key] = kmer.score;
     }
 }
 
@@ -384,7 +483,7 @@ std::pair<db_builder::branch_hash_map, size_t> db_builder::explore_group(const p
         {
             for (const auto& kmer : *window)
             {
-                put(hash_map, kmer.key, kmer.score);
+                put(hash_map, kmer);
                 ++count;
             }
         }
@@ -393,8 +492,45 @@ std::pair<db_builder::branch_hash_map, size_t> db_builder::explore_group(const p
     return {std::move(hash_map), count};
 }
 
+#endif
+
 namespace boost::serialization
 {
+
+#ifdef KEEP_POSITIONS
+    /// Serialize a hash map
+    template<class Archive>
+    inline void save(Archive& ar, const ::db_builder::branch_hash_map& map, const unsigned int /*version*/)
+    {
+        size_t map_size = map.size();
+        ar & map_size;
+
+        for (const auto& [key, score_pos_pair] : map)
+        {
+            const auto& [score, position] = score_pos_pair;
+            ar & key & score & position;
+        }
+    }
+
+    /// Deserialize a hash map
+    template<class Archive>
+    inline void load(Archive& ar, ::db_builder::branch_hash_map& map, unsigned int version)
+    {
+        (void)version;
+
+        size_t map_size = 0;
+        ar & map_size;
+
+        for (size_t i = 0; i < map_size; ++i)
+        {
+            xpas::phylo_kmer::key_type key = xpas::phylo_kmer::na_key;
+            xpas::phylo_kmer::score_type score = xpas::phylo_kmer::na_score;
+            xpas::phylo_kmer::pos_type position = xpas::phylo_kmer::na_pos;
+            ar & key & score & position;
+            map[key] = { score, position };
+        }
+    }
+#else
     /// Serialize a hash map
     template<class Archive>
     inline void save(Archive& ar, const ::db_builder::branch_hash_map& map, const unsigned int /*version*/)
@@ -410,24 +546,27 @@ namespace boost::serialization
 
     /// Deserialize a hash map
     template<class Archive>
-    inline void load(Archive& ar, ::db_builder::branch_hash_map& map, const unsigned int /*version*/)
+    inline void load(Archive& ar, ::db_builder::branch_hash_map& map, unsigned int version)
     {
+        (void)version;
+
         size_t map_size = 0;
         ar & map_size;
 
         for (size_t i = 0; i < map_size; ++i)
         {
-            xpas::phylo_kmer::key_type key = xpas::phylo_kmer::nan_key;
-            xpas::phylo_kmer::score_type score = xpas::phylo_kmer::nan_score;
+            xpas::phylo_kmer::key_type key = xpas::phylo_kmer::na_key;
+            xpas::phylo_kmer::score_type score = xpas::phylo_kmer::na_score;
             ar & key & score;
             map[key] = score;
         }
     }
+#endif
 
     // split non-intrusive serialization function member into separate
     // non intrusive save/load member functions
     template<class Archive>
-    inline void serialize(Archive& ar, ::db_builder::branch_hash_map& map, const unsigned int file_version)
+    inline void serialize(Archive& ar, ::db_builder::branch_hash_map& map, unsigned int file_version)
     {
         boost::serialization::split_free(ar, map, file_version);
     }
@@ -457,10 +596,12 @@ namespace rappas
     phylo_kmer_db build(const std::string& working_directory, const std::string& ar_probabilities_file,
                         const std::string& original_tree_file, const std::string& extended_tree_file,
                         const std::string& extended_mapping_file, const std::string& artree_mapping_file,
+                        bool merge_branches,
                         size_t kmer_size, xpas::phylo_kmer::score_type omega, filter_type filter, double mu, size_t num_threads)
     {
         db_builder builder(working_directory, ar_probabilities_file, original_tree_file, extended_tree_file,
-                           extended_mapping_file, artree_mapping_file, kmer_size, omega, filter, mu, num_threads);
+                           extended_mapping_file, artree_mapping_file, merge_branches,
+                           kmer_size, omega, filter, mu, num_threads);
         builder.run();
         return std::move(builder._phylo_kmer_db);
     }

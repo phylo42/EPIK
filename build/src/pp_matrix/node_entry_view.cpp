@@ -12,7 +12,7 @@ dac_kmer_iterator make_dac_end_iterator()
     return { nullptr, 0, 0, 0 };
 }
 
-bool kmer_score_comparator(const phylo_kmer& k1, const phylo_kmer& k2)
+bool kmer_score_comparator(const unpositioned_phylo_kmer& k1, const unpositioned_phylo_kmer& k2)
 {
     return k1.score > k2.score;
 }
@@ -31,7 +31,7 @@ dac_kmer_iterator::dac_kmer_iterator(const node_entry* entry, size_t kmer_size, 
         for (size_t i = 0; i < seq_traits::alphabet_size; ++i)
         {
             const auto& letter = _entry->at(_start_pos, i);
-            _left_halfmers.push_back({ letter.index, letter.score });
+            _left_halfmers.push_back(make_phylo_kmer<unpositioned_phylo_kmer>(letter.index, letter.score, 0));
         }
         _left_halfmer_it = _left_halfmers.begin();
         _current = _next_phylokmer();
@@ -116,7 +116,7 @@ dac_kmer_iterator::pointer dac_kmer_iterator::operator->()  const noexcept
     return &_current;
 }
 
-phylo_kmer dac_kmer_iterator::_next_phylokmer()
+unpositioned_phylo_kmer dac_kmer_iterator::_next_phylokmer()
 {
     if (_left_halfmer_it != _left_halfmers.end())
     {
@@ -138,7 +138,7 @@ phylo_kmer dac_kmer_iterator::_next_phylokmer()
                     | right_halfmer.key;
                 const auto full_score = left_halfmer.score + right_halfmer.score;
                 ++_right_halfmer_it;
-                return { full_key, full_score };
+                return make_phylo_kmer<unpositioned_phylo_kmer>(full_key, full_score, 0);
             }
         }
         else
@@ -157,11 +157,11 @@ void dac_kmer_iterator::_select_right_halfmers_bound()
 {
     const auto residual_threshold =  _threshold - _left_halfmer_it->score;
     _last_right_halfmer_it = ::std::lower_bound(_right_halfmers.begin(), _right_halfmers.end(),
-        phylo_kmer{ 0, residual_threshold }, kmer_score_comparator);
+        make_phylo_kmer<unpositioned_phylo_kmer>(0, residual_threshold, 0), kmer_score_comparator);
 }
 
-node_entry_view::node_entry_view(const node_entry* entry, xpas::phylo_kmer::score_type threshold,
-                                 xpas::phylo_kmer::pos_type start, xpas::phylo_kmer::pos_type end) noexcept
+node_entry_view::node_entry_view(const node_entry* entry, phylo_kmer::score_type threshold,
+                                 phylo_kmer::pos_type start, phylo_kmer::pos_type end) noexcept
     : _entry{ entry }, _threshold{ threshold }, _start{ start }, _end{ end }
 {}
 
