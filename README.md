@@ -1,5 +1,5 @@
 # RAPPAS2
-This is the new version of [RAPPAS](https://github.com/phylo42/RAPPAS).
+This is the new version of [RAPPAS](https://github.com/phylo42/RAPPAS), currently under development.
 
 ## Installation
 
