@@ -165,6 +165,10 @@ def validate_filter(ctx, param, value):
              is_flag=True,
              default=False, show_default=True,
              help="Dev option. Run only ancestral reconstruction and tree extension. No database will be built")
+@click.option('--keep-positions',
+              is_flag=True,
+              default=False,
+              help="""Keeps phylo k-mers positions in the alignment. Makes databases larger in size.""")
 @click.option('--threads',
              type=int,
              default=4, show_default=True,
@@ -176,7 +180,7 @@ def build(arbinary, #database,
           k, model, arparameters, convert_uo, force_root, #gap_jump_thresh,
           no_reduction, ratio_reduction, omega,
           filter, f, mu, use_unrooted, merge_branches,
-          ardir,
+          ardir, keep_positions,
           threads, aronly):
     """
     Builds a database of phylo k-mers.
@@ -264,9 +268,15 @@ def build(arbinary, #database,
     # run rappas2 if RAPPAS succeed
     if return_code == 0:
         if states == 'nucl':
-            rappas_bin = f"{current_dir}/bin/build/rappas-build-dna"
+            if keep_positions:
+                raise RuntimeError("--keep-positions is not supported for DNA.")
+            else:
+                rappas_bin = f"{current_dir}/bin/build/rappas-build-dna"
         else:
-            rappas_bin = f"{current_dir}/bin/build/rappas-build-aa"
+            if keep_positions:
+                rappas_bin = f"{current_dir}/bin/build/rappas-build-aa-pos"
+            else:
+                rappas_bin = f"{current_dir}/bin/build/rappas-build-aa"
 
         command = [
             rappas_bin,

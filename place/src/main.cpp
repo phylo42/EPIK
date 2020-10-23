@@ -7,6 +7,7 @@
 #include <xpas/serialization.h>
 #include <xpas/phylo_tree.h>
 #include <xpas/newick.h>
+#include <xpas/version.h>
 #include <utils/io/fasta.h>
 #include "place/place.h"
 #include "place/jplace.h"
@@ -58,7 +59,13 @@ int main(int argc, char** argv)
 
     std::cout << "Loading database..." << std::endl;
     const auto db = xpas::load(db_file);
+    std::cout << "Database parameters:" << std::endl
+              << "\tSequence type: " << db.sequence_type() << std::endl
+              << "\tk: " << db.kmer_size() << std::endl
+              << "\tomega: " << db.omega() << std::endl
+              << "\tPositions loaded: " << (db.positions_loaded() ? "true" : "false") << std::endl << std::endl;
     std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
+
     const auto tree = xpas::io::parse_newick(db.tree());
     const auto placer = rappas::placer(db, tree, keep_at_most, keep_factor);
     /// Here we transform the tree to .newick by our own to make sure the output format is always the same
@@ -68,7 +75,12 @@ int main(int argc, char** argv)
     {
         print_line();
         const auto query_file = std::string{ argv[i] };
-        const auto sequences = xpas::io::read_fasta(query_file);
+
+        auto sequences = std::vector<xpas::io::fasta>();
+        for (const auto& seq : xpas::io::read_fasta(query_file))
+        {
+            sequences.push_back(seq);
+        }
 
         /// Place sequences from a file
         std::cout << "Placing " << query_file << "..." << std::endl;

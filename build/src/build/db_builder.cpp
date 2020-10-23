@@ -8,6 +8,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <xpas/phylo_kmer_db.h>
 #include <xpas/phylo_tree.h>
+#include <xpas/version.h>
 #include <utils/io/file_io.h>
 #include <xpas/newick.h>
 #include "db_builder.h"
@@ -161,9 +162,8 @@ db_builder::db_builder(const string& working_directory, const string& ar_probabi
     , _num_threads{ num_threads }
     /// I do not like reading a file here, but it seems to be better than having something like "set_tree"
     /// in the public interface of the phylo_kmer_db class.
-    , _phylo_kmer_db{ kmer_size, omega, xpas::io::read_as_string(original_tree_file) }
-{
-}
+    , _phylo_kmer_db{ kmer_size, omega, xpas::seq_type::name, xpas::io::read_as_string(original_tree_file) }
+{}
 
 void create_directory(const std::string& dirname)
 {
@@ -213,9 +213,15 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t, unsigned long> db_build
     /// Load ancestral reconstruction output
     const auto proba_matrix = rappas::io::load_ar(_ar_probabilities_file);
 
-    /// Run the branch and bound algorithm
+    std::cout << "Construction parameters:" << std::endl <<
+                 "\tSequence type: " << xpas::seq_type::name << std::endl <<
+                 "\tk: " << _kmer_size << std::endl <<
+                 "\tomega: " << _omega << std::endl <<
+                 "\tKeep positions: " << (xpas::keep_positions ? "true" : "false") << std::endl << std::endl;
+
     std::cout << "Building database..." << std::endl;
 
+    /// Run the construction algorithm
     const auto begin = std::chrono::steady_clock::now();
     const auto& [group_ids, num_tuples] = explore_kmers(original_tree, extended_tree, proba_matrix);
     const auto end = std::chrono::steady_clock::now();
