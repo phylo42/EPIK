@@ -16,7 +16,10 @@ namespace cli
     static std::string REFTREE = "reftree", REFTREE_SHORT = "t";
 
     static std::string AR_MODEL = "model";
+
     static std::string REDUCTION_RATIO = "reduction-ratio";
+    static std::string NO_REDUCTION = "no-reduction";
+
     static std::string EXTENDED_TREE = "extended-tree", EXTENDED_TREE_SHORT = "x";
     static std::string EXTENDED_MAPPING = "extended-mapping", EXTENDED_MAPPING_SHORT = "e";
     static std::string ARTREE_MAPPING = "artree-mapping", ARTREE_MAPPING_SHORT = "m";
@@ -47,40 +50,45 @@ namespace cli
     bool log_std_deviation_filter_flag = false;
     bool random_filter_flag = false;
     bool merge_branches_flag = false;
+    bool no_reduction_flag = false;
 
     po::options_description get_opt_description()
     {
         po::options_description desc("General options");
         desc.add_options()
             ((HELP + "," + HELP_SHORT).c_str(),
-             "Show help")
+                "Show help")
             ((WORKING_DIR + "," + WORKING_DIR_SHORT).c_str(), po::value<fs::path>()->default_value(fs::current_path()),
-             "Path to the working directory")
+                "Path to the working directory")
             (REFALIGN .c_str(), po::value<fs::path>()->required(),
-             "Reference alignment in fasta format."
-             "It must be the multiple alignment from which the reference tree was built.")
+                "Reference alignment in fasta format."
+                "It must be the multiple alignment from which the reference tree was built.")
             ((AR_PROBABILITIES + "," + AR_PROBABILITIES_SHORT).c_str(), po::value<fs::path>()->required(),
-             "Ancestral reconstruction probabilities file")
+                "Ancestral reconstruction probabilities file")
             ((REFTREE + "," + REFTREE_SHORT).c_str(), po::value<fs::path>()->required(),
-             "Original phylogenetic tree file")
-            (AR_MODEL.c_str(), po::value<std::string>()->required(),
-             "Model used in AR, one of the following:"
-             "nucl  : JC69, HKY85, K80, F81, TN93, GTR"
-             "amino : LG, WAG, JTT, Dayhoff, DCMut, CpREV, mMtREV, MtMam, MtArt")
-            (REDUCTION_RATIO.c_str(), po::value<double>()->default_value(0.99),
-             "Ratio for alignment reduction, e.g. sites holding >X% gaps are ignored.")
+                "Original phylogenetic tree file")
+
             ((EXTENDED_TREE + "," + EXTENDED_TREE_SHORT).c_str(), po::value<fs::path>()->required(),
-             "Extended phylogenetic tree file")
+                "Extended phylogenetic tree file")
             ((EXTENDED_MAPPING + "," + EXTENDED_MAPPING_SHORT).c_str(), po::value<fs::path>()->required(),
-             "Original mapping file")
+                "Original mapping file")
             ((ARTREE_MAPPING + "," + ARTREE_MAPPING_SHORT).c_str(), po::value<fs::path>()->required(),
-             "Ancestral reconstruction tree mapping file")
+                "Ancestral reconstruction tree mapping file")
             ((K + "," + K_SHORT).c_str(), po::value<size_t>()->default_value(8),
-             "k-mer length used at DB build")
+                "k-mer length used at DB build")
+            (AR_MODEL.c_str(), po::value<std::string>()->required(),
+                "Model used in AR, one of the following:"
+                "nucl  : JC69, HKY85, K80, F81, TN93, GTR"
+                "amino : LG, WAG, JTT, Dayhoff, DCMut, CpREV, mMtREV, MtMam, MtArt")
+            (REDUCTION_RATIO.c_str(), po::value<double>()->default_value(0.99),
+                "Ratio for alignment reduction, e.g. sites holding >X% gaps are ignored.")
+            (NO_REDUCTION.c_str(), po::bool_switch(&no_reduction_flag),
+                "Disable alignment reduction. This will keep all sites of the reference alignment and "
+                "may produce erroneous ancestral k-mers.")
             ((OMEGA + "," + OMEGA_SHORT).c_str(), po::value<xpas::phylo_kmer::score_type>()->default_value(1.5),
-             "Score threshold parameter")
+                "Score threshold parameter")
             ((NUM_THREADS + "," + NUM_THREADS_SHORT).c_str(), po::value<size_t>()->default_value(1),
-             "Number of threads")
+                "Number of threads")
             ((MERGE_BRANCHES).c_str(), po::bool_switch(&merge_branches_flag))
             ((NO_FILTER).c_str(), po::bool_switch(&no_filter_flag))
             ((ENTROPY).c_str(), po::bool_switch(&entropy_flag))
@@ -126,12 +134,13 @@ namespace cli
             parameters.alignment_file = vm[REFALIGN].as<fs::path>().string();
             parameters.ar_probabilities_file = vm[AR_PROBABILITIES].as<fs::path>().string();
             parameters.original_tree_file = vm[REFTREE].as<fs::path>().string();
-            parameters.ar_model = vm[AR_MODEL].as<std::string>();
-            parameters.reduction_ratio = vm[REDUCTION_RATIO].as<double>();
             parameters.extended_tree_file = vm[EXTENDED_TREE].as<fs::path>().string();
             parameters.extended_mapping_file = vm[EXTENDED_MAPPING].as<fs::path>().string();
             parameters.artree_mapping_file = vm[ARTREE_MAPPING].as<fs::path>().string();
             parameters.kmer_size = vm[K].as<size_t>();
+            parameters.ar_model = vm[AR_MODEL].as<std::string>();
+            parameters.reduction_ratio = vm[REDUCTION_RATIO].as<double>();
+            parameters.no_reduction = no_reduction_flag;
             parameters.omega = vm[OMEGA].as<xpas::phylo_kmer::score_type>();
             parameters.num_threads = vm[NUM_THREADS].as<size_t>();
             parameters.mu = vm[MU].as<double>();

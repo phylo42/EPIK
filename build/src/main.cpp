@@ -78,8 +78,9 @@ return_code run(const cli::cli_parameters& parameters)
 
             std::cout << "TODO: MEASURE TIME HERE" << std::endl << std::endl;
             auto alignment = rappas::preprocess_alignment(parameters.working_directory,
-                                                                parameters.alignment_file,
-                                                                parameters.reduction_ratio);
+                                                          parameters.alignment_file,
+                                                          parameters.reduction_ratio,
+                                                          parameters.no_reduction);
 
             const auto db = rappas::build(parameters.working_directory,
                                           parameters.ar_probabilities_file,

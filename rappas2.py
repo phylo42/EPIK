@@ -280,6 +280,7 @@ def build(arbinary, #database,
 
         command = [
             rappas_bin,
+            "--refalign", str(refalign)
             "-t", str(reftree),
             "-x", extended_tree,
             "-a", ar_seq_txt,
@@ -287,12 +288,16 @@ def build(arbinary, #database,
             "-m", artree_id_mapping,
             "-w", str(workdir),
             "-k", str(k),
+            "--model", model,
+            "--reduction-ratio", str(ratio_reduction),
             "-o", str(omega),
             "--" + filter.lower(),
             "-u", str(mu),
             "-j", str(threads)
         ]
 
+        if no_reduction:
+            command.append("--no-reduction")
         if merge_branches:
             command.append("--merge-branches")
 

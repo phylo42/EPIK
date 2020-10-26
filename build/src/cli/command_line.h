@@ -27,7 +27,10 @@ namespace cli
         std::string artree_mapping_file;
 
         std::string ar_model;
+
+        // Alignment filtering options
         double reduction_ratio;
+        bool no_reduction;
 
         // algo options
         size_t kmer_size;
