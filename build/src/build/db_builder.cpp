@@ -12,8 +12,10 @@
 #include <utils/io/file_io.h>
 #include <xpas/newick.h>
 #include "db_builder.h"
+#include "alignment.h"
 #include "pp_matrix/proba_matrix.h"
 #include "pp_matrix/ar.h"
+#include "../utils/io.h"
 
 using std::string;
 using std::cout, std::endl;
@@ -27,10 +29,12 @@ namespace rappas
     /// \brief Constructs a database of phylo-kmers.
     class db_builder
     {
-        friend phylo_kmer_db build(const string& working_directory, const string& ar_probabilities_file,
-                                   const string& original_tree_file, const string& extended_tree_file,
-                                   const string& extended_mapping_file, const string& artree_mapping_file,
-                                   bool merge_branches, size_t kmer_size, xpas::phylo_kmer::score_type omega,
+        friend phylo_kmer_db build(string working_directory, string ar_probabilities_file,
+                                   string original_tree_file, string extended_tree_file,
+                                   string extended_mapping_file, string artree_mapping_file,
+                                   rappas::alignment alignment,
+                                   bool merge_branches, size_t kmer_size,
+                                   xpas::phylo_kmer::score_type omega,
                                    filter_type filter, double mu, size_t num_threads);
     public:
         /// Member types
@@ -57,9 +61,10 @@ namespace rappas
 
 
         /// Ctors, dtor and operator=
-        db_builder(const string& working_directory, const string& ar_probabilities_file,
-                   const string& original_tree_file, const string& extended_tree_file,
-                   const string& extended_mapping_file, const string& artree_mapping_file,
+        db_builder(string working_directory, string ar_probabilities_file,
+                   string original_tree_file, string extended_tree_file,
+                   string extended_mapping_file, string artree_mapping_file,
+                   rappas::alignment alignment,
                    bool merge_branches, size_t kmer_size, xpas::phylo_kmer::score_type omega,
                    filter_type filter, double mu, size_t num_threads);
         db_builder(const db_builder&) = delete;
@@ -124,10 +129,14 @@ namespace rappas
         string _extended_mapping_file;
         string _artree_mapping_file;
 
+        const alignment _alignment;
+
         bool _merge_branches;
 
         size_t _kmer_size;
         xpas::phylo_kmer::score_type _omega;
+
+        double _reduction_ratio;
 
         filter_type _filter;
         double _mu;
@@ -142,18 +151,20 @@ namespace rappas
 
 using namespace rappas;
 
-db_builder::db_builder(const string& working_directory, const string& ar_probabilities_file,
-                       const string& original_tree_file, const string& extended_tree_file,
-                       const string& extended_mapping_file, const string& artree_mapping_file,
+db_builder::db_builder(string working_directory, string ar_probabilities_file,
+                       string original_tree_file, string extended_tree_file,
+                       string extended_mapping_file, string artree_mapping_file,
+                       rappas::alignment alignment,
                        bool merge_branches, size_t kmer_size, xpas::phylo_kmer::score_type omega,
                        filter_type filter, double mu, size_t num_threads)
-    : _working_directory{ working_directory }
-    ,_hashmaps_directory{ (fs::path{working_directory} / fs::path{"hashmaps"}).string() }
-    , _ar_probabilities_file{ ar_probabilities_file }
-    , _original_tree_file{ original_tree_file }
-    , _extended_tree_file{ extended_tree_file }
-    , _extended_mapping_file{ extended_mapping_file }
-    , _artree_mapping_file{ artree_mapping_file }
+    : _working_directory{ std::move(working_directory) }
+    , _hashmaps_directory{ (fs::path{working_directory} / fs::path{"hashmaps"}).string() }
+    , _ar_probabilities_file{ std::move(ar_probabilities_file) }
+    , _original_tree_file{ std::move(original_tree_file) }
+    , _extended_tree_file{ std::move(extended_tree_file) }
+    , _extended_mapping_file{ std::move(extended_mapping_file) }
+    , _artree_mapping_file{ std::move(artree_mapping_file) }
+    , _alignment{ std::move(alignment) }
     , _merge_branches{ merge_branches }
     , _kmer_size{ kmer_size }
     , _omega{ omega }
@@ -164,18 +175,6 @@ db_builder::db_builder(const string& working_directory, const string& ar_probabi
     /// in the public interface of the phylo_kmer_db class.
     , _phylo_kmer_db{ kmer_size, omega, xpas::seq_type::name, xpas::io::read_as_string(original_tree_file) }
 {}
-
-void create_directory(const std::string& dirname)
-{
-    /// Create if does not exist
-    if (!fs::is_directory(dirname) || !fs::exists(dirname))
-    {
-        if (!fs::create_directory(dirname))
-        {
-            throw std::runtime_error("Cannot create directory " + dirname);
-        }
-    }
-}
 
 void db_builder::run()
 {
@@ -204,7 +203,7 @@ std::tuple<std::vector<phylo_kmer::branch_type>, size_t, unsigned long> db_build
     _artree_mapping = rappas::io::load_artree_mapping(_artree_mapping_file);
 
     /// create a temporary directory for hashmaps
-    create_directory(_hashmaps_directory);
+    rappas::io::create_directory(_hashmaps_directory);
 
     /// Load .newick files
     const auto original_tree = xpas::io::load_newick(_original_tree_file);
@@ -599,15 +598,18 @@ db_builder::branch_hash_map db_builder::load_hash_map(const std::string& filenam
 
 namespace rappas
 {
-    phylo_kmer_db build(const std::string& working_directory, const std::string& ar_probabilities_file,
-                        const std::string& original_tree_file, const std::string& extended_tree_file,
-                        const std::string& extended_mapping_file, const std::string& artree_mapping_file,
+    phylo_kmer_db build(string working_directory, string ar_probabilities_file,
+                        string original_tree_file, string extended_tree_file,
+                        string extended_mapping_file, string artree_mapping_file,
+                        rappas::alignment alignment,
                         bool merge_branches,
                         size_t kmer_size, xpas::phylo_kmer::score_type omega, filter_type filter, double mu, size_t num_threads)
     {
-        db_builder builder(working_directory, ar_probabilities_file, original_tree_file, extended_tree_file,
-                           extended_mapping_file, artree_mapping_file, merge_branches,
-                           kmer_size, omega, filter, mu, num_threads);
+        db_builder builder(std::move(working_directory), std::move(ar_probabilities_file),
+                           std::move(original_tree_file), std::move(extended_tree_file),
+                           std::move(extended_mapping_file), std::move(artree_mapping_file),
+                           std::move(alignment),
+                           merge_branches, kmer_size, omega, filter, mu, num_threads);
         builder.run();
         return std::move(builder._phylo_kmer_db);
     }

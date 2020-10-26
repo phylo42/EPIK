@@ -7,6 +7,7 @@
 #include "cli/command_line.h"
 #include "cli/exceptions.h"
 #include "build/db_builder.h"
+#include "build/alignment.h"
 #include "return.h"
 
 namespace fs = boost::filesystem;
@@ -53,12 +54,10 @@ std::string generate_db_name(const xpas::phylo_kmer_db& db)
 
 void check_parameters(const cli::cli_parameters& parameters)
 {
-#ifndef KEEP_POSITIONS
-       if (parameters.merge_branches)
-       {
-           throw std::runtime_error("--merge-branches is only supported for xpas compiled with the KEEP_POSITIONS flag.");
-       }
-#endif
+   if (!xpas::keep_positions && parameters.merge_branches)
+   {
+       throw std::runtime_error("--merge-branches is only supported for xpas compiled with the KEEP_POSITIONS flag.");
+   }
 }
 
 return_code run(const cli::cli_parameters& parameters)
@@ -77,9 +76,16 @@ return_code run(const cli::cli_parameters& parameters)
                 return return_code::argument_error;
             }
 
-            const auto db = rappas::build(parameters.working_directory, parameters.ar_probabilities_file,
+            std::cout << "TODO: MEASURE TIME HERE" << std::endl << std::endl;
+            auto alignment = rappas::preprocess_alignment(parameters.working_directory,
+                                                                parameters.alignment_file,
+                                                                parameters.reduction_ratio);
+
+            const auto db = rappas::build(parameters.working_directory,
+                                          parameters.ar_probabilities_file,
                                           parameters.original_tree_file, parameters.extended_tree_file,
                                           parameters.extended_mapping_file, parameters.artree_mapping_file,
+                                          std::move(alignment),
                                           parameters.merge_branches, parameters.kmer_size, parameters.omega,
                                           rappas::filter_type::no_filter, parameters.mu,
                                           parameters.num_threads);

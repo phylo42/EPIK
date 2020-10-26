@@ -20,15 +20,17 @@ set(SOURCES src/cli/command_line.cpp
         src/cli/exceptions.cpp
 
         # database builder
-        src/build/db_builder.cpp
+        src/build/db_builder.cpp src/build/db_builder.h
+        src/build/alignment.cpp src/build/alignment.h
 
         # posterior probability matrix
-        src/pp_matrix/proba_matrix.cpp
-        src/pp_matrix/node_entry.cpp
-        src/pp_matrix/node_entry_view.cpp
-        src/pp_matrix/ar.cpp
+        src/pp_matrix/proba_matrix.cpp src/pp_matrix/proba_matrix.h
+        src/pp_matrix/node_entry.cpp src/pp_matrix/node_entry.h
+        src/pp_matrix/node_entry_view.cpp src/pp_matrix/node_entry_view.h
+        src/pp_matrix/ar.cpp src/pp_matrix/ar.h
 
         src/utils/utils.h
+        src/utils/io.cpp src/utils/io.h
 
         src/main.cpp)
 

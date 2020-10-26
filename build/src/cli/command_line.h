@@ -19,11 +19,15 @@ namespace cli
         // main options
         action_t action;
         std::string working_directory;
+        std::string alignment_file;
         std::string ar_probabilities_file;
         std::string original_tree_file;
         std::string extended_tree_file;
         std::string extended_mapping_file;
         std::string artree_mapping_file;
+
+        std::string ar_model;
+        double reduction_ratio;
 
         // algo options
         size_t kmer_size;

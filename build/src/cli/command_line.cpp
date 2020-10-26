@@ -11,14 +11,20 @@ namespace cli
 {
     static std::string HELP = "help", HELP_SHORT = "h";
     static std::string WORKING_DIR = "workdir", WORKING_DIR_SHORT = "w";
+    static std::string REFALIGN = "refalign";
     static std::string AR_PROBABILITIES = "ar-probabilities", AR_PROBABILITIES_SHORT = "a";
     static std::string REFTREE = "reftree", REFTREE_SHORT = "t";
+
+    static std::string AR_MODEL = "model";
+    static std::string REDUCTION_RATIO = "reduction-ratio";
     static std::string EXTENDED_TREE = "extended-tree", EXTENDED_TREE_SHORT = "x";
     static std::string EXTENDED_MAPPING = "extended-mapping", EXTENDED_MAPPING_SHORT = "e";
     static std::string ARTREE_MAPPING = "artree-mapping", ARTREE_MAPPING_SHORT = "m";
     static std::string K = "k", K_SHORT = "k";
     static std::string OMEGA="omega", OMEGA_SHORT="o";
     static std::string NUM_THREADS = "num_threads", NUM_THREADS_SHORT = "j";
+
+    // Filtering options
     static std::string MU = "mu", MU_SHORT = "u";
     static std::string NO_FILTER = "no-filter";
     static std::string ENTROPY = "entropy";
@@ -50,10 +56,19 @@ namespace cli
              "Show help")
             ((WORKING_DIR + "," + WORKING_DIR_SHORT).c_str(), po::value<fs::path>()->default_value(fs::current_path()),
              "Path to the working directory")
+            (REFALIGN .c_str(), po::value<fs::path>()->required(),
+             "Reference alignment in fasta format."
+             "It must be the multiple alignment from which the reference tree was built.")
             ((AR_PROBABILITIES + "," + AR_PROBABILITIES_SHORT).c_str(), po::value<fs::path>()->required(),
              "Ancestral reconstruction probabilities file")
             ((REFTREE + "," + REFTREE_SHORT).c_str(), po::value<fs::path>()->required(),
              "Original phylogenetic tree file")
+            (AR_MODEL.c_str(), po::value<std::string>()->required(),
+             "Model used in AR, one of the following:"
+             "nucl  : JC69, HKY85, K80, F81, TN93, GTR"
+             "amino : LG, WAG, JTT, Dayhoff, DCMut, CpREV, mMtREV, MtMam, MtArt")
+            (REDUCTION_RATIO.c_str(), po::value<double>()->default_value(0.99),
+             "Ratio for alignment reduction, e.g. sites holding >X% gaps are ignored.")
             ((EXTENDED_TREE + "," + EXTENDED_TREE_SHORT).c_str(), po::value<fs::path>()->required(),
              "Extended phylogenetic tree file")
             ((EXTENDED_MAPPING + "," + EXTENDED_MAPPING_SHORT).c_str(), po::value<fs::path>()->required(),
@@ -108,8 +123,11 @@ namespace cli
             }
 
             parameters.working_directory = vm[WORKING_DIR].as<fs::path>().string();
+            parameters.alignment_file = vm[REFALIGN].as<fs::path>().string();
             parameters.ar_probabilities_file = vm[AR_PROBABILITIES].as<fs::path>().string();
             parameters.original_tree_file = vm[REFTREE].as<fs::path>().string();
+            parameters.ar_model = vm[AR_MODEL].as<std::string>();
+            parameters.reduction_ratio = vm[REDUCTION_RATIO].as<double>();
             parameters.extended_tree_file = vm[EXTENDED_TREE].as<fs::path>().string();
             parameters.extended_mapping_file = vm[EXTENDED_MAPPING].as<fs::path>().string();
             parameters.artree_mapping_file = vm[ARTREE_MAPPING].as<fs::path>().string();
