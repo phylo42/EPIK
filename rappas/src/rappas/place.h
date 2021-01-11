@@ -8,9 +8,9 @@
 #include <xpas/phylo_tree.h>
 #include <boost/multiprecision/float128.hpp>
 
-namespace xpas::io
+namespace xpas
 {
-    class fasta;
+    class seq_record;
 }
 
 namespace rappas::impl
@@ -51,7 +51,6 @@ namespace rappas
     /// \brief Places a collection of fasta sequences
     class placer
     {
-        using fasta = xpas::io::fasta;
         using placed_collection = impl::placed_collection;
         using placed_sequence = impl::placed_sequence;
 
@@ -69,7 +68,7 @@ namespace rappas
         ~placer() noexcept = default;
 
         /// \brief Places a collection of fasta sequences
-        placed_collection place(const std::vector<fasta>& fasta_collection, size_t num_threads) const;
+        placed_collection place(const std::vector<xpas::seq_record>& seq_records, size_t num_threads) const;
 
     private:
 

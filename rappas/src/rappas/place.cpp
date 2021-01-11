@@ -1,17 +1,19 @@
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <cmath>
 #include <numeric>
+#include <iostream>
 #include <xpas/phylo_kmer_db.h>
 #include <xpas/phylo_tree.h>
 #include <xpas/kmer_iterator.h>
-#include <utils/io/fasta.h>
-#include <unordered_set>
+#include <xpas/seq_record.h>
+#include <xpas/fasta.h>
 #include "place.h"
 
-using xpas::io::fasta;
 using namespace rappas::impl;
 using namespace rappas;
+using xpas::seq_record;
 
 
 /// \brief Copies the keys of an input map to a vector
@@ -37,10 +39,10 @@ std::vector<K> copy_keys(const Map<K, V>& map)
 ///       ...
 ///     }
 /// to store identical reads together
-sequence_map_t group_by_sequence_content(const std::vector<fasta>& fasta_collection)
+sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_records)
 {
     sequence_map_t sequence_map;
-    for (const auto& seq_record : fasta_collection)
+    for (const auto& seq_record : seq_records)
     {
         sequence_map[seq_record.sequence()].push_back(seq_record.header());
     }
@@ -83,11 +85,11 @@ std::vector<placement> filter_by_ratio(const std::vector<placement>& placements,
     return result;
 }
 
-placed_collection placer::place(const std::vector<fasta>& fasta_collection, size_t num_threads) const
+placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads) const
 {
     /// There may be identical sequences with different headers. We group them
     /// by the sequence content to not to place the same sequences more than once
-    const auto sequence_map = group_by_sequence_content(fasta_collection);
+    const auto sequence_map = group_by_sequence_content(seq_records);
 
     /// To support OpenMP, we need to iterate over unique sequences in the old-style fashion.
     /// To do this, we copy all the unique keys from a map to a vector.
@@ -97,13 +99,13 @@ placed_collection placer::place(const std::vector<fasta>& fasta_collection, size
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
     (void)num_threads;
-    #pragma omp parallel for schedule(auto) num_threads(num_threads)
+    /*#pragma omp parallel for schedule(auto) num_threads(num_threads)*/
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
         const auto sequence = unique_sequences[i];
         const auto headers = sequence_map.at(sequence);
 
-        placed_seqs[i] = place_seq(sequence);
+        placed_seqs[i] = std::move(place_seq(sequence));
 
         /// compute weight ratio
         const auto score_sum = sum_scores(placed_seqs[i].placements);
@@ -220,10 +222,14 @@ placed_sequence placer::place_seq(std::string_view seq) const
                     placements[postorder_node_id].score += score - _log_threshold;
                 }
 #else
+                //std::cout << key << " " << kmer << std::endl;
                 for (const auto& [postorder_node_id, score] : *entries)
                 {
                     placements[postorder_node_id].count += 1;
                     placements[postorder_node_id].score += score - _log_threshold;
+
+                    //std::cout << "\t" << postorder_node_id << " " << score << " " << std::pow(10, score) << std::endl;
+
                 }
 #endif
             }

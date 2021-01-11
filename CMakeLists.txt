@@ -14,6 +14,4 @@ if(NOT DEFINED HASH_MAP)
 endif()
 
 add_subdirectory(xpas)
-add_subdirectory(strasser)
-add_subdirectory(build)
-add_subdirectory(place)
+add_subdirectory(rappas)

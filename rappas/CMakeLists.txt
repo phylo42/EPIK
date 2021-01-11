@@ -10,8 +10,8 @@ set_target_properties(place_aa PROPERTIES OUTPUT_NAME rappas-place-aa)
 
 set(SOURCES
         src/main.cpp
-        src/place/place.cpp
-        src/place/jplace.cpp)
+        src/rappas/place.cpp src/rappas/place.h
+        src/rappas/jplace.cpp src/rappas/jplace.h)
 
 target_sources(place_dna
         PRIVATE

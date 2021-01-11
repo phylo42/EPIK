@@ -1,16 +1,14 @@
 #include <iostream>
 #include <string>
 #include <chrono>
-#include <omp.h>
 #include <boost/filesystem.hpp>
 #include <xpas/phylo_kmer_db.h>
 #include <xpas/serialization.h>
 #include <xpas/phylo_tree.h>
 #include <xpas/newick.h>
-#include <xpas/version.h>
-#include <utils/io/fasta.h>
-#include "place/place.h"
-#include "place/jplace.h"
+#include <xpas/fasta.h>
+#include <rappas/place.h>
+#include <rappas/jplace.h>
 
 namespace fs = boost::filesystem;
 
@@ -69,14 +67,14 @@ int main(int argc, char** argv)
     const auto tree = xpas::io::parse_newick(db.tree());
     const auto placer = rappas::placer(db, tree, keep_at_most, keep_factor);
     /// Here we transform the tree to .newick by our own to make sure the output format is always the same
-    const auto tree_as_newick = xpas::io::to_newick(tree);
+    const auto tree_as_newick = xpas::io::to_newick(tree, true);
 
     for (int i = 4; i < argc; ++i)
     {
         print_line();
         const auto query_file = std::string{ argv[i] };
 
-        auto sequences = std::vector<xpas::io::fasta>();
+        auto sequences = std::vector<xpas::seq_record>();
         for (const auto& seq : xpas::io::read_fasta(query_file))
         {
             sequences.push_back(seq);
