@@ -59,9 +59,9 @@ def place(database, states, outputdir, threads, input_files):
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
     if states == 'nucl':
-        rappas_bin = f"{current_dir}/bin/place/rappas-place-dna"
+        rappas_bin = f"{current_dir}/bin/rappas/rappas-place-dna"
     else:
-        rappas_bin = f"{current_dir}/bin/place/rappas-place-aa"
+        rappas_bin = f"{current_dir}/bin/rappas/rappas-place-aa"
     
 
     command = [
