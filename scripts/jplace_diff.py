@@ -17,6 +17,8 @@ from typing import Dict, List, Union, Mapping
 Number = Union[int, float]
 SeqID = str
 
+EPSILON = 1e-3
+
 
 class PlacementRecord:
     """
@@ -134,6 +136,11 @@ class JplaceParser:
         return self._placements
 
 
+def conditional_print(string, boolean):
+    if boolean:
+        print(string)
+
+
 def jplace_diff(jplace1: str, jplace2: str) -> None:
 
     # parse the input files
@@ -147,28 +154,30 @@ def jplace_diff(jplace1: str, jplace2: str) -> None:
     num_matches = 0
     for name, result1 in parser1.placements.items():
 
-        # get the placements for the same sequences from the second file
+        # get the placements for the same sequence from the second file
         result2 = parser2.placements[name]
 
-        records1 = result1.placements
-        records2 = result2.placements
+        records1 = dict((rec.edge_num, rec.likelihood) for rec in result1.placements)
+        records2 = dict((rec.edge_num, rec.likelihood) for rec in result2.placements)
+        edge_union = set(records1.keys()).union(set(records2.keys()))
 
         found_mismatch = False
-
-        # first we check the IDs of edges and their order
-        for rec1, rec2 in zip(records1, records2):
-            if rec1.edge_num != rec2.edge_num:
+        for edge in edge_union:
+            if edge not in records1:
+                conditional_print(f'\n{name}:', not found_mismatch)
+                found_mismatch = True
+                print(f"\t{edge} is not in the first file")
+            elif edge not in records2:
+                conditional_print(f'\n{name}:', not found_mismatch)
+                found_mismatch = True
+                print(f"\t{edge} is not in the second file")
+            # if found in both, check likelihoods
+            elif abs(records1[edge] - records2[edge]) > EPSILON:
                 if not found_mismatch:
                     print(f'\n{name}:')
                     found_mismatch = True
 
-                print(f'\t{rec1.edge_num} != {rec2.edge_num}')
-            elif abs(rec1.likelihood - rec2.likelihood) > 1e-3:
-                if not found_mismatch:
-                    print(f'\n{name}:')
-                    found_mismatch = True
-
-                print(f'\t[{rec1.edge_num}] {rec1.likelihood} != {rec2.likelihood}')
+                print(f'\t[{edge}] {records1[edge]} != {records2[edge]}')
 
         if not found_mismatch:
             num_matches += 1
