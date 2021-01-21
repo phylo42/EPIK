@@ -17,7 +17,7 @@ from typing import Dict, List, Union, Mapping
 Number = Union[int, float]
 SeqID = str
 
-EPSILON = 1e-3
+EPSILON = 1e-2
 
 
 class PlacementRecord:
@@ -173,10 +173,8 @@ def jplace_diff(jplace1: str, jplace2: str) -> None:
                 print(f"\t{edge} is not in the second file")
             # if found in both, check likelihoods
             elif abs(records1[edge] - records2[edge]) > EPSILON:
-                if not found_mismatch:
-                    print(f'\n{name}:')
-                    found_mismatch = True
-
+                conditional_print(f'\n{name}:', not found_mismatch)
+                found_mismatch = True
                 print(f'\t[{edge}] {records1[edge]} != {records2[edge]}')
 
         if not found_mismatch:

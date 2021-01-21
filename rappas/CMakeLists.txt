@@ -2,33 +2,31 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 ######################################################################################################
 # Application target and properties
-add_executable(place_dna "")
-add_executable(place_aa "")
+add_executable(rappas2-dna "")
+add_executable(rappas2-aa "")
 
-set_target_properties(place_dna PROPERTIES OUTPUT_NAME rappas-place-dna)
-set_target_properties(place_aa PROPERTIES OUTPUT_NAME rappas-place-aa)
 
 set(SOURCES
         src/main.cpp
         src/rappas/place.cpp src/rappas/place.h
         src/rappas/jplace.cpp src/rappas/jplace.h)
 
-target_sources(place_dna
+target_sources(rappas2-dna
         PRIVATE
             ${SOURCES})
 
-target_sources(place_aa
+target_sources(rappas2-aa
         PRIVATE
         ${SOURCES})
 
 ######################################################################################################
 find_package(RapidJSON REQUIRED)
-target_include_directories(place_dna
+target_include_directories(rappas2-dna
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
             ${RapidJSON_INCLUDE_DIRS}
         )
-target_include_directories(place_aa
+target_include_directories(rappas2-aa
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
             ${RapidJSON_INCLUDE_DIRS}
@@ -40,7 +38,7 @@ find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
 find_package(OpenMP REQUIRED)
 find_package(QuadMath REQUIRED)
 
-target_link_libraries(place_dna
+target_link_libraries(rappas2-dna
         PRIVATE
             xpas::dna
             Boost::program_options
@@ -50,7 +48,7 @@ target_link_libraries(place_dna
             quadmath
 )
 
-target_link_libraries(place_aa
+target_link_libraries(rappas2-aa
         PRIVATE
             xpas::aa
             Boost::program_options
@@ -61,20 +59,21 @@ target_link_libraries(place_aa
         )
 
 # Turn on the warnings and treat them as errors
-target_compile_options(place_dna
+target_compile_options(rappas2-dna
         PRIVATE
             -Wall -Wextra -Werror
 )
-target_compile_options(place_aa
+
+target_compile_options(rappas2-aa
         PRIVATE
             -Wall -Wextra -Werror
         )
 
-target_compile_features(place_dna
+target_compile_features(rappas2-dna
         PUBLIC
             cxx_std_17)
 
-target_compile_features(place_aa
+target_compile_features(rappas2-aa
         PUBLIC
             cxx_std_17)
 
