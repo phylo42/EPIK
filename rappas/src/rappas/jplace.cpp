@@ -1,49 +1,47 @@
 #include <fstream>
+#include <utility>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/stringbuffer.h>
 #include "jplace.h"
 #include "place.h"
 
-namespace rappas
+namespace rappas::io
 {
-    namespace io
+    /// \brief Writes a collection of placements to a .jplace formatted file.
+    class jplace_writer
     {
-        /// \brief Writes a collection of placements to a .jplace formatted file.
-        class jplace_writer
-        {
-        public:
-            jplace_writer(const std::string& filename) noexcept;
-            jplace_writer(const jplace_writer&) = delete;
-            jplace_writer(jplace_writer&&) = delete;
-            jplace_writer& operator=(const jplace_writer&) = delete;
-            jplace_writer& operator=(jplace_writer&&) = delete;
-            ~jplace_writer() noexcept = default;
+    public:
+        explicit jplace_writer(std::string filename) noexcept;
+        jplace_writer(const jplace_writer&) = delete;
+        jplace_writer(jplace_writer&&) = delete;
+        jplace_writer& operator=(const jplace_writer&) = delete;
+        jplace_writer& operator=(jplace_writer&&) = delete;
+        ~jplace_writer() noexcept = default;
 
-            void write(const std::string& invocation, std::string_view newick_tree,
-                       const impl::placed_collection& placed);
+        void write(const std::string& invocation, std::string_view newick_tree,
+                   const impl::placed_collection& placed);
 
-        private:
-            void _write_metadata(const std::string& invocation);
-            void _write_tree(std::string_view newick_tree);
-            void _write_version();
-            void _write_fields();
-            void _write_placements(const impl::placed_collection& placed);
-            void _write_placement(const impl::placed_sequence& placed_seq);
+    private:
+        void _write_metadata(const std::string& invocation);
+        void _write_tree(std::string_view newick_tree);
+        void _write_version();
+        void _write_fields();
+        void _write_placements(const impl::placed_collection& placed);
+        void _write_placement(const impl::placed_sequence& placed_seq);
 
-            template<class Collection>
-            void _write_named_multiplicity(const Collection& seq_headers);
+        template<class Collection>
+        void _write_named_multiplicity(const Collection& seq_headers);
 
-            std::string _filename;
-            rapidjson::StringBuffer _buffer;
-            rapidjson::PrettyWriter<rapidjson::StringBuffer> _writer;
-        };
-    }
+        std::string _filename;
+        rapidjson::StringBuffer _buffer;
+        rapidjson::PrettyWriter<rapidjson::StringBuffer> _writer;
+    };
 }
 
 using namespace rappas::io;
 
-jplace_writer::jplace_writer(const std::string& filename) noexcept
-    : _filename{ filename }, _buffer{ }, _writer{ _buffer }
+jplace_writer::jplace_writer(std::string filename) noexcept
+    : _filename{std::move( filename )}, _buffer{ }, _writer{ _buffer }
 {}
 
 void jplace_writer::_write_metadata(const std::string& invocation)
