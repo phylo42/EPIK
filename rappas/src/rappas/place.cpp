@@ -96,6 +96,8 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Keys are std::string_view's, so copying is cheap enough
     const auto unique_sequences = copy_keys(sequence_map);
 
+    auto keep_factor = _keep_factor;
+
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
     (void)num_threads;
@@ -111,11 +113,23 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         const auto score_sum = sum_scores(placed_seqs[i].placements);
         for (auto& placement : placed_seqs[i].placements)
         {
-            placement.weight_ratio = boost::multiprecision::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
+            /// If the scores are that small that taking 10 to these powers is still zero
+            /// according to boost::multiprecision::pow, then score_sum is zero.
+            /// Assign all weight_ration to zeros and keep_factor to zero as well to
+            /// not filter them out.
+            if (score_sum == 0)
+            {
+                placement.weight_ratio = 0.0f;
+                keep_factor = 0.0f;
+            }
+            else
+            {
+                placement.weight_ratio = boost::multiprecision::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
+            }
         }
 
         /// Remove placements with low weight ratio
-        placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, _keep_factor);
+        placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
     return { sequence_map, placed_seqs };
 }
