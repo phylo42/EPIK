@@ -1,6 +1,6 @@
 [submodule "xpas"]
 	path = xpas
-	url = https://github.com:phylo42/xpas.git
+	url = https://github.com/phylo42/xpas.git
 [submodule "strasser"]
 	path = strasser
-	url = https://github.com:nromashchenko/strasser.git
+	url = https://github.com/nromashchenko/strasser.git
