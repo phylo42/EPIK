@@ -13,7 +13,7 @@ This is the new version of [RAPPAS](https://github.com/phylo42/RAPPAS), currentl
 
 In debian, these can be installed with:
 ```
-sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dbg rapidjson-dev
+sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dbg rapidjson-dev libquadmath0
 ```
 
 ### Clone and build
