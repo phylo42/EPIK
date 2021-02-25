@@ -5,14 +5,15 @@ This is the new version of [RAPPAS](https://github.com/phylo42/RAPPAS), currentl
 
 ### Prerequisites
 
-- Java v11 and Ant
-- Boost Libraries >=1.65
+- Boost Libraries >=1.6
 - CMake >= 3.10
 - GCC compiler must support c++17
+- zlib
+- rapidjson
 
 In debian, these can be installed with:
 ```
-sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev openjdk-11-jdk ant
+sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dbg rapidjson-dev
 ```
 
 ### Clone and build
@@ -23,8 +24,23 @@ cd rappas2
 ```
 
 ## Usage
+
+### Building databases
+
+The functionality of constructing new databases of phylo k-mers has been moved to [xpas](https://github.com/phylo42/xpas/tree/master), a standalone tool for phylo k-mer database construction, which is a submodule of this repository.
+
+Instead of running commands
 ```
-python rappas2.py build -b `which phyml` -r reference.fasta -t tree.newick -m GTR -k 8 -w work_dir
+python rappas2.py build OPTIONS...
+```
+which were supported in earlier versions of RAPPAS2, run:
+
+```
+python xpas.py OPTIONS...
 ```
 
-See `python rappas2.py --help` and `python rappas2.py build --help` for more information.
+### Phylogenetic placement
+```
+python rappas2.py place -i DATABASE -s [nucl|amino] -o OUTPUT_DIR INPUT_FASTA
+```
+See `python rappas2.py place --help` for more information.
