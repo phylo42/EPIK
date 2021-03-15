@@ -42,9 +42,9 @@ int main(int argc, char** argv)
 {
     std::ios::sync_with_stdio(false);
 
-    if (argc < 4)
+    if (argc < 5)
     {
-        std::cout << "Usage:\n\t" << argv[0] << " DATABASE_FILE OUTPUT_DIRECTORY NUM_THREADS QUERY_FILE"  << std::endl;
+        std::cout << "Usage:\n\t" << argv[0] << " DATABASE_FILE OUTPUT_DIRECTORY EXISTS [0/1] NUM_THREADS QUERY_FILE"  << std::endl;
         return 1;
     }
 

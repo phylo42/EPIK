@@ -49,11 +49,12 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
     return sequence_map;
 }
 
-placer::placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& original_tree, size_t keep_at_most, double keep_factor) noexcept
+placer::placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& original_tree, size_t keep_at_most,
+               double keep_factor) noexcept
     : _db{ db }
     , _original_tree{ original_tree }
-    , _threshold{ xpas::score_threshold(db.omega(), db.kmer_size()) }
-    , _log_threshold{ std::log10(_threshold) }
+    , _threshold{db.log_threshold() }
+    , _log_threshold{ std::log10(db.log_threshold()) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
 {}
