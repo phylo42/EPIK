@@ -58,18 +58,6 @@ placer::placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& original_t
     , _keep_factor{ keep_factor }
 {}
 
-/// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
-/// We use a longer float type, not phylo_kmer::score_type here, because 10 ** score can be a small number.
-placement::weight_ratio_type sum_scores(const std::vector<placement>& placements)
-{
-    placement::weight_ratio_type sum = 0.0;
-    for (const auto& placement : placements)
-    {
-        sum += boost::multiprecision::pow(10.0, placement::weight_ratio_type(placement.score));
-    }
-    return sum;
-}
-
 /// \brief Copies placements that have a weight ratio >= some threshold value. The threshold
 /// is calculated as a relative _keep_factor from a maximum weight_ratio among the given placements.
 std::vector<placement> filter_by_ratio(const std::vector<placement>& placements, double _keep_factor)
@@ -104,31 +92,10 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /*#pragma omp parallel for schedule(auto) num_threads(num_threads)*/
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
-        const auto sequence = unique_sequences[i];
-        const auto headers = sequence_map.at(sequence);
+        /// place the sequence
+        placed_seqs[i] = std::move(place_seq(unique_sequences[i]));
 
-        placed_seqs[i] = std::move(place_seq(sequence));
-
-        /// compute weight ratio
-        const auto score_sum = sum_scores(placed_seqs[i].placements);
-        for (auto& placement : placed_seqs[i].placements)
-        {
-            /// If the scores are that small that taking 10 to these powers is still zero
-            /// according to boost::multiprecision::pow, then score_sum is zero.
-            /// Assign all weight_ration to zeros and keep_factor to zero as well to
-            /// not filter them out.
-            if (score_sum == 0)
-            {
-                placement.weight_ratio = 0.0f;
-                keep_factor = 0.0f;
-            }
-            else
-            {
-                placement.weight_ratio = boost::multiprecision::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
-            }
-        }
-
-        /// Remove placements with low weight ratio
+        /// filter placements by likelihood weight ratio
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
     return { sequence_map, placed_seqs };
@@ -148,7 +115,6 @@ std::vector<placement> select_best_placements(const std::vector<placement>& plac
     auto it = std::copy_if(placements.begin(), placements.end(), result.begin(),
                            [](const placement& pb){ return pb.count > 0; } );
     result.resize(std::distance(result.begin(), it));
-
 
     /// Partially select best keep_at_most placements
     size_t return_size = std::min(keep_at_most, result.size());
@@ -297,6 +263,24 @@ placed_sequence placer::place_seq(std::string_view seq) const
                 ambiguous_placements[postorder_node_id].score = 0;
             }
         }
+    }
+
+    /// get the score of the best placement
+    const auto score_compare = [](const auto& p1, const auto& p2) { return p1.score < p2.score; };
+    const auto max_score = std::max_element(placements.begin(), placements.end(),
+                                            score_compare)->score;
+
+    /// compute the sum of 10^(score - max_score)
+    placement::weight_ratio_type score_sum = 0.0;
+    for (const auto& placement : placements)
+    {
+        score_sum += std::pow(10.0, placement::weight_ratio_type(placement.score - max_score));
+    }
+
+    /// compute likelihood weight ratios
+    for (auto& placement : placements)
+    {
+        placement.weight_ratio = std::pow(10.0f, placement::weight_ratio_type(placement.score - max_score)) / score_sum;
     }
 
     return { seq, select_best_placements(placements, _keep_at_most) };

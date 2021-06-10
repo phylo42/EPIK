@@ -6,7 +6,7 @@
 #include <xpas/phylo_kmer.h>
 #include <xpas/phylo_kmer_db.h>
 #include <xpas/phylo_tree.h>
-#include <boost/multiprecision/float128.hpp>
+//#include <boost/multiprecision/float128.hpp>
 
 namespace xpas
 {
@@ -22,7 +22,8 @@ namespace rappas::impl
     /// A placement of one sequence
     struct placement {
     public:
-        using weight_ratio_type = boost::multiprecision::float128;
+        using weight_ratio_type = double;
+        //using weight_ratio_type = boost::multiprecision::float128;
 
         xpas::phylo_kmer::branch_type branch_id;
         xpas::phylo_kmer::score_type score;

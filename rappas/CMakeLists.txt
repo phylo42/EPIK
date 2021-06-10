@@ -45,7 +45,7 @@ target_link_libraries(rappas2-dna
             Boost::filesystem
             Boost::iostreams
             OpenMP::OpenMP_CXX
-            quadmath
+            #quadmath
 )
 
 target_link_libraries(rappas2-aa
@@ -55,20 +55,22 @@ target_link_libraries(rappas2-aa
             Boost::filesystem
             Boost::iostreams
             OpenMP::OpenMP_CXX
-            quadmath
+            #quadmath
         )
 
 # Turn on the warnings and treat them as errors
 target_compile_options(rappas2-dna
         PRIVATE
-            -Wall -Wextra -Werror
+            -Wall -Wextra #-Werror
 )
 
+set_property(TARGET rappas2-aa PROPERTY CXX_STANDARD 17)
 target_compile_options(rappas2-aa
         PRIVATE
-            -Wall -Wextra -Werror
+            -Wall -Wextra #-Werror
         )
 
+set_property(TARGET rappas2-dna PROPERTY CXX_STANDARD 17)
 target_compile_features(rappas2-dna
         PUBLIC
             cxx_std_17)
