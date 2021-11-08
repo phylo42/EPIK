@@ -31,11 +31,9 @@ fs::path make_output_filename(const std::string& input_file, const std::string& 
 
 void print_line()
 {
-    for (size_t j = 0; j < 60; ++j)
-    {
-        std::cout << '*';
-    }
-    std::cout << std::endl;
+    constexpr auto line_length{ 60U };
+    constexpr auto symbol{ '*' };
+    std::cout << std::string(line_length, symbol) << std::endl;
 }
 
 int main(int argc, char** argv)
