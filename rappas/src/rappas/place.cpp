@@ -50,13 +50,14 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
 }
 
 placer::placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& original_tree, size_t keep_at_most,
-               double keep_factor) noexcept
+               double keep_factor, bool exists) noexcept
     : _db{ db }
     , _original_tree{ original_tree }
-    , _threshold{db.log_threshold() }
-    , _log_threshold{ std::log10(db.log_threshold()) }
+    , _threshold{ db.get_threshold() }
+    , _log_threshold{ std::log10(db.get_threshold()) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
+    , _exists{ exists }
 {}
 
 /// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
@@ -108,7 +109,7 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         const auto sequence = unique_sequences[i];
         const auto headers = sequence_map.at(sequence);
 
-        placed_seqs[i] = std::move(place_seq(sequence));
+        placed_seqs[i] = place_seq(sequence);
 
         /// compute weight ratio
         const auto score_sum = sum_scores(placed_seqs[i].placements);
@@ -171,8 +172,22 @@ std::vector<placement> select_best_placements(const std::vector<placement>& plac
 placed_sequence placer::place_seq(std::string_view seq) const
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
-    const auto sequence_log_threshold = num_of_kmers * _log_threshold;
+
+    /*
+    std::cout << "THRESHOLD: " << _log_threshold << std::endl;
+    std::cout << "THRESHOLD ?? " << _db.get_threshold() << std::endl;
+    std::cout << "BUT REAL: " << std::log10(xpas::score_threshold(_db.omega(), _db.kmer_size())) << std::endl;
+*/
+
+    const auto eps = xpas::score_threshold(_db.omega(), _db.kmer_size());
+    const auto log_eps = std::log10(eps);
+    const auto epsE = _db.get_threshold();
+    const auto frac_eps = (1 - eps) / (1 - epsE);
+
+    const auto sequence_log_threshold = num_of_kmers * log_eps;
     const auto num_branch_nodes = _original_tree.get_node_count();
+
+    //const xpas::phylo_kmer::score_type f = (xpas::phylo_kmer::score_type)num_of_kmers / (1228 - _db.kmer_size() + 1);
 
     /// Initialize "ambiguous placements" array, which correspond to S_amb[] and C_amb[]
     /// We initialize it here and clean it at every iteration over an umbiguous k-mer
@@ -240,10 +255,50 @@ placed_sequence placer::place_seq(std::string_view seq) const
                 //std::cout << key << " " << kmer << std::endl;
                 for (const auto& [postorder_node_id, score] : *entries)
                 {
-                    placements[postorder_node_id].count += 1;
-                    placements[postorder_node_id].score += score - _log_threshold;
 
-                    //std::cout << "\t" << postorder_node_id << " " << score << " " << std::pow(10, score) << std::endl;
+                    auto fscore = score;
+                    (void)fscore;
+                    if (_exists)
+                    {
+                        auto s = std::pow(10, score);
+
+                        // Sometimes the score can be even less than the threshold... rounding error?
+                        if (s < epsE)
+                        {
+                            //s = epsE;
+
+                            //std::cout << "BROKEN: " << s << " " << epsE << std::endl;
+                            //std::cout << score << " " << std::log10(epsE) << std::endl;
+
+                            fscore = log_eps;
+                        }
+                        else
+                        {
+                            //fscore = std::log10(frac_eps * (s - epsE) + eps);
+                            fscore = score;
+                        }
+                        /*
+                        std::cout << "\t" << kmer << " for " << postorder_node_id << ": " << placements[postorder_node_id].score << std::endl;
+                        std::cout << "\t\t fscore: " << fscore << " | " << frac_eps * (s - epsE) + eps << std::endl;
+                         */
+
+                    }
+
+
+                    placements[postorder_node_id].count += 1;
+                    placements[postorder_node_id].score += fscore - log_eps;
+                    //placements[postorder_node_id].score += score - _log_threshold;
+
+                    //std::cout << "\t" << kmer << " for " << postorder_node_id << ": " << placements[postorder_node_id].score << std::endl;
+                    //break;
+
+                    /*if (auto the_node = _original_tree.get_by_postorder_id(postorder_node_id); *the_node)
+                    {
+                        std::cout << "\t" << (*the_node)->get_preorder_id() <<
+                                  " " << std::pow(10, score) << std::endl;
+                    }*/
+                    //std::cout << "\t" << postorder_node_id << " " << xpas::decode_kmer(key, _db.kmer_size()) <<
+                    //          " " << score << " " << std::pow(10, score) << std::endl;
 
                 }
 #endif

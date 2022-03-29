@@ -53,7 +53,8 @@ int main(int argc, char** argv)
 
     const auto db_file = std::string{ argv[1] };
     const auto output_dir = std::string{ argv[2] };
-    const auto num_threads = std::stoul(argv[3]);
+    const auto exists = std::stoul(argv[3]);
+    const auto num_threads = std::stoul(argv[4]);
 
     std::cout << "Loading database..." << std::endl;
     const auto db = xpas::load(db_file);
@@ -65,11 +66,11 @@ int main(int argc, char** argv)
     std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
 
     const auto tree = xpas::io::parse_newick(db.tree());
-    const auto placer = rappas::placer(db, tree, keep_at_most, keep_factor);
+    const auto placer = rappas::placer(db, tree, keep_at_most, keep_factor, exists);
     /// Here we transform the tree to .newick by our own to make sure the output format is always the same
     const auto tree_as_newick = xpas::io::to_newick(tree, true);
 
-    for (int i = 4; i < argc; ++i)
+    for (int i = 5; i < argc; ++i)
     {
         print_line();
         const auto query_file = std::string{ argv[i] };

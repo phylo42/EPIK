@@ -18,6 +18,7 @@ from pathlib import Path
 import click
 import subprocess
 from pathlib import Path
+from xpas.xpas import ScoreModel, SCORE_MODELS
 
 
 @click.group()
@@ -44,12 +45,15 @@ def rappas():
               required=True,
               type=click.Path(dir_okay=True, file_okay=False),
               help="Output directory.")
+@click.option('--score-model',
+              type=click.Choice(SCORE_MODELS),
+              default="max", show_default=True)
 @click.option('--threads',
              type=int,
              default=4, show_default=True,
              help="Number of threads used.")
 @click.argument('input_files', type=click.Path(exists=True), nargs=-1)
-def place(database, states, outputdir, threads, input_files):
+def place(database, states, outputdir, score_model, threads, input_files):
     """
     Places .fasta files using the input RAPPAS2 database.
 
@@ -63,14 +67,18 @@ def place(database, states, outputdir, threads, input_files):
     else:
         rappas_bin = f"{current_dir}/bin/rappas/rappas2-aa"
     
+    sm = 0 if score_model == ScoreModel.MAX else 1
 
     command = [
         rappas_bin,
         str(database),
         str(outputdir),
+        str(sm),
         str(threads)
     ]
     command.extend(input_files)
+
+    print(command)
     subprocess.call(command)
 
 

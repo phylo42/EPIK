@@ -60,7 +60,7 @@ namespace rappas
         /// the overhead of smart pointers. Make sure that the lifetime of these variables is
         /// longer than placer's one.
         placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& _original_tree,
-               size_t keep_at_most, double keep_factor) noexcept;
+               size_t keep_at_most, double keep_factor, bool exists) noexcept;
         placer(const placer&) = delete;
         placer(placer&&) = delete;
         placer& operator=(const placer&) = delete;
@@ -81,6 +81,7 @@ namespace rappas
         const xpas::phylo_kmer::score_type _log_threshold;
         const size_t _keep_at_most;
         const double _keep_factor;
+        const bool _exists;
     };
 }
 
