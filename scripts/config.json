@@ -1,0 +1,31 @@
+{
+    "soft":
+    {
+        "rappas": "/home/nikolai/miniconda3/envs/PEWO/bin/RAPPAS.jar",
+        "xpas": "xpas.py",
+        "rappas2": "rappas2.py",
+        "arbinary": "/home/nikolai/miniconda3/envs/PEWO/bin/raxml-ng"
+    },
+
+    "args":
+    {
+        "alignment": "/ngs/data/D652/reference.fasta",
+        "tree": "/ngs/data/D652/tree.newick",
+        "queries": "/ngs/rappas/D652/EMP_92_studies_10000.fas",
+
+        "states": "nucl",
+        
+        "ardir": "/ngs/rappas/D652/temp/AR",
+        "categories": "4",
+        "workdir": "/ngs/ppdiff/D652",
+
+        "k": "5",
+        "omega": "1.5",
+        "reduction-ratio": "0.99",
+        "filter": "no-filter",
+        "mu": "1.0",
+
+        "use-unrooted": "True"
+
+    }
+}
