@@ -242,7 +242,8 @@ placed_sequence placer::place_seq(std::string_view seq) const
                     placements[postorder_node_id].count += 1;
                     placements[postorder_node_id].score += score - _log_threshold;
 
-                    //std::cout << "\t" << postorder_node_id << " " << score << " " << std::pow(10, score) << std::endl;
+                    //const auto& node = _original_tree.get_by_postorder_id(postorder_node_id);
+                    //std::cout << "\t" << std::pow(10, score) << " " << (*node)->get_preorder_id() << std::endl;
 
                 }
 #endif

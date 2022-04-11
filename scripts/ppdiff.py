@@ -115,7 +115,8 @@ class Rappas(RappasBase):
             "-r", self.config["args"]["alignment"],
             "-w", self.workdir,
             "--ratio-reduction", self.config["args"]["reduction-ratio"],
-            "--ar-dir", self.config["args"]["ardir"]
+            "--ardir", self.config["args"]["ardir"],
+            "--gap-jump-thresh", "1.0"
         ]
 
         use_unrooted = "use-unrooted" in self.config["args"] and \
@@ -189,6 +190,7 @@ class Rappas2(RappasBase):
         keep_positions = False
         uncompressed = False
         threads = 2
+        #score_model = self.config["args"]["model"]
 
         xpas.build_database(self.config["soft"]["arbinary"],  # database,
                             self.config["args"]["alignment"], self.config["args"]["tree"],
@@ -197,7 +199,8 @@ class Rappas2(RappasBase):
                             alpha, categories,  # ghosts,
                             self.k, model, arparameters, convert_uo,  # gap_jump_thresh,
                             no_reduction, self.config["args"]["reduction-ratio"], self.omega,
-                            filter, f, mu, use_unrooted, merge_branches,
+                            filter, #score_model,
+                            f, mu, use_unrooted, merge_branches,
                             self.config["args"]["ardir"], aronly,
                             keep_positions, uncompressed,
                             threads)
