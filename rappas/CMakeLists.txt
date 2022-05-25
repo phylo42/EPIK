@@ -61,7 +61,7 @@ target_link_libraries(rappas2-aa
 # Turn on the warnings and treat them as errors
 target_compile_options(rappas2-dna
         PRIVATE
-            -Wall -Wextra -Werror -ftree-vectorize -O3
+            -Wall -Wextra -Werror
 )
 
 target_compile_options(rappas2-aa

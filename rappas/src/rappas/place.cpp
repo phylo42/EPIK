@@ -201,7 +201,7 @@ placed_sequence placer::place_seq(std::string_view seq) const
         auto mean_subtree_branch_length = 0.0;
         if (num_subtree_nodes > 1)
         {
-            mean_subtree_branch_length = (subtree_branch_length - (*node)->get_branch_length()) / ((double)num_subtree_nodes - 1.0);
+            mean_subtree_branch_length = subtree_branch_length / num_subtree_nodes;
         }
 
         const auto pendant_length = mean_subtree_branch_length + distal_length;
