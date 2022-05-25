@@ -57,6 +57,13 @@ int main(int argc, char** argv)
 
     std::cout << "Loading database..." << std::endl;
     const auto db = xpas::load(db_file);
+    if (db.version() < xpas::protocol::EARLIEST_INDEX)
+    {
+        std::cerr << "The serialization protocol version is too old (v" << db.version() << ").\n"
+            << "Can not use databases built by xpas older than v0.3.2" << std::endl;
+        return -1;
+    }
+
     std::cout << "Database parameters:" << std::endl
               << "\tSequence type: " << db.sequence_type() << std::endl
               << "\tk: " << db.kmer_size() << std::endl

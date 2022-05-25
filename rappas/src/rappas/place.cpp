@@ -2,8 +2,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cmath>
-#include <numeric>
-#include <iostream>
 #include <xpas/phylo_kmer_db.h>
 #include <xpas/phylo_tree.h>
 #include <xpas/kmer_iterator.h>
@@ -101,13 +99,13 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
     (void)num_threads;
-    /*#pragma omp parallel for schedule(auto) num_threads(num_threads)*/
+    //#pragma omp parallel for schedule(auto) num_threads(num_threads)
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
         const auto sequence = unique_sequences[i];
         const auto headers = sequence_map.at(sequence);
 
-        placed_seqs[i] = std::move(place_seq(sequence));
+        placed_seqs[i] = place_seq(sequence);
 
         /// compute weight ratio
         const auto score_sum = sum_scores(placed_seqs[i].placements);
@@ -195,20 +193,15 @@ placed_sequence placer::place_seq(std::string_view seq) const
 
         const auto distal_length = (*node)->get_branch_length() / 2;
 
-        /// For pendant_length, calculate the total branch length in the whole subtree
-        xpas::phylo_node::branch_length_type total_subtree_branch_lenght = 0;
-        size_t num_subtree_nodes = 0;
-        for (const auto& subtree_node : xpas::visit_subtree(*node))
-        {
-            total_subtree_branch_lenght += subtree_node.get_branch_length();
-            ++num_subtree_nodes;
-        }
+        /// For pendant_length
+        const auto num_subtree_nodes = _db.tree_index()[i].subtree_num_nodes;
+        const auto subtree_branch_length = _db.tree_index()[i].subtree_total_length;
 
         /// calculate the mean branch length in the subtree (excluding the branch with this post-order id)
-        auto mean_subtree_branch_length = 0.0f;
+        auto mean_subtree_branch_length = 0.0;
         if (num_subtree_nodes > 1)
         {
-            mean_subtree_branch_length = (total_subtree_branch_lenght - (*node)->get_branch_length()) / (num_subtree_nodes - 1.0f);
+            mean_subtree_branch_length = (subtree_branch_length - (*node)->get_branch_length()) / ((double)num_subtree_nodes - 1.0);
         }
 
         const auto pendant_length = mean_subtree_branch_length + distal_length;

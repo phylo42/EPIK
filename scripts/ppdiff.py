@@ -18,9 +18,10 @@ import subprocess
 from pathlib import Path
 from click.testing import CliRunner
 import jplace_diff as jd
-from xpas import xpas
-from rappas2 import rappas2
-
+#from xpas import xpas
+#from rappas2 import rappas2
+import xpas
+import rappas2
 
 # abstract class for RAPPAS and XPAS+RAPPAS2
 # has properties for run parameters
@@ -67,18 +68,20 @@ class RappasBase:
         return os.path.isfile(self.database_file)
 
     # runs RAPPAS / XPAS+RAPPAS2
-    def run(self) -> str:
+    def run(self, **kwargs) -> str:
+        force = kwargs.get("force", False)
+
         # create the workdir if not exists
         Path(self.workdir).mkdir(parents=True, exist_ok=True)
 
         # build the database if not already done
-        if not self.database_exists:
+        if not self.database_exists or force:
             self.build_database()
         else:
             print(f"Database file {self.database_file} already exists. Skipping build")
 
         # place the queries if not already done
-        if not os.path.isfile(self.renamed_placement_file):
+        if not os.path.isfile(self.renamed_placement_file) or force:
             self.place_queries()
             # rename placement file to avoid confusion between RAPPAS and RAPPAS2
             print("Rename: " + self.placement_file + " -> " + self.renamed_placement_file)
@@ -231,7 +234,8 @@ def check_file_exists(file):
 
 @click.command()
 @click.argument('config_file', type=click.Path(exists=True))
-def run(config_file: str) -> None:
+@click.option('-f', '--force', is_flag=True, show_default=True, default=False, help="Recreate existing files.")
+def run(config_file: str, force: bool) -> None:
     with open(config_file, "r") as jsonfile:
         config = json.load(jsonfile)
 
@@ -240,8 +244,8 @@ def run(config_file: str) -> None:
         rappas2 = Rappas2(config)
 
         # run software
-        rappas_placement = rappas.run()
-        rappas2_placement = rappas2.run()
+        rappas_placement = rappas.run(force=force)
+        rappas2_placement = rappas2.run(force=force)
 
         # check that the placement files exist
         check_file_exists(rappas_placement)
