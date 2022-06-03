@@ -74,6 +74,7 @@ def place_queries(database, states, outputdir, threads, input_files):
         str(threads)
     ]
     command.extend(input_files)
+    print(" ".join(s for s in command))
     return subprocess.call(command)
 
 

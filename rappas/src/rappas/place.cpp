@@ -7,6 +7,7 @@
 #include <xpas/kmer_iterator.h>
 #include <xpas/seq_record.h>
 #include <xpas/fasta.h>
+#include <iostream>
 #include "place.h"
 
 using namespace rappas::impl;
@@ -94,16 +95,16 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Keys are std::string_view's, so copying is cheap enough
     const auto unique_sequences = copy_keys(sequence_map);
 
-    auto keep_factor = _keep_factor;
 
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
     (void)num_threads;
-    //#pragma omp parallel for schedule(auto) num_threads(num_threads)
+    #pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
+        default(none) shared(placed_seqs, unique_sequences)
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
+        auto keep_factor = _keep_factor;
         const auto sequence = unique_sequences[i];
-        const auto headers = sequence_map.at(sequence);
 
         placed_seqs[i] = place_seq(sequence);
 
@@ -236,7 +237,7 @@ placed_sequence placer::place_seq(std::string_view seq) const
                     placements[postorder_node_id].score += score - _log_threshold;
 
                     //const auto& node = _original_tree.get_by_postorder_id(postorder_node_id);
-                    //std::cout << "\t" << std::pow(10, score) << " " << (*node)->get_preorder_id() << std::endl;
+                    //std::cout << "\t" << std::pow(10, score) << " " << (*node)->get_preorder_id() << " " << postorder_node_id << std::endl;
 
                 }
 #endif
