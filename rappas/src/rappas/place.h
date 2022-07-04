@@ -3,12 +3,12 @@
 
 #include <vector>
 #include <unordered_map>
-#include <xpas/phylo_kmer.h>
-#include <xpas/phylo_kmer_db.h>
-#include <xpas/phylo_tree.h>
+#include <xcl/phylo_kmer.h>
+#include <xcl/phylo_kmer_db.h>
+#include <xcl/phylo_tree.h>
 #include <boost/multiprecision/float128.hpp>
 
-namespace xpas
+namespace xcl
 {
     class seq_record;
 }
@@ -24,12 +24,12 @@ namespace rappas::impl
     public:
         using weight_ratio_type = boost::multiprecision::float128;
 
-        xpas::phylo_kmer::branch_type branch_id;
-        xpas::phylo_kmer::score_type score;
+        xcl::phylo_kmer::branch_type branch_id;
+        xcl::phylo_kmer::score_type score;
         weight_ratio_type weight_ratio;
         size_t count;
-        xpas::phylo_node::branch_length_type distal_length;
-        xpas::phylo_node::branch_length_type pendant_length;
+        xcl::phylo_node::branch_length_type distal_length;
+        xcl::phylo_node::branch_length_type pendant_length;
     };
 
     /// A wrapper to store a sequence and its placement information
@@ -59,7 +59,7 @@ namespace rappas
         /// \details: WARNING: db and tree are stored as references to avoid copying and
         /// the overhead of smart pointers. Make sure that the lifetime of these variables is
         /// longer than placer's one.
-        placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& _original_tree,
+        placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& _original_tree,
                size_t keep_at_most, double keep_factor) noexcept;
         placer(const placer&) = delete;
         placer(placer&&) = delete;
@@ -68,17 +68,17 @@ namespace rappas
         ~placer() noexcept = default;
 
         /// \brief Places a collection of fasta sequences
-        placed_collection place(const std::vector<xpas::seq_record>& seq_records, size_t num_threads) const;
+        placed_collection place(const std::vector<xcl::seq_record>& seq_records, size_t num_threads) const;
 
     private:
 
         /// \brief Places a fasta sequence
         placed_sequence place_seq(std::string_view seq) const;
 
-        const xpas::phylo_kmer_db& _db;
-        const xpas::phylo_tree& _original_tree;
-        const xpas::phylo_kmer::score_type _threshold;
-        const xpas::phylo_kmer::score_type _log_threshold;
+        const xcl::phylo_kmer_db& _db;
+        const xcl::phylo_tree& _original_tree;
+        const xcl::phylo_kmer::score_type _threshold;
+        const xcl::phylo_kmer::score_type _log_threshold;
         const size_t _keep_at_most;
         const double _keep_factor;
     };

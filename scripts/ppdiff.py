@@ -193,7 +193,7 @@ class Rappas2(RappasBase):
         keep_positions = False
         uncompressed = False
         threads = 2
-        score_model = self.config["args"]["model"]
+        #score_model = self.config["args"]["model"]
 
         xpas.build_database(self.config["soft"]["arbinary"],  # database,
                             self.config["args"]["alignment"], self.config["args"]["tree"],

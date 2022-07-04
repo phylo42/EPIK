@@ -2,17 +2,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cmath>
-#include <xpas/phylo_kmer_db.h>
-#include <xpas/phylo_tree.h>
-#include <xpas/kmer_iterator.h>
-#include <xpas/seq_record.h>
-#include <xpas/fasta.h>
+#include <xcl/phylo_kmer_db.h>
+#include <xcl/phylo_tree.h>
+#include <xcl/kmer_iterator.h>
+#include <xcl/seq_record.h>
+#include <xcl/fasta.h>
 #include <iostream>
 #include "place.h"
 
 using namespace rappas::impl;
 using namespace rappas;
-using xpas::seq_record;
+using xcl::seq_record;
 
 
 /// \brief Copies the keys of an input map to a vector
@@ -48,10 +48,10 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
     return sequence_map;
 }
 
-placer::placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& original_tree, size_t keep_at_most, double keep_factor) noexcept
+placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tree, size_t keep_at_most, double keep_factor) noexcept
     : _db{ db }
     , _original_tree{ original_tree }
-    , _threshold{ xpas::score_threshold(db.omega(), db.kmer_size()) }
+    , _threshold{ xcl::score_threshold(db.omega(), db.kmer_size()) }
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
@@ -182,7 +182,7 @@ placed_sequence placer::place_seq(std::string_view seq) const
     /// placements.score and placements.count correspond to S[] and C[] arrays from the original paper.
     std::vector<placement> placements;
     placements.reserve(num_branch_nodes);
-    for (xpas::phylo_kmer::branch_type i = 0; i < num_branch_nodes; ++i)
+    for (xcl::phylo_kmer::branch_type i = 0; i < num_branch_nodes; ++i)
     {
         /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
         /// not the pre-order ones
@@ -210,7 +210,7 @@ placed_sequence placer::place_seq(std::string_view seq) const
     }
 
     /// Query every k-mer that has no more than one ambiguous character
-    for (const auto& [kmer, keys] : xpas::to_kmers<xpas::one_ambiguity_policy>(seq, _db.kmer_size()))
+    for (const auto& [kmer, keys] : xcl::to_kmers<xcl::one_ambiguity_policy>(seq, _db.kmer_size()))
     {
         (void)kmer;
 
@@ -247,7 +247,7 @@ placed_sequence placer::place_seq(std::string_view seq) const
         else
         {
             /// hash set of branch ids that are scored by the ambiguous k-mer
-            std::unordered_set<xpas::phylo_kmer::branch_type> l_amb;
+            std::unordered_set<xcl::phylo_kmer::branch_type> l_amb;
 
             for (const auto& key : keys)
             {
