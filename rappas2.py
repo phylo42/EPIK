@@ -13,11 +13,8 @@ __license__ = "MIT"
 
 
 import os
-from os import path
-from pathlib import Path
 import click
 import subprocess
-from pathlib import Path
 
 
 @click.group()

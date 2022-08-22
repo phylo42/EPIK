@@ -49,34 +49,34 @@ target_compile_features(rappas2-dna
 
 ######################################################################################################
 
-#add_executable(rappas2-aa "")
+add_executable(rappas2-aa "")
 
-#target_sources(rappas2-aa
-#        PRIVATE
-#        ${SOURCES})
+target_sources(rappas2-aa
+        PRIVATE
+        ${SOURCES})
 
-#target_include_directories(rappas2-aa
-#        PRIVATE
-#            ${CMAKE_CURRENT_SOURCE_DIR}/src/
-#            ${RapidJSON_INCLUDE_DIRS}
-#        )
+target_include_directories(rappas2-aa
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/
+            ${RapidJSON_INCLUDE_DIRS}
+        )
 
-#target_link_libraries(rappas2-aa
-#        PRIVATE
-#        xcl::aa
-#        Boost::program_options
-#        Boost::filesystem
-#        Boost::iostreams
-#        OpenMP::OpenMP_CXX
-#        quadmath
-#        )
+target_link_libraries(rappas2-aa
+        PRIVATE
+        xcl::aa
+        Boost::program_options
+        Boost::filesystem
+        Boost::iostreams
+        OpenMP::OpenMP_CXX
+        quadmath
+        )
 
-#target_compile_options(rappas2-aa
-#        PRIVATE
-#        -Wall -Wextra -Werror
-#        )
+target_compile_options(rappas2-aa
+        PRIVATE
+        -Wall -Wextra -Werror
+        )
 
-#target_compile_features(rappas2-aa
-#        PUBLIC
-#        cxx_std_17)
-#
+target_compile_features(rappas2-aa
+        PUBLIC
+        cxx_std_17)
+
