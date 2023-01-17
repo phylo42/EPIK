@@ -68,12 +68,12 @@ namespace rappas
         ~placer() noexcept = default;
 
         /// \brief Places a collection of fasta sequences
-        placed_collection place(const std::vector<xcl::seq_record>& seq_records, size_t num_threads) const;
+        placed_collection place(const std::vector<xcl::seq_record>& seq_records, size_t num_threads);
 
     private:
 
         /// \brief Places a fasta sequence
-        placed_sequence place_seq(std::string_view seq) const;
+        placed_sequence place_seq(std::string_view seq);
 
         const xcl::phylo_kmer_db& _db;
         const xcl::phylo_tree& _original_tree;
@@ -81,6 +81,17 @@ namespace rappas
         const xcl::phylo_kmer::score_type _log_threshold;
         const size_t _keep_at_most;
         const double _keep_factor;
+
+        // Corresponds to S[], the array storing the score of the query for each edge x of refT
+        std::vector<xcl::phylo_kmer::score_type> _scores;
+        std::vector<xcl::phylo_kmer::score_type> _scores_amb;
+
+        // Corresponds to C[], the array counting the number of k-mers in the query mapped to x
+        std::vector<size_t> _counts;
+        std::vector<size_t> _counts_amb;
+
+        /// Corresponds to L[], the list of edges mapped to some k-mer in the query
+        std::vector<xcl::phylo_kmer::branch_type> _edges;
     };
 }
 

@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
 
     const auto tree = xcl::io::parse_newick(db.tree());
-    const auto placer = rappas::placer(db, tree, keep_at_most, keep_factor);
+    auto placer = rappas::placer(db, tree, keep_at_most, keep_factor);
     /// Here we transform the tree to .newick by our own to make sure the output format is always the same
     const auto tree_as_newick = xcl::io::to_newick(tree, true);
 
