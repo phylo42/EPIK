@@ -92,6 +92,8 @@ namespace rappas
 
         /// Corresponds to L[], the list of edges mapped to some k-mer in the query
         std::vector<xcl::phylo_kmer::branch_type> _edges;
+
+        std::vector<double> _pendant_lengths;
     };
 }
 

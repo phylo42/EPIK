@@ -59,7 +59,35 @@ placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tre
     , _scores_amb(original_tree.get_node_count())
     , _counts(original_tree.get_node_count())
     , _counts_amb(original_tree.get_node_count())
-{}
+{
+    /// precompute pendant lengths
+    for (xcl::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
+    {
+        /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
+        /// not the pre-order ones
+        const auto node = _original_tree.get_by_postorder_id(i);
+        if (!node)
+        {
+            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(i));
+        }
+
+        const auto distal_length = (*node)->get_branch_length() / 2;
+
+        /// For pendant_length
+        const auto num_subtree_nodes = _db.tree_index()[i].subtree_num_nodes;
+        const auto subtree_branch_length = _db.tree_index()[i].subtree_total_length;
+
+        /// calculate the mean branch length in the subtree (excluding the branch with this post-order id)
+        auto mean_subtree_branch_length = 0.0;
+        if (num_subtree_nodes > 1)
+        {
+            mean_subtree_branch_length = subtree_branch_length / num_subtree_nodes;
+        }
+
+        const auto pendant_length = mean_subtree_branch_length + distal_length;
+        _pendant_lengths.push_back(pendant_length);
+    }
+}
 
 /// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
 /// We use a longer float type, not phylo_kmer::score_type here, because 10 ** score can be a small number.
@@ -178,34 +206,6 @@ placed_sequence placer::place_seq(std::string_view seq)
     }
     _edges.clear();
 
-/*
-    for (xcl::phylo_kmer::branch_type i = 0; i < num_branch_nodes; ++i)
-    {
-        /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
-        /// not the pre-order ones
-        const auto node = _original_tree.get_by_postorder_id(i);
-        if (!node)
-        {
-            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(i));
-        }
-
-        const auto distal_length = (*node)->get_branch_length() / 2;
-
-        /// For pendant_length
-        const auto num_subtree_nodes = _db.tree_index()[i].subtree_num_nodes;
-        const auto subtree_branch_length = _db.tree_index()[i].subtree_total_length;
-
-        /// calculate the mean branch length in the subtree (excluding the branch with this post-order id)
-        auto mean_subtree_branch_length = 0.0;
-        if (num_subtree_nodes > 1)
-        {
-            mean_subtree_branch_length = subtree_branch_length / num_subtree_nodes;
-        }
-
-        const auto pendant_length = mean_subtree_branch_length + distal_length;
-        placements.push_back({ i, sequence_log_threshold, 0.0, 0, distal_length, pendant_length});
-    }*/
-
     /// Query every k-mer that has no more than one ambiguous character
     for (const auto& [kmer, keys] : xcl::to_kmers<xcl::one_ambiguity_policy>(seq, _db.kmer_size()))
     {
@@ -298,7 +298,14 @@ placed_sequence placer::place_seq(std::string_view seq)
     std::vector<placement> placements;
     for (const auto& edge: _edges)
     {
-        placements.push_back({edge, _scores[edge], 0.0, _counts[edge], 0.0f, 0.0f });
+        const auto node = _original_tree.get_by_postorder_id(edge);
+        if (!node)
+        {
+            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(edge));
+        }
+
+        const auto distal_length = (*node)->get_branch_length() / 2;
+        placements.push_back({edge, _scores[edge], 0.0, _counts[edge], distal_length, _pendant_lengths[edge] });
     }
 
     return { seq, select_best_placements(std::move(placements), _keep_at_most) };
