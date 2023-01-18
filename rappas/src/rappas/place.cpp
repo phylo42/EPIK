@@ -48,7 +48,7 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
     return sequence_map;
 }
 
-placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tree, size_t keep_at_most, double keep_factor) noexcept
+placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tree, size_t keep_at_most, double keep_factor)
     : _db{ db }
     , _original_tree{ original_tree }
     , _threshold{ xcl::score_threshold(db.omega(), db.kmer_size()) }
@@ -68,7 +68,8 @@ placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tre
         const auto node = _original_tree.get_by_postorder_id(i);
         if (!node)
         {
-            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(i));
+            const auto node_id_str = std::to_string(i);
+            throw std::runtime_error("Could not find node by post-order id: " + node_id_str);
         }
 
         const auto distal_length = (*node)->get_branch_length() / 2;

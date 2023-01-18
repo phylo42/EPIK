@@ -60,7 +60,7 @@ namespace rappas
         /// the overhead of smart pointers. Make sure that the lifetime of these variables is
         /// longer than placer's one.
         placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& _original_tree,
-               size_t keep_at_most, double keep_factor) noexcept;
+               size_t keep_at_most, double keep_factor);
         placer(const placer&) = delete;
         placer(placer&&) = delete;
         placer& operator=(const placer&) = delete;
