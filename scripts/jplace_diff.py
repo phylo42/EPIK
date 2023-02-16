@@ -17,7 +17,7 @@ from typing import Dict, List, Union, Mapping
 Number = Union[int, float]
 SeqID = str
 
-EPSILON = 1e-2
+EPSILON = 1e-4
 
 
 class PlacementRecord:
@@ -141,8 +141,23 @@ def conditional_print(string, boolean):
         print(string)
 
 
-def jplace_diff(jplace1: str, jplace2: str) -> None:
+def set_almost_equals(a, b, epsilon=EPSILON):
+    """
+    Compares two sets for almost equality.
+    """
+    if len(a) != len(b):
+        return False
 
+    la, lb = sorted(list(a)), sorted(list(b))
+
+    for i in range(len(la)):
+        if abs(la[i] - lb[i]) > epsilon:
+            return False
+
+    return True
+
+
+def jplace_diff(jplace1: str, jplace2: str) -> None:
     # parse the input files
     parser1 = JplaceParser(jplace1)
     parser1.parse()
@@ -161,6 +176,19 @@ def jplace_diff(jplace1: str, jplace2: str) -> None:
         records2 = dict((rec.edge_num, rec.likelihood) for rec in result2.placements)
         edge_union = set(records1.keys()).union(set(records2.keys()))
 
+        # check if scores of placements are all the same.
+        # If so, we can skip the sequence (no matter what branches are reported)
+        scores1 = set(rec.likelihood for rec in result1.placements)
+        scores2 = set(rec.likelihood for rec in result2.placements)
+
+        #print(name)
+        #print(scores1)
+        #print(scores2)
+        if set_almost_equals(scores1, scores2):
+            num_matches += 1
+            continue
+
+        # compare placements one by one
         found_mismatch = False
         for edge in edge_union:
             if edge not in records1:
@@ -172,7 +200,7 @@ def jplace_diff(jplace1: str, jplace2: str) -> None:
                 found_mismatch = True
                 print(f"\t{edge} is not in the second file")
             # if found in both, check likelihoods
-            elif abs(records1[edge] - records2[edge]) > EPSILON:
+            elif abs(10**records1[edge] - 10**records2[edge]) > EPSILON:
                 conditional_print(f'\n{name}:', not found_mismatch)
                 found_mismatch = True
                 print(f'\t[{edge}] {records1[edge]} != {records2[edge]}')

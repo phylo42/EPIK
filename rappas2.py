@@ -13,11 +13,8 @@ __license__ = "MIT"
 
 
 import os
-from os import path
-from pathlib import Path
 import click
 import subprocess
-from pathlib import Path
 
 
 @click.group()
@@ -56,13 +53,16 @@ def place(database, states, outputdir, threads, input_files):
     \tpython rappas2.py place -s [nucl|amino] -i db.rps -o output file.fasta [file2.fasta ...]
 
     """
+    place_queries(database, states, outputdir, threads, input_files)
+
+
+def place_queries(database, states, outputdir, threads, input_files):
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
     if states == 'nucl':
         rappas_bin = f"{current_dir}/bin/rappas/rappas2-dna"
     else:
         rappas_bin = f"{current_dir}/bin/rappas/rappas2-aa"
-    
 
     command = [
         rappas_bin,
@@ -71,7 +71,8 @@ def place(database, states, outputdir, threads, input_files):
         str(threads)
     ]
     command.extend(input_files)
-    subprocess.call(command)
+    print(" ".join(s for s in command))
+    return subprocess.call(command)
 
 
 if __name__ == "__main__":

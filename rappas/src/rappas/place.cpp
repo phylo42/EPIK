@@ -2,18 +2,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cmath>
-#include <numeric>
+#include <xcl/phylo_kmer_db.h>
+#include <xcl/phylo_tree.h>
+#include <xcl/kmer_iterator.h>
+#include <xcl/seq_record.h>
+#include <xcl/fasta.h>
 #include <iostream>
-#include <xpas/phylo_kmer_db.h>
-#include <xpas/phylo_tree.h>
-#include <xpas/kmer_iterator.h>
-#include <xpas/seq_record.h>
-#include <xpas/fasta.h>
 #include "place.h"
 
 using namespace rappas::impl;
 using namespace rappas;
-using xpas::seq_record;
+using xcl::seq_record;
 
 
 /// \brief Copies the keys of an input map to a vector
@@ -49,14 +48,47 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
     return sequence_map;
 }
 
-placer::placer(const xpas::phylo_kmer_db& db, const xpas::phylo_tree& original_tree, size_t keep_at_most, double keep_factor) noexcept
+placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tree, size_t keep_at_most, double keep_factor)
     : _db{ db }
     , _original_tree{ original_tree }
-    , _threshold{ xpas::score_threshold(db.omega(), db.kmer_size()) }
+    , _threshold{ xcl::score_threshold(db.omega(), db.kmer_size()) }
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
-{}
+    , _scores(original_tree.get_node_count())
+    , _scores_amb(original_tree.get_node_count())
+    , _counts(original_tree.get_node_count())
+    , _counts_amb(original_tree.get_node_count())
+{
+    /// precompute pendant lengths
+    for (xcl::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
+    {
+        /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
+        /// not the pre-order ones
+        const auto node = _original_tree.get_by_postorder_id(i);
+        if (!node)
+        {
+            const auto node_id_str = std::to_string(i);
+            throw std::runtime_error("Could not find node by post-order id: " + node_id_str);
+        }
+
+        const auto distal_length = (*node)->get_branch_length() / 2;
+
+        /// For pendant_length
+        const auto num_subtree_nodes = _db.tree_index()[i].subtree_num_nodes;
+        const auto subtree_branch_length = _db.tree_index()[i].subtree_total_length;
+
+        /// calculate the mean branch length in the subtree (excluding the branch with this post-order id)
+        auto mean_subtree_branch_length = 0.0;
+        if (num_subtree_nodes > 1)
+        {
+            mean_subtree_branch_length = subtree_branch_length / num_subtree_nodes;
+        }
+
+        const auto pendant_length = mean_subtree_branch_length + distal_length;
+        _pendant_lengths.push_back(pendant_length);
+    }
+}
 
 /// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
 /// We use a longer float type, not phylo_kmer::score_type here, because 10 ** score can be a small number.
@@ -85,7 +117,7 @@ std::vector<placement> filter_by_ratio(const std::vector<placement>& placements,
     return result;
 }
 
-placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads) const
+placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads)
 {
     /// There may be identical sequences with different headers. We group them
     /// by the sequence content to not to place the same sequences more than once
@@ -96,18 +128,18 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Keys are std::string_view's, so copying is cheap enough
     const auto unique_sequences = copy_keys(sequence_map);
 
-    auto keep_factor = _keep_factor;
 
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
     (void)num_threads;
-    /*#pragma omp parallel for schedule(auto) num_threads(num_threads)*/
+    #pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
+        default(none) shared(placed_seqs, unique_sequences)
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
+        auto keep_factor = _keep_factor;
         const auto sequence = unique_sequences[i];
-        const auto headers = sequence_map.at(sequence);
 
-        placed_seqs[i] = std::move(place_seq(sequence));
+        placed_seqs[i] = place_seq(sequence);
 
         /// compute weight ratio
         const auto score_sum = sum_scores(placed_seqs[i].placements);
@@ -140,83 +172,43 @@ bool compare_placed_branches(const placement& lhs, const placement& rhs)
 }
 
 /// \brief Selects keep_at_most most placed branches among these that have count > 0
-std::vector<placement> select_best_placements(const std::vector<placement>& placements, size_t keep_at_most)
+std::vector<placement> select_best_placements(std::vector<placement> placements, size_t keep_at_most)
 {
-    /// WARNING: Here we copy the placements to make sorting easier. It may be not
-    /// the most effective and elegant solution.
-    std::vector<placement> result(placements.size());
-    auto it = std::copy_if(placements.begin(), placements.end(), result.begin(),
-                           [](const placement& pb){ return pb.count > 0; } );
-    result.resize(std::distance(result.begin(), it));
-
-
     /// Partially select best keep_at_most placements
-    size_t return_size = std::min(keep_at_most, result.size());
+    size_t return_size = std::min(keep_at_most, placements.size());
 
     /// if no single query k-mer was found, all counts are zeros, and
     /// we take just first keep_at_most branches
     if (return_size == 0)
     {
         return_size = std::min(keep_at_most, placements.size());
-        result.resize(return_size);
-        std::copy(placements.begin(), placements.end(), result.begin());
-
+        placements.resize(return_size);
+        std::copy(placements.begin(), placements.end(), placements.begin());
     }
-    std::partial_sort(std::begin(result), std::begin(result) + return_size, std::end(result), compare_placed_branches);
-    return { std::begin(result), std::begin(result) + return_size };
+    std::partial_sort(std::begin(placements),
+                      std::begin(placements) + return_size,
+                      std::end(placements),
+                      compare_placed_branches);
+    placements.resize(return_size);
+    return placements;
 }
 
 /// \brief Places a fasta sequence
-placed_sequence placer::place_seq(std::string_view seq) const
+placed_sequence placer::place_seq(std::string_view seq)
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
-    const auto sequence_log_threshold = num_of_kmers * _log_threshold;
-    const auto num_branch_nodes = _original_tree.get_node_count();
 
-    /// Initialize "ambiguous placements" array, which correspond to S_amb[] and C_amb[]
-    /// We initialize it here and clean it at every iteration over an umbiguous k-mer
-    /// for efficiency reasons.
-    std::vector<placement> ambiguous_placements(num_branch_nodes);
-
-    /// Initialize the "placements" array. This is an array of size of the number of branches
-    /// in a tree, which contains triplets [branch_id, score, count].
-    /// placements.score and placements.count correspond to S[] and C[] arrays from the original paper.
-    std::vector<placement> placements;
-    placements.reserve(num_branch_nodes);
-    for (xpas::phylo_kmer::branch_type i = 0; i < num_branch_nodes; ++i)
+    for (const auto& edge : _edges)
     {
-        /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
-        /// not the pre-order ones
-        const auto node = _original_tree.get_by_postorder_id(i);
-        if (!node)
-        {
-            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(i));
-        }
-
-        const auto distal_length = (*node)->get_branch_length() / 2;
-
-        /// For pendant_length, calculate the total branch length in the whole subtree
-        xpas::phylo_node::branch_length_type total_subtree_branch_lenght = 0;
-        size_t num_subtree_nodes = 0;
-        for (const auto& subtree_node : xpas::visit_subtree(*node))
-        {
-            total_subtree_branch_lenght += subtree_node.get_branch_length();
-            ++num_subtree_nodes;
-        }
-
-        /// calculate the mean branch length in the subtree (excluding the branch with this post-order id)
-        auto mean_subtree_branch_length = 0.0f;
-        if (num_subtree_nodes > 1)
-        {
-            mean_subtree_branch_length = (total_subtree_branch_lenght - (*node)->get_branch_length()) / (num_subtree_nodes - 1.0f);
-        }
-
-        const auto pendant_length = mean_subtree_branch_length + distal_length;
-        placements.push_back({ i, sequence_log_threshold, 0.0, 0, distal_length, pendant_length});
+        _counts[edge] = 0;
+        _scores[edge] = 0.0f;
+        _counts_amb[edge] = 0;
+        _scores_amb[edge] = 0.0f;
     }
+    _edges.clear();
 
     /// Query every k-mer that has no more than one ambiguous character
-    for (const auto& [kmer, keys] : xpas::to_kmers<xpas::one_ambiguity_policy>(seq, _db.kmer_size()))
+    for (const auto& [kmer, keys] : xcl::to_kmers<xcl::one_ambiguity_policy>(seq, _db.kmer_size()))
     {
         (void)kmer;
 
@@ -232,27 +224,26 @@ placed_sequence placer::place_seq(std::string_view seq) const
                 for (const auto& [postorder_node_id, score, position] : *entries)
                 {
                     (void)position;
-                    placements[postorder_node_id].count += 1;
-                    placements[postorder_node_id].score += score - _log_threshold;
-                }
 #else
-                //std::cout << key << " " << kmer << std::endl;
                 for (const auto& [postorder_node_id, score] : *entries)
                 {
-                    placements[postorder_node_id].count += 1;
-                    placements[postorder_node_id].score += score - _log_threshold;
-
-                    //std::cout << "\t" << postorder_node_id << " " << score << " " << std::pow(10, score) << std::endl;
-
-                }
 #endif
+                    if (_counts[postorder_node_id] == 0)
+                    {
+                        _edges.push_back(postorder_node_id);
+                    }
+
+                    _counts[postorder_node_id] += 1;
+                    _scores[postorder_node_id] += score;
+                }
+
             }
         }
         /// treat ambiguities with mean
         else
         {
             /// hash set of branch ids that are scored by the ambiguous k-mer
-            std::unordered_set<xpas::phylo_kmer::branch_type> l_amb;
+            std::unordered_set<xcl::phylo_kmer::branch_type> l_amb;
 
             for (const auto& key : keys)
             {
@@ -262,20 +253,18 @@ placed_sequence placer::place_seq(std::string_view seq) const
                     for (const auto& [postorder_node_id, score, position] : *entries)
                     {
                         (void)position;
-                        l_amb.insert(postorder_node_id);
-
-                        ambiguous_placements[postorder_node_id].count += 1;
-                        ambiguous_placements[postorder_node_id].score += std::pow(10, score);
-                    }
 #else
                     for (const auto& [postorder_node_id, score] : *entries)
                     {
-                        l_amb.insert(postorder_node_id);
-
-                        ambiguous_placements[postorder_node_id].count += 1;
-                        ambiguous_placements[postorder_node_id].score += std::pow(10, score);
-                    }
 #endif
+                        if (_counts_amb[postorder_node_id] == 0)
+                        {
+                            l_amb.insert(postorder_node_id);
+                        }
+
+                        _counts_amb[postorder_node_id] += 1;
+                        _scores_amb[postorder_node_id] += static_cast<xcl::phylo_kmer::score_type>(std::pow(10, score));
+                    }
                 }
             }
 
@@ -286,18 +275,39 @@ placed_sequence placer::place_seq(std::string_view seq) const
             for (const auto postorder_node_id : l_amb)
             {
                 const auto average_prob = (
-                    ambiguous_placements[postorder_node_id].score +
-                    (w_size - ambiguous_placements[postorder_node_id].count) * _threshold) / w_size;
+                    _scores_amb[postorder_node_id] +
+                    static_cast<float>(w_size - _counts_amb[postorder_node_id]) * _threshold
+                    ) / static_cast<float>(w_size);
 
-                placements[postorder_node_id].count += 1;
-                placements[postorder_node_id].score += std::log10(average_prob) - _log_threshold;
+                if (_counts[postorder_node_id] == 0)
+                {
+                    _edges.push_back(postorder_node_id);
+                }
 
-                /// clean the ambiguous placements array
-                ambiguous_placements[postorder_node_id].count = 0;
-                ambiguous_placements[postorder_node_id].score = 0;
+                _counts[postorder_node_id] += 1;
+                _scores[postorder_node_id] += average_prob;
             }
         }
     }
 
-    return { seq, select_best_placements(placements, _keep_at_most) };
+    /// Score correction
+    for (const auto& edge: _edges)
+    {
+        _scores[edge] += static_cast<xcl::phylo_kmer::score_type>(num_of_kmers - _counts[edge]) * _log_threshold;
+    }
+
+    std::vector<placement> placements;
+    for (const auto& edge: _edges)
+    {
+        const auto node = _original_tree.get_by_postorder_id(edge);
+        if (!node)
+        {
+            throw std::runtime_error("Could not find node by post-order id: " + std::to_string(edge));
+        }
+
+        const auto distal_length = (*node)->get_branch_length() / 2;
+        placements.push_back({edge, _scores[edge], 0.0, _counts[edge], distal_length, _pendant_lengths[edge] });
+    }
+
+    return { seq, select_best_placements(std::move(placements), _keep_at_most) };
 }
