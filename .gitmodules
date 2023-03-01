@@ -1,3 +1,6 @@
-[submodule "xpas"]
-	path = xpas
-	url = https://github.com/phylo42/xpas.git
+[submodule "i2l"]
+	path = i2l
+	url = https://github.com/phylo42/i2l
+[submodule "third-party/indicators"]
+	path = third-party/indicators
+	url = https://github.com/p-ranav/indicators

@@ -3,12 +3,12 @@
 
 #include <vector>
 #include <unordered_map>
-#include <xcl/phylo_kmer.h>
-#include <xcl/phylo_kmer_db.h>
-#include <xcl/phylo_tree.h>
+#include <i2l/phylo_kmer.h>
+#include <i2l/phylo_kmer_db.h>
+#include <i2l/phylo_tree.h>
 #include <boost/multiprecision/float128.hpp>
 
-namespace xcl
+namespace i2l
 {
     class seq_record;
 }
@@ -24,12 +24,12 @@ namespace rappas::impl
     public:
         using weight_ratio_type = boost::multiprecision::float128;
 
-        xcl::phylo_kmer::branch_type branch_id;
-        xcl::phylo_kmer::score_type score;
+        i2l::phylo_kmer::branch_type branch_id;
+        i2l::phylo_kmer::score_type score;
         weight_ratio_type weight_ratio;
         size_t count;
-        xcl::phylo_node::branch_length_type distal_length;
-        xcl::phylo_node::branch_length_type pendant_length;
+        i2l::phylo_node::branch_length_type distal_length;
+        i2l::phylo_node::branch_length_type pendant_length;
     };
 
     /// A wrapper to store a sequence and its placement information
@@ -59,7 +59,7 @@ namespace rappas
         /// \details: WARNING: db and tree are stored as references to avoid copying and
         /// the overhead of smart pointers. Make sure that the lifetime of these variables is
         /// longer than placer's one.
-        placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& _original_tree,
+        placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& _original_tree,
                size_t keep_at_most, double keep_factor);
         placer(const placer&) = delete;
         placer(placer&&) = delete;
@@ -68,30 +68,30 @@ namespace rappas
         ~placer() noexcept = default;
 
         /// \brief Places a collection of fasta sequences
-        placed_collection place(const std::vector<xcl::seq_record>& seq_records, size_t num_threads);
+        placed_collection place(const std::vector<i2l::seq_record>& seq_records, size_t num_threads);
 
     private:
 
         /// \brief Places a fasta sequence
         placed_sequence place_seq(std::string_view seq);
 
-        const xcl::phylo_kmer_db& _db;
-        const xcl::phylo_tree& _original_tree;
-        const xcl::phylo_kmer::score_type _threshold;
-        const xcl::phylo_kmer::score_type _log_threshold;
+        const i2l::phylo_kmer_db& _db;
+        const i2l::phylo_tree& _original_tree;
+        const i2l::phylo_kmer::score_type _threshold;
+        const i2l::phylo_kmer::score_type _log_threshold;
         const size_t _keep_at_most;
         const double _keep_factor;
 
         // Corresponds to S[], the array storing the score of the query for each edge x of refT
-        std::vector<xcl::phylo_kmer::score_type> _scores;
-        std::vector<xcl::phylo_kmer::score_type> _scores_amb;
+        std::vector<i2l::phylo_kmer::score_type> _scores;
+        std::vector<i2l::phylo_kmer::score_type> _scores_amb;
 
         // Corresponds to C[], the array counting the number of k-mers in the query mapped to x
         std::vector<size_t> _counts;
         std::vector<size_t> _counts_amb;
 
         /// Corresponds to L[], the list of edges mapped to some k-mer in the query
-        std::vector<xcl::phylo_kmer::branch_type> _edges;
+        std::vector<i2l::phylo_kmer::branch_type> _edges;
 
         std::vector<double> _pendant_lengths;
     };

@@ -2,17 +2,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cmath>
-#include <xcl/phylo_kmer_db.h>
-#include <xcl/phylo_tree.h>
-#include <xcl/kmer_iterator.h>
-#include <xcl/seq_record.h>
-#include <xcl/fasta.h>
+#include <i2l/phylo_kmer_db.h>
+#include <i2l/phylo_tree.h>
+#include <i2l/kmer_iterator.h>
+#include <i2l/seq_record.h>
+#include <i2l/fasta.h>
 #include <iostream>
 #include "place.h"
 
 using namespace rappas::impl;
 using namespace rappas;
-using xcl::seq_record;
+using i2l::seq_record;
 
 
 /// \brief Copies the keys of an input map to a vector
@@ -48,10 +48,10 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
     return sequence_map;
 }
 
-placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tree, size_t keep_at_most, double keep_factor)
+placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tree, size_t keep_at_most, double keep_factor)
     : _db{ db }
     , _original_tree{ original_tree }
-    , _threshold{ xcl::score_threshold(db.omega(), db.kmer_size()) }
+    , _threshold{ i2l::score_threshold(db.omega(), db.kmer_size()) }
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
@@ -61,7 +61,7 @@ placer::placer(const xcl::phylo_kmer_db& db, const xcl::phylo_tree& original_tre
     , _counts_amb(original_tree.get_node_count())
 {
     /// precompute pendant lengths
-    for (xcl::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
+    for (i2l::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
     {
         /// i is a post-order node id here. The phylo_kmer_db::search returns the post-order ids,
         /// not the pre-order ones
@@ -132,8 +132,8 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
     (void)num_threads;
-    #pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
-        default(none) shared(placed_seqs, unique_sequences)
+    /*#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
+        default(none) shared(placed_seqs, unique_sequences)*/
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
         auto keep_factor = _keep_factor;
@@ -208,7 +208,7 @@ placed_sequence placer::place_seq(std::string_view seq)
     _edges.clear();
 
     /// Query every k-mer that has no more than one ambiguous character
-    for (const auto& [kmer, keys] : xcl::to_kmers<xcl::one_ambiguity_policy>(seq, _db.kmer_size()))
+    for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, _db.kmer_size()))
     {
         (void)kmer;
 
@@ -243,7 +243,7 @@ placed_sequence placer::place_seq(std::string_view seq)
         else
         {
             /// hash set of branch ids that are scored by the ambiguous k-mer
-            std::unordered_set<xcl::phylo_kmer::branch_type> l_amb;
+            std::unordered_set<i2l::phylo_kmer::branch_type> l_amb;
 
             for (const auto& key : keys)
             {
@@ -263,7 +263,7 @@ placed_sequence placer::place_seq(std::string_view seq)
                         }
 
                         _counts_amb[postorder_node_id] += 1;
-                        _scores_amb[postorder_node_id] += static_cast<xcl::phylo_kmer::score_type>(std::pow(10, score));
+                        _scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
                     }
                 }
             }
@@ -293,7 +293,7 @@ placed_sequence placer::place_seq(std::string_view seq)
     /// Score correction
     for (const auto& edge: _edges)
     {
-        _scores[edge] += static_cast<xcl::phylo_kmer::score_type>(num_of_kmers - _counts[edge]) * _log_threshold;
+        _scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - _counts[edge]) * _log_threshold;
     }
 
     std::vector<placement> placements;

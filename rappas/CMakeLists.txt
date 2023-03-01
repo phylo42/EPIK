@@ -17,7 +17,7 @@ find_package(RapidJSON REQUIRED)
 target_include_directories(rappas2-dna
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
-            ${RapidJSON_INCLUDE_DIRS}
+            ${RapidJSON_INCLUDE_DIR}
         )
 
 # WARNING: some dependencies are not listed here. They are supposed to be compiled
@@ -28,7 +28,7 @@ find_package(QuadMath REQUIRED)
 
 target_link_libraries(rappas2-dna
         PRIVATE
-            xcl::dna
+            i2l::dna
             Boost::program_options
             Boost::filesystem
             Boost::iostreams
@@ -63,7 +63,7 @@ target_include_directories(rappas2-aa
 
 target_link_libraries(rappas2-aa
         PRIVATE
-        xcl::aa
+        i2l::aa
         Boost::program_options
         Boost::filesystem
         Boost::iostreams
