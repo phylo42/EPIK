@@ -1,5 +1,5 @@
-#ifndef RAPPAS_PLACE_PLACE_H
-#define RAPPAS_PLACE_PLACE_H
+#ifndef EPIK_PLACE_H
+#define EPIK_PLACE_H
 
 #include <vector>
 #include <unordered_map>
@@ -13,7 +13,7 @@ namespace i2l
     class seq_record;
 }
 
-namespace rappas::impl
+namespace epik::impl
 {
     /// A mapping "sequence content -> list of headers" to group identical reads
     /// TODO: check if std::unordered_map is efficient enough
@@ -46,7 +46,7 @@ namespace rappas::impl
     };
 }
 
-namespace rappas
+namespace epik
 {
     /// \brief Places a collection of fasta sequences
     class placer
@@ -97,4 +97,4 @@ namespace rappas
     };
 }
 
-#endif //RAPPAS_PLACE_PLACE_H
+#endif

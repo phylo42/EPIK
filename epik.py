@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
-RAPPAS2 wrapper script.
-
-Since not all the functionality of RAPPAS is yet implemented in RAPPAS2,
-one has to call RAPPAS to produce intermediate files needed to run RAPPAS2.
-This script makes usage of RAPPAS2 transparent by calling RAPPAS where needed,
-thus providing a clean CLI interface which is very similar to the one from RAPPAS.
+EPIK: Evolutionary Placement with Informative K-mers
 """
 
 __author__ = "Nikolai Romashchenko"
@@ -18,16 +13,16 @@ import subprocess
 
 
 @click.group()
-def rappas():
+def epik():
     """
-    RAPPAS2
+    EPIK: Evolutionary Placement with Informative K-mers
 
     N. Romashchenko, B. Linard, F. Pardi, E. Rivals
     """
     pass
 
 
-@rappas.command()
+@epik.command()
 @click.option('-i', '--database',
               required=True,
               type=click.Path(dir_okay=False, file_okay=True, exists=True),
@@ -48,9 +43,9 @@ def rappas():
 @click.argument('input_files', type=click.Path(exists=True), nargs=-1)
 def place(database, states, outputdir, threads, input_files):
     """
-    Places .fasta files using the input RAPPAS2 database.
+    Places .fasta files using the input IPK database.
 
-    \tpython rappas2.py place -s [nucl|amino] -i db.rps -o output file.fasta [file2.fasta ...]
+    \tpython epik.py place -s [nucl|amino] -i db.rps -o output file.fasta [file2.fasta ...]
 
     """
     place_queries(database, states, outputdir, threads, input_files)
@@ -60,12 +55,12 @@ def place_queries(database, states, outputdir, threads, input_files):
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
     if states == 'nucl':
-        rappas_bin = f"{current_dir}/bin/rappas/rappas2-dna"
+        epik_bin = f"{current_dir}/bin/epik/epik-dna"
     else:
-        rappas_bin = f"{current_dir}/bin/rappas/rappas2-aa"
+        epik_bin = f"{current_dir}/bin/epik/epik-aa"
 
     command = [
-        rappas_bin,
+        epik_bin,
         str(database),
         str(outputdir),
         str(threads)
@@ -76,4 +71,4 @@ def place_queries(database, states, outputdir, threads, input_files):
 
 
 if __name__ == "__main__":
-    rappas()
+    epik()

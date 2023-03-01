@@ -2,16 +2,16 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cmath>
+#include <iostream>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/phylo_tree.h>
 #include <i2l/kmer_iterator.h>
 #include <i2l/seq_record.h>
 #include <i2l/fasta.h>
-#include <iostream>
-#include "place.h"
+#include <epik/place.h>
 
-using namespace rappas::impl;
-using namespace rappas;
+using namespace epik::impl;
+using namespace epik;
 using i2l::seq_record;
 
 

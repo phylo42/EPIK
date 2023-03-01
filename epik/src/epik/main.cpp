@@ -7,8 +7,8 @@
 #include <i2l/phylo_tree.h>
 #include <i2l/newick.h>
 #include <i2l/fasta.h>
-#include <rappas/place.h>
-#include <rappas/jplace.h>
+#include <epik/place.h>
+#include <epik/jplace.h>
 
 namespace fs = boost::filesystem;
 
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
         std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
-        auto placer = rappas::placer(db, tree, keep_at_most, keep_factor);
+        auto placer = epik::placer(db, tree, keep_at_most, keep_factor);
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
         const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
             const auto jplace_filename = make_output_filename(query_file, output_dir).string();
             const auto invocation = make_invocation(argc, argv);
             std::cout << "Writing to file: " << jplace_filename << "...\n" << std::flush;
-            rappas::io::write_jplace(jplace_filename, invocation, tree_as_newick, placed_seqs);
+            epik::io::write_jplace(jplace_filename, invocation, tree_as_newick, placed_seqs);
             std::cout << std::endl;
         }
 

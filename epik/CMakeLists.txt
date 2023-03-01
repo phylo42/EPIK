@@ -1,32 +1,30 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-set(SOURCES
-        src/main.cpp
-        src/rappas/place.cpp src/rappas/place.h
-        src/rappas/jplace.cpp src/rappas/jplace.h)
-
-######################################################################################################
-# Application target and properties
-add_executable(rappas2-dna "")
-
-target_sources(rappas2-dna
-        PRIVATE
-            ${SOURCES})
-
 find_package(RapidJSON REQUIRED)
-target_include_directories(rappas2-dna
-        PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/
-            ${RapidJSON_INCLUDE_DIR}
-        )
-
-# WARNING: some dependencies are not listed here. They are supposed to be compiled
-# and built together with this project by the top-level CMake file
 find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
 find_package(OpenMP REQUIRED)
 find_package(QuadMath REQUIRED)
 
-target_link_libraries(rappas2-dna
+
+set(SOURCES
+        src/epik/main.cpp
+        include/epik/place.h src/epik/place.cpp
+        include/epik/jplace.h src/epik/jplace.cpp)
+
+
+######################################################################################################
+# Application target and properties
+add_executable(epik-dna "")
+target_sources(epik-dna PRIVATE ${SOURCES})
+
+target_include_directories(epik-dna
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        ${RapidJSON_INCLUDE_DIR}
+        )
+
+target_link_libraries(epik-dna
         PRIVATE
             i2l::dna
             Boost::program_options
@@ -37,31 +35,32 @@ target_link_libraries(rappas2-dna
 )
 
 # Turn on the warnings and treat them as errors
-target_compile_options(rappas2-dna
+target_compile_options(epik-dna
         PRIVATE
             -Wall -Wextra -Werror
 )
 
 
-target_compile_features(rappas2-dna
+target_compile_features(epik-dna
         PUBLIC
             cxx_std_17)
 
 ######################################################################################################
 
-add_executable(rappas2-aa "")
+add_executable(epik-aa "")
 
-target_sources(rappas2-aa
+target_sources(epik-aa
         PRIVATE
         ${SOURCES})
 
-target_include_directories(rappas2-aa
+target_include_directories(epik-aa
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/
             ${RapidJSON_INCLUDE_DIRS}
         )
 
-target_link_libraries(rappas2-aa
+target_link_libraries(epik-aa
         PRIVATE
         i2l::aa
         Boost::program_options
@@ -71,12 +70,12 @@ target_link_libraries(rappas2-aa
         quadmath
         )
 
-target_compile_options(rappas2-aa
+target_compile_options(epik-aa
         PRIVATE
         -Wall -Wextra -Werror
         )
 
-target_compile_features(rappas2-aa
+target_compile_features(epik-aa
         PUBLIC
         cxx_std_17)
 

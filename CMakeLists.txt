@@ -10,4 +10,4 @@ endif()
 
 add_subdirectory(i2l)
 add_subdirectory(third-party)
-add_subdirectory(rappas)
+add_subdirectory(epik)
