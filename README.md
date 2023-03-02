@@ -1,5 +1,5 @@
 # EPIK: Evolutionary Placement with Informative K-mers
-EPIK is a program for rapid alignment-free phylogenetic placement, a successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
+EPIK is a program for rapid alignment-free phylogenetic placement, the successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
 ## Installation
 
