@@ -1,5 +1,5 @@
-# RAPPAS2
-This is the new version of [RAPPAS](https://github.com/phylo42/RAPPAS), currently under development.
+# EPIK: Evolutionary Placement with Informative K-mers
+EPIK is a program for rapid alignment-free phylogenetic placement, a successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
 ## Installation
 
@@ -18,29 +18,22 @@ sudo apt install build-essential cmake libboost-dev libboost-serialization-dev l
 
 ### Clone and build
 ```
-git clone --recursive https://github.com/phylo42/rappas2.git
-cd rappas2
-./build.sh
+git clone --recursive https://github.com/phylo42/EPIK epik
+cd epik && mkdir -p bin && cd bin
+cmake ..
+make -j4
 ```
 
 ## Usage
 
-### Building databases
-
-The functionality of constructing new databases of phylo k-mers has been moved to [xpas](https://github.com/phylo42/xpas/tree/master), a standalone tool for phylo k-mer database construction, which is a submodule of this repository.
-
-Instead of running commands
-```
-python rappas2.py build OPTIONS...
-```
-which were supported in earlier versions of RAPPAS2, run:
-
-```
-python xpas.py build OPTIONS...
-```
 
 ### Phylogenetic placement
 ```
-python rappas2.py place -i DATABASE -s [nucl|amino] -o OUTPUT_DIR INPUT_FASTA
+python epik.py place -i DATABASE -s [nucl|amino] -o OUTPUT_DIR INPUT_FASTA
 ```
-See `python rappas2.py place --help` for more information.
+See `python epik.py place --help` for more information.
+
+### Building databases
+
+To compute phylo-k-mer databases, use [IPK](https://github.com/phylo42/IPK).
+
