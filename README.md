@@ -10,10 +10,12 @@ EPIK is a program for rapid alignment-free phylogenetic placement, the successor
 - GCC compiler must support c++17
 - zlib
 - rapidjson
+- click
 
-In debian, these can be installed with:
+On Debian-like systems they can be installed with:
 ```
-sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0
+sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
+pip install click
 ```
 
 ### Clone and build
