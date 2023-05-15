@@ -57,6 +57,15 @@ int main(int argc, char** argv)
         const auto output_dir = std::string{argv[2]};
         const auto num_threads = std::stoul(argv[3]);
 
+#ifndef EPIK_OMP
+        if (num_threads != 1)
+        {
+            std::cerr << "EPIK was complied without OpenMP support and can not be run "
+                         "in parallel." << std::endl;
+            return -2;
+        }
+#endif
+
         std::cout << "Loading database..." << std::endl;
         const auto db = i2l::load(db_file);
         if (db.version() < i2l::protocol::EARLIEST_INDEX)
@@ -74,7 +83,7 @@ int main(int argc, char** argv)
         std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
-        auto placer = epik::placer(db, tree, keep_at_most, keep_factor);
+        auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads);
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
         const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
@@ -92,7 +101,7 @@ int main(int argc, char** argv)
             /// Place sequences from a file
             std::cout << "Placing " << query_file << "..." << std::endl;
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-            const auto placed_seqs = placer.place(sequences, num_threads);
+            const auto placed_seqs = placer.place(sequences);
             std::cout << "Placed " << sequences.size() << " sequences.\n" << std::flush;
             std::cout << "Time (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - begin).count() << std::endl << std::endl;

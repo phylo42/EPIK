@@ -1,10 +1,17 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
+set(ENABLE_OMP ON)
+
 find_package(RapidJSON REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
-find_package(OpenMP REQUIRED)
 find_package(QuadMath REQUIRED)
-
+if(ENABLE_OMP)
+    find_package(OpenMP REQUIRED)
+    message(STATUS "OpenMP: ENABLED")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DEPIK_OMP")
+else()
+    message(STATUS "OpenMP: DISABLED")
+endif()
 
 set(SOURCES
         src/epik/main.cpp
@@ -30,9 +37,12 @@ target_link_libraries(epik-dna
             Boost::program_options
             Boost::filesystem
             Boost::iostreams
-            OpenMP::OpenMP_CXX
             quadmath
 )
+
+if(ENABLE_OMP)
+    target_link_libraries(epik-dna PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 # Turn on the warnings and treat them as errors
 target_compile_options(epik-dna
@@ -66,9 +76,11 @@ target_link_libraries(epik-aa
         Boost::program_options
         Boost::filesystem
         Boost::iostreams
-        OpenMP::OpenMP_CXX
         quadmath
         )
+if(ENABLE_OMP)
+    target_link_libraries(epik-aa PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 target_compile_options(epik-aa
         PRIVATE

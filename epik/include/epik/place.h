@@ -33,7 +33,7 @@ namespace epik::impl
     };
 
     /// A wrapper to store a sequence and its placement information
-    struct placed_sequence {
+    struct alignas(64) placed_sequence {
         std::string_view sequence;
         std::vector<placement> placements;
     };
@@ -53,6 +53,9 @@ namespace epik
     {
         using placed_collection = impl::placed_collection;
         using placed_sequence = impl::placed_sequence;
+        using score_vector = std::vector<i2l::phylo_kmer::score_type>;
+        using count_vector = std::vector<size_t>;
+        using branch_list = std::vector<i2l::phylo_kmer::branch_type>;
 
     public:
         /// \brief Constructor.
@@ -60,7 +63,7 @@ namespace epik
         /// the overhead of smart pointers. Make sure that the lifetime of these variables is
         /// longer than placer's one.
         placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& _original_tree,
-               size_t keep_at_most, double keep_factor);
+               size_t keep_at_most, double keep_factor, size_t num_threads);
         placer(const placer&) = delete;
         placer(placer&&) = delete;
         placer& operator=(const placer&) = delete;
@@ -68,7 +71,7 @@ namespace epik
         ~placer() noexcept = default;
 
         /// \brief Places a collection of fasta sequences
-        placed_collection place(const std::vector<i2l::seq_record>& seq_records, size_t num_threads);
+        placed_collection place(const std::vector<i2l::seq_record>& seq_records);
 
     private:
 
@@ -81,17 +84,23 @@ namespace epik
         const i2l::phylo_kmer::score_type _log_threshold;
         const size_t _keep_at_most;
         const double _keep_factor;
+        const size_t _num_threads;
 
-        // Corresponds to S[], the array storing the score of the query for each edge x of refT
-        std::vector<i2l::phylo_kmer::score_type> _scores;
-        std::vector<i2l::phylo_kmer::score_type> _scores_amb;
+        // A vector of vectors of scores. Every vector corresponds to an array S[]
+        // (in terms of the RAPPAS' supplement) for a concurrent thread and its query.
+        // S[] is the array storing the scores S[i] of branch i for the processed query.
+        std::vector<score_vector> _scores;
+        std::vector<score_vector> _scores_amb;
 
-        // Corresponds to C[], the array counting the number of k-mers in the query mapped to x
-        std::vector<size_t> _counts;
-        std::vector<size_t> _counts_amb;
+        // A vector of vectors of branch counts. Every vector corresponds to C[],
+        // the array counting the number of k-mers of the query mapped to branch C[i]
+        std::vector<count_vector> _counts;
+        std::vector<count_vector> _counts_amb;
 
-        /// Corresponds to L[], the list of edges mapped to some k-mer in the query
-        std::vector<i2l::phylo_kmer::branch_type> _edges;
+        /// A vector of vector of branch ids. Every vector corresponds to L[],
+        /// the list of branches mapped to some k-mer in the query, i.e.
+        /// branches i such that C[i] > 0
+        std::vector<branch_list> _edges;
 
         std::vector<double> _pendant_lengths;
     };

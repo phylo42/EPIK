@@ -9,6 +9,9 @@
 #include <i2l/seq_record.h>
 #include <i2l/fasta.h>
 #include <epik/place.h>
+#ifdef EPIK_OMP
+#include <omp.h>
+#endif
 
 using namespace epik::impl;
 using namespace epik;
@@ -48,17 +51,20 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
     return sequence_map;
 }
 
-placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tree, size_t keep_at_most, double keep_factor)
+placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tree,
+               size_t keep_at_most, double keep_factor, size_t num_threads)
     : _db{ db }
     , _original_tree{ original_tree }
     , _threshold{ i2l::score_threshold(db.omega(), db.kmer_size()) }
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
-    , _scores(original_tree.get_node_count())
-    , _scores_amb(original_tree.get_node_count())
-    , _counts(original_tree.get_node_count())
-    , _counts_amb(original_tree.get_node_count())
+    , _num_threads{ num_threads }
+    , _scores(num_threads, score_vector(original_tree.get_node_count()))
+    , _scores_amb(num_threads, score_vector(original_tree.get_node_count()))
+    , _counts(num_threads, count_vector(original_tree.get_node_count()))
+    , _counts_amb(num_threads, count_vector(original_tree.get_node_count()))
+    , _edges(num_threads)
 {
     /// precompute pendant lengths
     for (i2l::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
@@ -117,7 +123,7 @@ std::vector<placement> filter_by_ratio(const std::vector<placement>& placements,
     return result;
 }
 
-placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads)
+placed_collection placer::place(const std::vector<seq_record>& seq_records)
 {
     /// There may be identical sequences with different headers. We group them
     /// by the sequence content to not to place the same sequences more than once
@@ -128,12 +134,14 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Keys are std::string_view's, so copying is cheap enough
     const auto unique_sequences = copy_keys(sequence_map);
 
-
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
-    (void)num_threads;
-    /*#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
-        default(none) shared(placed_seqs, unique_sequences)*/
+
+#ifdef EPIK_OMP
+    std::cout << "OpenMP FOR" << std::endl;
+    #pragma omp parallel for schedule(dynamic) num_threads(_num_threads) \
+        default(none) shared(placed_seqs, unique_sequences)
+#endif
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
         auto keep_factor = _keep_factor;
@@ -197,15 +205,25 @@ std::vector<placement> select_best_placements(std::vector<placement> placements,
 placed_sequence placer::place_seq(std::string_view seq)
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
+#ifdef EPIK_OMP
+    const auto thread_id = omp_get_thread_num();
+#else
+    const size_t thread_id = 0;
+#endif
+    auto& thread_counts = _counts[thread_id];
+    auto& thread_scores = _scores[thread_id];
+    auto& thread_counts_amb = _counts_amb[thread_id];
+    auto& thread_scores_amb = _scores_amb[thread_id];
+    auto& thread_edges = _edges[thread_id];
 
-    for (const auto& edge : _edges)
+    for (const auto& edge : thread_edges)
     {
-        _counts[edge] = 0;
-        _scores[edge] = 0.0f;
-        _counts_amb[edge] = 0;
-        _scores_amb[edge] = 0.0f;
+        thread_counts[edge] = 0;
+        thread_scores[edge] = 0.0f;
+        thread_counts_amb[edge] = 0;
+        thread_scores_amb[edge] = 0.0f;
     }
-    _edges.clear();
+    thread_edges.clear();
 
     /// Query every k-mer that has no more than one ambiguous character
     for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, _db.kmer_size()))
@@ -228,13 +246,13 @@ placed_sequence placer::place_seq(std::string_view seq)
                 for (const auto& [postorder_node_id, score] : *entries)
                 {
 #endif
-                    if (_counts[postorder_node_id] == 0)
+                    if (thread_counts[postorder_node_id] == 0)
                     {
-                        _edges.push_back(postorder_node_id);
+                        thread_edges.push_back(postorder_node_id);
                     }
 
-                    _counts[postorder_node_id] += 1;
-                    _scores[postorder_node_id] += score;
+                    thread_counts[postorder_node_id] += 1;
+                    thread_scores[postorder_node_id] += score;
                 }
 
             }
@@ -257,13 +275,13 @@ placed_sequence placer::place_seq(std::string_view seq)
                     for (const auto& [postorder_node_id, score] : *entries)
                     {
 #endif
-                        if (_counts_amb[postorder_node_id] == 0)
+                        if (thread_counts_amb[postorder_node_id] == 0)
                         {
                             l_amb.insert(postorder_node_id);
                         }
 
-                        _counts_amb[postorder_node_id] += 1;
-                        _scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
+                        thread_counts_amb[postorder_node_id] += 1;
+                        thread_scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
                     }
                 }
             }
@@ -275,29 +293,31 @@ placed_sequence placer::place_seq(std::string_view seq)
             for (const auto postorder_node_id : l_amb)
             {
                 const auto average_prob = (
-                    _scores_amb[postorder_node_id] +
-                    static_cast<float>(w_size - _counts_amb[postorder_node_id]) * _threshold
+                    thread_scores_amb[postorder_node_id] +
+                    static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold
                     ) / static_cast<float>(w_size);
 
-                if (_counts[postorder_node_id] == 0)
+                if (thread_counts[postorder_node_id] == 0)
                 {
-                    _edges.push_back(postorder_node_id);
+                    thread_edges.push_back(postorder_node_id);
                 }
 
-                _counts[postorder_node_id] += 1;
-                _scores[postorder_node_id] += average_prob;
+                thread_counts[postorder_node_id] += 1;
+                thread_scores[postorder_node_id] += average_prob;
             }
         }
     }
 
     /// Score correction
-    for (const auto& edge: _edges)
+    for (const auto& edge: thread_edges)
     {
-        _scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - _counts[edge]) * _log_threshold;
+        thread_scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - thread_counts[edge]) * _log_threshold;
     }
 
     std::vector<placement> placements;
-    for (const auto& edge: _edges)
+    placements.reserve(thread_edges.size());
+
+    for (const auto& edge: thread_edges)
     {
         const auto node = _original_tree.get_by_postorder_id(edge);
         if (!node)
@@ -306,7 +326,8 @@ placed_sequence placer::place_seq(std::string_view seq)
         }
 
         const auto distal_length = (*node)->get_branch_length() / 2;
-        placements.push_back({edge, _scores[edge], 0.0, _counts[edge], distal_length, _pendant_lengths[edge] });
+        placements.push_back({ edge, thread_scores[edge], 0.0,
+                               thread_counts[edge], distal_length, _pendant_lengths[edge] });
     }
 
     return { seq, select_best_placements(std::move(placements), _keep_at_most) };
