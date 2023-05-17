@@ -11,6 +11,12 @@ set(SOURCES
         include/epik/place.h src/epik/place.cpp
         include/epik/jplace.h src/epik/jplace.cpp)
 
+set(LIBRARIES
+        Boost::program_options
+        Boost::filesystem
+        Boost::iostreams
+        OpenMP::OpenMP_CXX
+        quadmath)
 
 ######################################################################################################
 # Application target and properties
@@ -27,12 +33,8 @@ target_include_directories(epik-dna
 target_link_libraries(epik-dna
         PRIVATE
             i2l::dna
-            Boost::program_options
-            Boost::filesystem
-            Boost::iostreams
-            OpenMP::OpenMP_CXX
-            quadmath
-)
+            ${LIBRARIES}
+        )
 
 # Turn on the warnings and treat them as errors
 target_compile_options(epik-dna
@@ -57,17 +59,13 @@ target_include_directories(epik-aa
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
             ${CMAKE_CURRENT_SOURCE_DIR}/include/
-            ${RapidJSON_INCLUDE_DIRS}
+            ${RapidJSON_INCLUDE_DIR}
         )
 
 target_link_libraries(epik-aa
         PRIVATE
-        i2l::aa
-        Boost::program_options
-        Boost::filesystem
-        Boost::iostreams
-        OpenMP::OpenMP_CXX
-        quadmath
+            i2l::aa
+            ${LIBRARIES}
         )
 
 target_compile_options(epik-aa
