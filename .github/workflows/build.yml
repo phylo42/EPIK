@@ -41,7 +41,7 @@ jobs:
 
       - name: (MacOS) Install dependencies
         if: runner.os == 'macOS'
-        run: brew install boost libomp
+        run: brew update && brew install cmake boost zlib rapidjson && pip3 install click
 
       - name: (Linux) Install dependencies
         if: runner.os == 'Linux'
@@ -61,4 +61,4 @@ jobs:
       - name: Test python script
         working-directory: ${{runner.workspace}}/bin
         shell: bash
-        run: ./epik.py place --help
+        run: ${{runner.workspace}}/epik.py place --help
