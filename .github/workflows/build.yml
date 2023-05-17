@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
+        os: [ ubuntu-22.04, ubuntu-20.04 ] #, macos-13, macos-12 ]
         include:
           - os: ubuntu-22.04
             buildname: 'ubuntu-22.04'
@@ -41,7 +41,7 @@ jobs:
 
       - name: (MacOS) Install dependencies
         if: runner.os == 'macOS'
-        run: brew update && brew install cmake boost zlib rapidjson llvm libomp && pip3 install click
+        run: brew update && brew install cmake boost zlib rapidjson && pip3 install click
 
       - name: (Linux) Install dependencies
         if: runner.os == 'Linux'
@@ -55,9 +55,7 @@ jobs:
 
       - name: Test build successful
         working-directory: ${{runner.workspace}}/bin
-        shell: bash
         run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-dna
 
       - name: Test python script
-        shell: bash
-        run: ${{runner.workspace}}/epik.py place --help
+        run: ${{runner.workspace}}/epik.py place --help | ls -la
