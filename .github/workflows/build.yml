@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-20.04 ] #, macos-13, macos-12 ]
+        os: [ ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
         include:
           - os: ubuntu-22.04
             buildname: 'ubuntu-22.04'
@@ -58,4 +58,4 @@ jobs:
         run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-dna
 
       - name: Test python script
-        run: ${{runner.workspace}}/epik.py place --help | ls -la
+        run: python3 epik.py place --help
