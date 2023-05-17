@@ -59,6 +59,5 @@ jobs:
         run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-dna
 
       - name: Test python script
-        working-directory: ${{runner.workspace}}/bin
         shell: bash
         run: ${{runner.workspace}}/epik.py place --help
