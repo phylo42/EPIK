@@ -2,13 +2,13 @@
 #include <string>
 #include <chrono>
 #include <boost/filesystem.hpp>
-#include <xcl/phylo_kmer_db.h>
-#include <xcl/serialization.h>
-#include <xcl/phylo_tree.h>
-#include <xcl/newick.h>
-#include <xcl/fasta.h>
-#include <rappas/place.h>
-#include <rappas/jplace.h>
+#include <i2l/phylo_kmer_db.h>
+#include <i2l/serialization.h>
+#include <i2l/phylo_tree.h>
+#include <i2l/newick.h>
+#include <i2l/fasta.h>
+#include <epik/place.h>
+#include <epik/jplace.h>
 
 namespace fs = boost::filesystem;
 
@@ -58,8 +58,8 @@ int main(int argc, char** argv)
         const auto num_threads = std::stoul(argv[3]);
 
         std::cout << "Loading database..." << std::endl;
-        const auto db = xcl::load(db_file);
-        if (db.version() < xcl::protocol::EARLIEST_INDEX)
+        const auto db = i2l::load(db_file);
+        if (db.version() < i2l::protocol::EARLIEST_INDEX)
         {
             std::cerr << "The serialization protocol version is too old (v" << db.version() << ").\n"
                       << "Can not use databases built by xpas older than v0.3.2" << std::endl;
@@ -73,18 +73,18 @@ int main(int argc, char** argv)
                   << "\tPositions loaded: " << (db.positions_loaded() ? "true" : "false") << std::endl << std::endl;
         std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
 
-        const auto tree = xcl::io::parse_newick(db.tree());
-        auto placer = rappas::placer(db, tree, keep_at_most, keep_factor);
+        const auto tree = i2l::io::parse_newick(db.tree());
+        auto placer = epik::placer(db, tree, keep_at_most, keep_factor);
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
-        const auto tree_as_newick = xcl::io::to_newick(tree, true);
+        const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
         for (int i = 4; i < argc; ++i)
         {
             print_line();
             const auto query_file = std::string{argv[i]};
 
-            auto sequences = std::vector<xcl::seq_record>();
-            for (const auto& seq: xcl::io::read_fasta(query_file))
+            auto sequences = std::vector<i2l::seq_record>();
+            for (const auto& seq: i2l::io::read_fasta(query_file))
             {
                 sequences.push_back(seq);
             }
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
             const auto jplace_filename = make_output_filename(query_file, output_dir).string();
             const auto invocation = make_invocation(argc, argv);
             std::cout << "Writing to file: " << jplace_filename << "...\n" << std::flush;
-            rappas::io::write_jplace(jplace_filename, invocation, tree_as_newick, placed_seqs);
+            epik::io::write_jplace(jplace_filename, invocation, tree_as_newick, placed_seqs);
             std::cout << std::endl;
         }
 

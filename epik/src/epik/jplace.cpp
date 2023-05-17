@@ -2,10 +2,10 @@
 #include <utility>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/stringbuffer.h>
-#include "jplace.h"
-#include "place.h"
+#include <epik/jplace.h>
+#include <epik/place.h>
 
-namespace rappas::io
+namespace epik::io
 {
     /// \brief Writes a collection of placements to a .jplace formatted file.
     class jplace_writer
@@ -38,7 +38,7 @@ namespace rappas::io
     };
 }
 
-using namespace rappas::io;
+using namespace epik::io;
 
 jplace_writer::jplace_writer(std::string filename) noexcept
     : _filename{std::move( filename )}, _buffer{ }, _writer{ _buffer }
@@ -152,7 +152,7 @@ void jplace_writer::write(const std::string& invocation, std::string_view newick
     out << _buffer.GetString();
 }
 
-void rappas::io::write_jplace(const std::string& filename, const std::string& invocation,
+void epik::io::write_jplace(const std::string& filename, const std::string& invocation,
                               std::string_view newick_tree, const impl::placed_collection& placed)
 {
     jplace_writer writer(filename);

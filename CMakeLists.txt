@@ -8,5 +8,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif()
 
-add_subdirectory(xpas)
-add_subdirectory(rappas)
+add_subdirectory(i2l)
+add_subdirectory(third-party)
+add_subdirectory(epik)

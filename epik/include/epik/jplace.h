@@ -1,9 +1,9 @@
-#ifndef RAPPAS_PLACE_JPLACE_H
-#define RAPPAS_PLACE_JPLACE_H
+#ifndef EPIK_JPLACE_H
+#define EPIK_JPLACE_H
 
 #include <string>
 
-namespace rappas
+namespace epik
 {
     namespace impl
     {
@@ -19,4 +19,4 @@ namespace rappas
     }
 }
 
-#endif //RAPPAS_PLACE_JPLACE_H
+#endif
