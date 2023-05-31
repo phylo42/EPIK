@@ -18,7 +18,6 @@ set(SOURCES
         include/epik/place.h src/epik/place.cpp
         include/epik/jplace.h src/epik/jplace.cpp)
 
-
 ######################################################################################################
 # Application target and properties
 add_executable(epik-dna "")
@@ -67,16 +66,21 @@ target_include_directories(epik-aa
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
             ${CMAKE_CURRENT_SOURCE_DIR}/include/
-            ${RapidJSON_INCLUDE_DIRS}
+            ${RapidJSON_INCLUDE_DIR}
         )
 
 target_link_libraries(epik-aa
         PRIVATE
+<<<<<<< HEAD
         i2l::aa
         Boost::program_options
         Boost::filesystem
         Boost::iostreams
         quadmath
+=======
+            i2l::aa
+            ${LIBRARIES}
+>>>>>>> 01dbbd971960e81330cd97292bcd8ab4afa9bfbc
         )
 if(ENABLE_OMP)
     target_link_libraries(epik-aa PRIVATE OpenMP::OpenMP_CXX)
