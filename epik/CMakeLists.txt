@@ -71,16 +71,11 @@ target_include_directories(epik-aa
 
 target_link_libraries(epik-aa
         PRIVATE
-<<<<<<< HEAD
         i2l::aa
         Boost::program_options
         Boost::filesystem
         Boost::iostreams
         quadmath
-=======
-            i2l::aa
-            ${LIBRARIES}
->>>>>>> 01dbbd971960e81330cd97292bcd8ab4afa9bfbc
         )
 if(ENABLE_OMP)
     target_link_libraries(epik-aa PRIVATE OpenMP::OpenMP_CXX)
