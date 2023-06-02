@@ -139,8 +139,16 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records)
 
 #ifdef EPIK_OMP
     std::cout << "OpenMP FOR" << std::endl;
-    #pragma omp parallel for schedule(dynamic) num_threads(_num_threads) \
-        default(none) shared(placed_seqs, unique_sequences)
+
+    #if (__GNUC__ < 9)
+#pragma omp parallel for schedule(dynamic) num_threads(_num_threads) default(none) shared(placed_seqs)
+    #else
+    /// In pre-GCC-9, const variables were predefined shared. It is not the case anymore, and
+    /// we need to explicitly define unique_sequences
+#pragma omp parallel for schedule(dynamic) num_threads(_num_threads) \
+    default(none) shared(unique_sequences, placed_seqs)
+    #endif
+
 #endif
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
