@@ -13,6 +13,10 @@ else()
     message(STATUS "OpenMP: DISABLED")
 endif()
 
+message(STATUS "RapidJSON: " ${RAPIDJSON_INCLUDE_DIRS})
+# RapidJSON cmake scripts are different between versions
+set(RapidJSON_INCLUDES ${RAPIDJSON_INCLUDE_DIRS} ${RapidJSON_INCLUDE_DIR})
+
 set(SOURCES
         src/epik/main.cpp
         include/epik/place.h src/epik/place.cpp
@@ -25,9 +29,9 @@ target_sources(epik-dna PRIVATE ${SOURCES})
 
 target_include_directories(epik-dna
         PRIVATE
+        ${RAPIDJSON_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/
         ${CMAKE_CURRENT_SOURCE_DIR}/include/
-        ${RapidJSON_INCLUDE_DIR}
         )
 
 target_link_libraries(epik-dna
@@ -66,7 +70,7 @@ target_include_directories(epik-aa
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/
             ${CMAKE_CURRENT_SOURCE_DIR}/include/
-            ${RapidJSON_INCLUDE_DIR}
+            ${RapidJSON_INCLUDES}
         )
 
 target_link_libraries(epik-aa

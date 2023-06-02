@@ -16,7 +16,6 @@ namespace i2l
 namespace epik::impl
 {
     /// A mapping "sequence content -> list of headers" to group identical reads
-    /// TODO: check if std::unordered_map is efficient enough
     using sequence_map_t = std::unordered_map<std::string_view, std::vector<std::string_view>>;
 
     /// A placement of one sequence
@@ -33,7 +32,7 @@ namespace epik::impl
     };
 
     /// A wrapper to store a sequence and its placement information
-    struct alignas(64) placed_sequence {
+    struct placed_sequence {
         std::string_view sequence;
         std::vector<placement> placements;
     };

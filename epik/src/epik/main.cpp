@@ -87,31 +87,49 @@ int main(int argc, char** argv)
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
         const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
+
         for (int i = 4; i < argc; ++i)
         {
             print_line();
             const auto query_file = std::string{argv[i]};
 
-            auto sequences = std::vector<i2l::seq_record>();
-            for (const auto& seq: i2l::io::read_fasta(query_file))
-            {
-                sequences.push_back(seq);
-            }
-
-            /// Place sequences from a file
-            std::cout << "Placing " << query_file << "..." << std::endl;
-            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-            const auto placed_seqs = placer.place(sequences);
-            std::cout << "Placed " << sequences.size() << " sequences.\n" << std::flush;
-            std::cout << "Time (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - begin).count() << std::endl << std::endl;
-
-            /// Write results
             const auto jplace_filename = make_output_filename(query_file, output_dir).string();
             const auto invocation = make_invocation(argc, argv);
-            std::cout << "Writing to file: " << jplace_filename << "...\n" << std::flush;
-            epik::io::write_jplace(jplace_filename, invocation, tree_as_newick, placed_seqs);
-            std::cout << std::endl;
+
+            auto jplace = epik::io::jplace_writer(jplace_filename, invocation, tree_as_newick);
+            jplace.start();
+
+            std::cout << "Placing " << query_file << "..." << std::endl;
+            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+            size_t num_seq_placed = 0;
+            const size_t batch_size = 10000;
+
+            auto reader = i2l::io::read_fasta(query_file);
+            auto it = reader.begin();
+            while (it != reader.end())
+            {
+                auto sequences = std::vector<i2l::seq_record>();
+                bool end = (it == reader.end());
+                size_t j = 0;
+                while (!end)
+                {
+                    sequences.push_back(*it);
+                    ++j;
+                    ++it;
+                    end = (j >= batch_size) || (it == reader.end());
+                }
+
+                const auto placed_batch = placer.place(sequences);
+                jplace << placed_batch;
+
+                num_seq_placed += sequences.size();
+            }
+            jplace.end();
+
+            std::cout << "Placed " << num_seq_placed << " sequences.\n" << std::flush;
+            std::cout << "Time (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - begin).count() << std::endl << std::endl;
         }
 
         std::cout << "Done." << '\n' << std::flush;
