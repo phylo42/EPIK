@@ -206,6 +206,9 @@ std::vector<placement> select_best_placements(std::vector<placement> placements,
     return placements;
 }
 
+#include <xmmintrin.h>
+
+
 /// \brief Places a fasta sequence
 placed_sequence placer::place_seq(std::string_view seq)
 {
@@ -241,15 +244,75 @@ placed_sequence placer::place_seq(std::string_view seq)
             const auto key = keys[0];
 
             /// Update placements if found
-            if (auto entries = _db.search(key); entries)
+            if (const auto entries  = _db.search(key); entries)
             {
+                const auto& [branches, updates] = *entries;
+#define SSE
+#ifdef SSE
+                const int num_entries = updates.size();
+                //const auto num_entries = std::distance(updates.begin(), updates.end());
+
+                int i = 0;
+                for (; i < num_entries - 4; i += 4) {
+                    /// Load a block of current scores and score updates
+                    __m128 current_scores4 = _mm_load_ps((float*)&thread_scores[i]);
+                    __m128 score_updates4 = _mm_load_ps((float*)&updates[i]);
+
+                    // Add the updates to the current scores
+                    __m128 new_scores4 = _mm_add_ps(current_scores4, score_updates4);
+
+                    if (thread_counts[branches[i]] == 0)
+                    {
+                        thread_edges.push_back(branches[i]);
+                    }
+                    if (thread_counts[branches[i+1]] == 0)
+                    {
+                        thread_edges.push_back(branches[i+1]);
+                    }
+                    if (thread_counts[branches[i+2]] == 0)
+                    {
+                        thread_edges.push_back(branches[i+2]);
+                    }
+                    if (thread_counts[branches[i+3]] == 0)
+                    {
+                        thread_edges.push_back(branches[i+3]);
+                    }
+
+                    // Store the new values back in the vector
+                    thread_scores[branches[i]] = new_scores4[0];
+                    thread_scores[branches[i+1]] = new_scores4[1];
+                    thread_scores[branches[i+2]] = new_scores4[2];
+                    thread_scores[branches[i+3]] = new_scores4[3];
+
+                    thread_counts[branches[i]]++;
+                    thread_counts[branches[i+1]]++;
+                    thread_counts[branches[i+2]]++;
+                    thread_counts[branches[i+3]]++;
+                }
+
+                // Process the remaining updates
+                for (; i < num_entries; i++) {
+
+                    if (thread_counts[branches[i]] == 0)
+                    {
+                        thread_edges.push_back(branches[i]);
+                    }
+
+                    thread_counts[branches[i]] += 1;
+                    thread_scores[branches[i]] += updates[i];
+                }
+
+#else
 #ifdef KEEP_POSITIONS
                 for (const auto& [postorder_node_id, score, position] : *entries)
                 {
                     (void)position;
 #else
-                for (const auto& [postorder_node_id, score] : *entries)
+                for (size_t i = 0; i < branches.size(); ++i)
+                //for (const auto& [postorder_node_id, score] : *entries)
                 {
+                    const auto postorder_node_id = branches[i];
+                    const auto score = updates[i];
 #endif
                     if (thread_counts[postorder_node_id] == 0)
                     {
@@ -259,12 +322,15 @@ placed_sequence placer::place_seq(std::string_view seq)
                     thread_counts[postorder_node_id] += 1;
                     thread_scores[postorder_node_id] += score;
                 }
+                //std::cout << std::endl;
+#endif
 
             }
         }
         /// treat ambiguities with mean
         else
         {
+            /*
             /// hash set of branch ids that are scored by the ambiguous k-mer
             std::unordered_set<i2l::phylo_kmer::branch_type> l_amb;
 
@@ -309,7 +375,7 @@ placed_sequence placer::place_seq(std::string_view seq)
 
                 thread_counts[postorder_node_id] += 1;
                 thread_scores[postorder_node_id] += average_prob;
-            }
+            }*/
         }
     }
 
