@@ -39,7 +39,7 @@ target_link_libraries(epik-dna
 # Turn on the warnings and treat them as errors
 target_compile_options(epik-dna
         PRIVATE
-            -Wall -Wextra -Werror
+            -Wall -Wextra -Wpedantic
 )
 
 
@@ -70,7 +70,7 @@ target_link_libraries(epik-aa
 
 target_compile_options(epik-aa
         PRIVATE
-        -Wall -Wextra -Werror
+        -Wall -Wextra -Wpedantic
         )
 
 target_compile_features(epik-aa
