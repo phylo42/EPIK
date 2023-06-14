@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-20.04] #, macos-13, macos-12 ]
+        os: [ ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
         include:
           - os: ubuntu-22.04
             buildname: 'ubuntu-22.04'
@@ -24,14 +24,14 @@ jobs:
             buildname: 'ubuntu-20.04'
             triplet: x64-linux
             compiler: gcc_64
-          #- os: macos-13
-          #  buildname: 'macos-13'
-          #  triplet: x64-osx
-          #  compiler: clang_64
-          #- os: macos-12
-          #  buildname: 'macos-12'
-          #  triplet: x64-osx
-          #  compiler: clang_64
+          - os: macos-13
+            buildname: 'macos-13'
+            triplet: x64-osx
+            compiler: clang_64
+          - os: macos-12
+            buildname: 'macos-12'
+            triplet: x64-osx
+            compiler: clang_64
 
     steps:
       - name: Checkout
@@ -55,7 +55,7 @@ jobs:
 
       - name: Test build successful
         working-directory: ${{runner.workspace}}/bin
-        run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-dna
+        run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-aa
 
       - name: Test python script
         run: python3 epik.py place --help
