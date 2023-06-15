@@ -15,6 +15,28 @@ using namespace epik;
 using i2l::seq_record;
 
 
+#ifdef __clang__
+
+#include <cmath>
+
+namespace epik::impl
+{
+    float (*pow)(float, float) = std::pow;  // definition
+}
+
+#else
+#include <boost/multiprecision/float128.hpp>
+
+namespace epik::impl
+{
+    lwr_type (*pow)(const lwr_type&, const lwr_type&) =
+    [](const lwr_type& base, const lwr_type& exponent) {
+        return boost::multiprecision::pow(base, exponent);
+    };  // definition
+}
+#endif
+
+
 /// \brief Copies the keys of an input map to a vector
 std::vector<std::string_view> copy_keys(const sequence_map_t& map)
 {

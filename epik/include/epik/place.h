@@ -17,7 +17,7 @@
 namespace epik::impl
 {
     using lwr_type = float;
-    constexpr auto pow = powf;
+    extern float (*pow)(float, float);  // declaration
 }
 #else
 #include <boost/multiprecision/float128.hpp>
@@ -25,11 +25,10 @@ namespace epik::impl
 namespace epik::impl
 {
     using lwr_type = boost::multiprecision::float128;
-    auto pow = [](const lwr_type& base, const lwr_type& exponent) {
-        return boost::multiprecision::pow(base, exponent);
-    };
+    extern lwr_type (*pow)(const lwr_type&, const lwr_type&);  // declaration
 }
 #endif
+
 
 namespace i2l
 {
