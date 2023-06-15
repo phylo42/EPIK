@@ -57,7 +57,7 @@ jobs:
 
       - name: (MacOS) Configure CMake
         if: runner.os == 'macOS'
-        run: cmake -DCMAKE_CXX_FLAGS="-L/opt/homebrew/opt/libomp/lib -I/opt/homebrew/opt/libomp/include" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        run: ls /opt/homebrew/opt/libomp/include && echo "OK" && /opt/homebrew/opt/ && echo "OK" cmake -DCMAKE_CXX_FLAGS="-L/opt/homebrew/opt/libomp/lib -I/opt/homebrew/opt/libomp/include" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: (MacOS) Build
         if: runner.os == 'macOS'
