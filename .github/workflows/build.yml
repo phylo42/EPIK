@@ -39,19 +39,23 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Get number of CPU cores
+        uses: SimenB/github-actions-cpu-cores@v1
+        id: cpu-cores
+
       - name: (MacOS) Install dependencies
         if: runner.os == 'macOS'
         run: brew update && brew install cmake boost zlib rapidjson && pip3 install click
 
       - name: (Linux) Install dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip && pip install click
+        run: sudo apt-get update && sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip && pip3 install click
 
       - name: Configure CMake
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: Build
-        run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE
+        run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE -j ${{ steps.cpu-cores.outputs.count }}
 
       - name: Test build successful
         working-directory: ${{runner.workspace}}/bin
