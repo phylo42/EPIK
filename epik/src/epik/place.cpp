@@ -15,11 +15,32 @@ using namespace epik;
 using i2l::seq_record;
 
 
-/// \brief Copies the keys of an input map to a vector
-template<typename K, typename V, template<class, class> typename Map>
-std::vector<K> copy_keys(const Map<K, V>& map)
+#ifdef __clang__
+
+#include <cmath>
+
+namespace epik::impl
 {
-    std::vector<K> values;
+    float (*pow)(float, float) = std::pow;  // definition
+}
+
+#else
+#include <boost/multiprecision/float128.hpp>
+
+namespace epik::impl
+{
+    lwr_type (*pow)(const lwr_type&, const lwr_type&) =
+    [](const lwr_type& base, const lwr_type& exponent) {
+        return boost::multiprecision::pow(base, exponent);
+    };  // definition
+}
+#endif
+
+
+/// \brief Copies the keys of an input map to a vector
+std::vector<std::string_view> copy_keys(const sequence_map_t& map)
+{
+    std::vector<std::string_view> values;
     values.reserve(map.size());
 
     for(const auto& [key, value] : map)
@@ -97,7 +118,7 @@ placement::weight_ratio_type sum_scores(const std::vector<placement>& placements
     placement::weight_ratio_type sum = 0.0;
     for (const auto& placement : placements)
     {
-        sum += boost::multiprecision::pow(10.0, placement::weight_ratio_type(placement.score));
+        sum += epik::impl::pow(10.0, placement::weight_ratio_type(placement.score));
     }
     return sum;
 }
@@ -128,7 +149,6 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Keys are std::string_view's, so copying is cheap enough
     const auto unique_sequences = copy_keys(sequence_map);
 
-
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
     (void)num_threads;
@@ -156,7 +176,7 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
             }
             else
             {
-                placement.weight_ratio = boost::multiprecision::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
+                placement.weight_ratio = epik::impl::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
             }
         }
 

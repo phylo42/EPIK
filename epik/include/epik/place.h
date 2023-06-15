@@ -6,7 +6,29 @@
 #include <i2l/phylo_kmer.h>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/phylo_tree.h>
+
+#ifdef __clang__
+/// Clang still does not fully support boost::multiprecion.
+/// We use floats instead despite of known precion-related
+/// issues in rare cases
+
+#include <cmath>
+
+namespace epik::impl
+{
+    using lwr_type = float;
+    extern float (*pow)(float, float);  // declaration
+}
+#else
 #include <boost/multiprecision/float128.hpp>
+
+namespace epik::impl
+{
+    using lwr_type = boost::multiprecision::float128;
+    extern lwr_type (*pow)(const lwr_type&, const lwr_type&);  // declaration
+}
+#endif
+
 
 namespace i2l
 {
@@ -16,13 +38,12 @@ namespace i2l
 namespace epik::impl
 {
     /// A mapping "sequence content -> list of headers" to group identical reads
-    /// TODO: check if std::unordered_map is efficient enough
     using sequence_map_t = std::unordered_map<std::string_view, std::vector<std::string_view>>;
 
     /// A placement of one sequence
     struct placement {
     public:
-        using weight_ratio_type = boost::multiprecision::float128;
+        using weight_ratio_type = lwr_type;
 
         i2l::phylo_kmer::branch_type branch_id;
         i2l::phylo_kmer::score_type score;

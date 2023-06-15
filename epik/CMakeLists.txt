@@ -15,8 +15,11 @@ set(LIBRARIES
         Boost::program_options
         Boost::filesystem
         Boost::iostreams
-        OpenMP::OpenMP_CXX
-        quadmath)
+        OpenMP::OpenMP_CXX)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(APPEND LIBRARIES quadmath)
+endif()
 
 ######################################################################################################
 # Application target and properties
@@ -39,7 +42,7 @@ target_link_libraries(epik-dna
 # Turn on the warnings and treat them as errors
 target_compile_options(epik-dna
         PRIVATE
-            -Wall -Wextra -Werror
+            -Wall -Wextra -Wpedantic
 )
 
 
@@ -70,7 +73,7 @@ target_link_libraries(epik-aa
 
 target_compile_options(epik-aa
         PRIVATE
-        -Wall -Wextra -Werror
+        -Wall -Wextra -Wpedantic
         )
 
 target_compile_features(epik-aa
