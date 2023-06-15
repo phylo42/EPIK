@@ -51,15 +51,15 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip && pip3 install click
 
-      - name: (MacOS) Configure CMake
-        if: runner.os == 'macOS'
-        run: cmake -DCMAKE_CXX_FLAGS="-L/opt/homebrew/opt/libomp/lib -I/opt/homebrew/opt/libomp/include" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-
       - name: (Linux) Configure CMake
-        if: runner.os == 'Linux'
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
-      - name: Build
+      - name: (MacOS) Build
+        if: runner.os == 'macOS'
+        run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE -j ${{ steps.cpu-cores.outputs.count }} -DOpenMP_CXX="${CMAKE_CXX_COMPILER}" -DOpenMP_CXX_FLAGS="-Xclang -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="libomp" -DOpenMP_libomp_LIBRARY="omp"
+
+      - name: (Linux) Build
+        if: runner.os == 'Linux'
         run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE -j ${{ steps.cpu-cores.outputs.count }}
 
       - name: Test build successful
