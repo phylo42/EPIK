@@ -1,11 +1,5 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-if(APPLE)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(OpenMP_CXX_FLAG "-fopenmp=libomp -Wno-unused-command-line-argument")
-    endif()
-endif()
-
 find_package(RapidJSON REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
 find_package(OpenMP REQUIRED)
