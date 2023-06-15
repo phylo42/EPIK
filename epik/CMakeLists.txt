@@ -15,8 +15,11 @@ set(LIBRARIES
         Boost::program_options
         Boost::filesystem
         Boost::iostreams
-        OpenMP::OpenMP_CXX
-        quadmath)
+        OpenMP::OpenMP_CXX)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(APPEND LIBRARIES quadmath)
+endif()
 
 ######################################################################################################
 # Application target and properties
