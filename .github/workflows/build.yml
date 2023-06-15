@@ -53,7 +53,7 @@ jobs:
 
       - name: (MacOS) Configure CMake
         if: runner.os == 'macOS'
-        run: ls /usr/local/opt/libomp/include && echo "OK" && /usr/local/opt/ && echo "OK" cmake -DCMAKE_CXX_FLAGS="-L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        run: ls /usr/local/opt/libomp/include && echo "OK" && /usr/local/opt/ && echo "OK" && cmake -DCMAKE_CXX_FLAGS="-L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: (Linux) Configure CMake
         if: runner.os == 'Linux'
