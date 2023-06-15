@@ -45,7 +45,7 @@ jobs:
 
       - name: (MacOS) Install dependencies
         if: runner.os == 'macOS'
-        run: brew update && brew install cmake boost zlib rapidjson && pip3 install click
+        run: brew update && brew install cmake boost zlib rapidjson libomp && pip3 install click
 
       - name: (Linux) Install dependencies
         if: runner.os == 'Linux'
