@@ -53,8 +53,7 @@ jobs:
 
       - name: (MacOS) Configure CMake
         if: runner.os == 'macOS'
-        run: cmake -DCMAKE_CXX_FLAGS="-L/opt/homebrew/opt/libomp/lib -I/opt/homebrew/opt/libomp/include" -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-
+        run: cmake -DCMAKE_CXX_FLAGS="-L/opt/homebrew/opt/libomp/lib -I/opt/homebrew/opt/libomp/include" -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DCMAKE_LIBRARY_PATH="/opt/homebrew/opt/libomp/lib" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: (Linux) Configure CMake
         if: runner.os == 'Linux'
