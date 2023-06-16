@@ -314,6 +314,7 @@ placed_sequence placer::place_seq(std::string_view seq)
     for (const auto& edge: _edges)
     {
         _scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - _counts[edge]) * _log_threshold;
+        _scores[edge] /= static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
     }
 
     std::vector<placement> placements;
