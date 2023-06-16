@@ -96,6 +96,10 @@ namespace epik
         /// \brief Places a fasta sequence
         placed_sequence place_seq(std::string_view seq);
 
+
+        epik::impl::placement::weight_ratio_type sum_scores(const std::vector<epik::impl::placement>& placements,
+                                                            std::string_view seq);
+
         const i2l::phylo_kmer_db& _db;
         const i2l::phylo_tree& _original_tree;
         const i2l::phylo_kmer::score_type _threshold;

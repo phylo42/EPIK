@@ -111,16 +111,56 @@ placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tre
     }
 }
 
+bool compare_placed_branches(const placement& lhs, const placement& rhs)
+{
+    return lhs.score > rhs.score;
+}
+
+/// \brief Selects keep_at_most most placed branches among these that have count > 0
+std::vector<placement> select_best_placements(std::vector<placement> placements, size_t keep_at_most)
+{
+    /// Partially select best keep_at_most placements
+    size_t return_size = std::min(keep_at_most, placements.size());
+
+    /// if no single query k-mer was found, all counts are zeros, and
+    /// we take just first keep_at_most branches
+    if (return_size == 0)
+    {
+        return_size = std::min(keep_at_most, placements.size());
+        placements.resize(return_size);
+        std::copy(placements.begin(), placements.end(), placements.begin());
+    }
+    std::partial_sort(std::begin(placements),
+                      std::begin(placements) + return_size,
+                      std::end(placements),
+                      compare_placed_branches);
+    placements.resize(return_size);
+    return placements;
+}
+
+
 /// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
 /// We use a longer float type, not phylo_kmer::score_type here, because 10 ** score can be a small number.
-placement::weight_ratio_type sum_scores(const std::vector<placement>& placements)
+placement::weight_ratio_type placer::sum_scores(const std::vector<placement>& placements, std::string_view seq)
 {
-    placement::weight_ratio_type sum = 0.0;
+    const auto num_branches = static_cast<i2l::phylo_kmer::score_type>(_original_tree.get_node_count());
+    const auto num_placements = static_cast<i2l::phylo_kmer::score_type>(placements.size());
+    const auto num_kmers = static_cast<i2l::phylo_kmer::score_type>(seq.size() - _db.kmer_size() + 1);
+    const auto kmer_size = static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
+
+    /// There are n branches where we placed the sequence, and N-n where we did not.
+    /// We score each of them with (#kmers * log_threshold) / k. This gives us the total score for
+    /// all branches to which the query was not placed:
+    placement::weight_ratio_type sum_not_placed =
+        (num_branches - num_placements) * epik::impl::pow(10.0, (num_kmers * _log_threshold / kmer_size));
+
+    /// The final sum includes branches that were scored by k-mers explicitly
+    placement::weight_ratio_type sum_placed = 0.0f;
     for (const auto& placement : placements)
     {
-        sum += epik::impl::pow(10.0, placement::weight_ratio_type(placement.score));
+        sum_placed += epik::impl::pow(10.0, placement::weight_ratio_type(placement.score));
     }
-    return sum;
+    return sum_not_placed + sum_placed;
 }
 
 /// \brief Copies placements that have a weight ratio >= some threshold value. The threshold
@@ -128,8 +168,8 @@ placement::weight_ratio_type sum_scores(const std::vector<placement>& placements
 std::vector<placement> filter_by_ratio(const std::vector<placement>& placements, double _keep_factor)
 {
     /// calculate the ratio threshold. Here we assume that input placements are sorted
-    const auto best_ratio = placements.size() > 0 ? placements[0].weight_ratio : 0.0f;
-    const auto ratio_threshold = best_ratio *_keep_factor;
+    const auto best_ratio = placements.empty() ? 0.0f : placements[0].weight_ratio;
+    const auto ratio_threshold = best_ratio * _keep_factor;
 
     std::vector<placement> result;
     result.reserve(placements.size());
@@ -162,7 +202,8 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         placed_seqs[i] = place_seq(sequence);
 
         /// compute weight ratio
-        const auto score_sum = sum_scores(placed_seqs[i].placements);
+        const auto score_sum = sum_scores(placed_seqs[i].placements, sequence);
+        placed_seqs[i].placements = select_best_placements(std::move(placed_seqs[i].placements), _keep_at_most);
         for (auto& placement : placed_seqs[i].placements)
         {
             /// If the scores are that small that taking 10 to these powers is still zero
@@ -184,33 +225,6 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
     return { sequence_map, placed_seqs };
-}
-
-bool compare_placed_branches(const placement& lhs, const placement& rhs)
-{
-    return lhs.score > rhs.score;
-}
-
-/// \brief Selects keep_at_most most placed branches among these that have count > 0
-std::vector<placement> select_best_placements(std::vector<placement> placements, size_t keep_at_most)
-{
-    /// Partially select best keep_at_most placements
-    size_t return_size = std::min(keep_at_most, placements.size());
-
-    /// if no single query k-mer was found, all counts are zeros, and
-    /// we take just first keep_at_most branches
-    if (return_size == 0)
-    {
-        return_size = std::min(keep_at_most, placements.size());
-        placements.resize(return_size);
-        std::copy(placements.begin(), placements.end(), placements.begin());
-    }
-    std::partial_sort(std::begin(placements),
-                      std::begin(placements) + return_size,
-                      std::end(placements),
-                      compare_placed_branches);
-    placements.resize(return_size);
-    return placements;
 }
 
 /// \brief Places a fasta sequence
@@ -311,10 +325,12 @@ placed_sequence placer::place_seq(std::string_view seq)
     }
 
     /// Score correction
+    i2l::phylo_kmer::score_type total_score = 0.0f;
     for (const auto& edge: _edges)
     {
         _scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - _counts[edge]) * _log_threshold;
         _scores[edge] /= static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
+        total_score += _scores[edge];
     }
 
     std::vector<placement> placements;
@@ -330,5 +346,6 @@ placed_sequence placer::place_seq(std::string_view seq)
         placements.push_back({edge, _scores[edge], 0.0, _counts[edge], distal_length, _pendant_lengths[edge] });
     }
 
-    return { seq, select_best_placements(std::move(placements), _keep_at_most) };
+    //return { seq, select_best_placements(std::move(placements), _keep_at_most) };
+    return { seq, std::move(placements) };
 }
