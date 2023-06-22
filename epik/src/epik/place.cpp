@@ -135,7 +135,16 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records)
     const auto unique_sequences = copy_keys(sequence_map);
 
     /// Place only unique sequences
+    //std::vector<placed_sequence> placed_seqs(unique_sequences.size());
+
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
+    for (size_t i = 0; i < unique_sequences.size(); ++i)
+    {
+        placed_seqs[i].sequence = unique_sequences[i];
+        placed_seqs[i].placements = { placement{ 42, -666, 0.666, 100, 0.0, 0.0 } };
+    }
+    return { sequence_map, placed_seqs };
+
 
 #ifdef EPIK_OMP
     #if __GNUC__ && (__GNUC__ < 9)
