@@ -60,12 +60,12 @@ placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tre
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
-    , _num_threads{ num_threads }
-    , _scores(num_threads, score_vector(original_tree.get_node_count()))
-    , _scores_amb(num_threads, score_vector(original_tree.get_node_count()))
-    , _counts(num_threads, count_vector(original_tree.get_node_count()))
-    , _counts_amb(num_threads, count_vector(original_tree.get_node_count()))
-    , _edges(num_threads)
+    , _num_threads{ std::max(num_threads, 1ul) }
+    , _scores(_num_threads, score_vector(original_tree.get_node_count()))
+    , _scores_amb(_num_threads, score_vector(original_tree.get_node_count()))
+    , _counts(_num_threads, count_vector(original_tree.get_node_count()))
+    , _counts_amb(_num_threads, count_vector(original_tree.get_node_count()))
+    , _edges(_num_threads)
 {
     /// precompute pendant lengths
     for (i2l::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)

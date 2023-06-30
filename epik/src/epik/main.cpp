@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+#include <future>
 #include <boost/filesystem.hpp>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/serialization.h>
@@ -83,7 +84,7 @@ int main(int argc, char** argv)
         std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
-        auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads);
+        auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads - 1);
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
         const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
@@ -103,12 +104,12 @@ int main(int argc, char** argv)
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
             size_t num_seq_placed = 0;
-            const size_t batch_size = 10000;
 
+            /// Batch query reading
             auto reader = i2l::io::read_fasta(query_file);
             auto it = reader.begin();
-            while (it != reader.end())
-            {
+            auto read_batch = [&it, &reader]() {
+                const size_t batch_size = 10000;
                 auto sequences = std::vector<i2l::seq_record>();
                 bool end = (it == reader.end());
                 size_t j = 0;
@@ -119,11 +120,29 @@ int main(int argc, char** argv)
                     ++it;
                     end = (j >= batch_size) || (it == reader.end());
                 }
+                return sequences;
+            };
 
-                const auto placed_batch = placer.place(sequences);
+            /// Query reading future policy depends on how many threads we are allowed to use.
+            /// If only one, read synchronously and place in one thread.
+            /// Otherwise, read asynchronously in a separate thread and place with N-1 threads
+            const auto async_policy = (num_threads > 1) ? std::launch::async : std::launch::deferred;
+            auto future = std::async(async_policy, read_batch);
+
+            bool end = false;
+            while (!end)
+            {
+                const auto batch = future.get();
+                if (batch.empty())
+                {
+                    end = true;
+                }
+                future = std::async(async_policy, read_batch);
+
+                const auto placed_batch = placer.place(batch);
                 jplace << placed_batch;
 
-                num_seq_placed += sequences.size();
+                num_seq_placed += batch.size();
             }
             jplace.end();
 
