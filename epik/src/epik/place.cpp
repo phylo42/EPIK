@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <cmath>
 #include <iostream>
+#include <i2l/seq.h>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/phylo_tree.h>
 #include <i2l/kmer_iterator.h>
@@ -206,6 +207,25 @@ std::vector<placement> select_best_placements(std::vector<placement> placements,
     return placements;
 }
 
+auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db) -> std::vector<decltype(db.search(0))>
+{
+    std::vector<decltype(db.search(0))> result;
+    result.reserve(seq.size() - db.kmer_size() + 1);
+
+    /// Query every k-mer that has no more than one ambiguous character
+    for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, db.kmer_size()))
+    {
+        (void) kmer;
+        if (keys.size() == 1)
+        {
+            const auto key = keys[0];
+            result.push_back(db.search(key));
+        }
+    }
+    return result;
+}
+
+
 /// \brief Places a fasta sequence
 placed_sequence placer::place_seq(std::string_view seq)
 {
@@ -230,6 +250,31 @@ placed_sequence placer::place_seq(std::string_view seq)
     }
     thread_edges.clear();
 
+    /// Let's query every k-mer in advance. We'll apply the scores later
+    const auto phylo_kmers = query_kmers(seq, _db);
+
+    /// Now let's update the score vectors according to retrieved values
+    for (auto search_result : phylo_kmers)
+    {
+#ifdef KEEP_POSITIONS
+        for (const auto& [postorder_node_id, score, position] : *search_result)
+            {
+                (void)position;
+#else
+        for (const auto& [postorder_node_id, score] : *search_result)
+        {
+#endif
+            if (thread_counts[postorder_node_id] == 0)
+            {
+                thread_edges.push_back(postorder_node_id);
+            }
+
+            thread_counts[postorder_node_id] += 1;
+            thread_scores[postorder_node_id] += score;
+        }
+    }
+
+    /*
     /// Query every k-mer that has no more than one ambiguous character
     for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, _db.kmer_size()))
     {
@@ -311,7 +356,7 @@ placed_sequence placer::place_seq(std::string_view seq)
                 thread_scores[postorder_node_id] += average_prob;
             }
         }
-    }
+    }*/
 
     /// Score correction
     for (const auto& edge: thread_edges)
