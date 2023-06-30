@@ -39,6 +39,12 @@ void print_line()
     std::cout << std::endl;
 }
 
+template<typename R>
+bool is_ready_or_dead(const std::future<R>& f)
+{
+    return (!f.valid()) || (f.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready);
+}
+
 int main(int argc, char** argv)
 {
     std::ios::sync_with_stdio(false);
@@ -84,7 +90,7 @@ int main(int argc, char** argv)
         std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
-        auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads - 1);
+        auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads);
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
         const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
@@ -123,27 +129,43 @@ int main(int argc, char** argv)
                 return sequences;
             };
 
+            auto write_batch = [&jplace] (const auto& batch) {
+                jplace << batch;
+            };
+
             /// Query reading future policy depends on how many threads we are allowed to use.
             /// If only one, read synchronously and place in one thread.
             /// Otherwise, read asynchronously in a separate thread and place with N-1 threads
             const auto async_policy = (num_threads > 1) ? std::launch::async : std::launch::deferred;
-            auto future = std::async(async_policy, read_batch);
+            auto future_read = std::async(async_policy, read_batch);
+            std::future<void> future_write;
 
             bool end = false;
             while (!end)
             {
-                const auto batch = future.get();
+                const auto batch = future_read.get();
                 if (batch.empty())
                 {
                     end = true;
                 }
-                future = std::async(async_policy, read_batch);
+                future_read = std::async(async_policy, read_batch);
 
-                const auto placed_batch = placer.place(batch);
-                jplace << placed_batch;
+                const auto threads_available = num_threads -
+                    (is_ready_or_dead(future_read) ? 0 : 1) - (is_ready_or_dead(future_write) ? 0 : 1);
+                std::cout << "Threads: " << threads_available << ". " <<
+                    "Reading: " << (is_ready_or_dead(future_read) ? ". " : "BUSY ") <<
+                    "Writing: " << (is_ready_or_dead(future_write) ? ". " : "BUSY ") << std::endl;
+                const auto placed_batch = placer.place(batch, threads_available);
+                if (future_write.valid())
+                {
+                    future_write.wait();
+                }
+                const auto async_write_policy = std::launch::async;
+                future_write = std::async(async_write_policy, write_batch, placed_batch);
 
                 num_seq_placed += batch.size();
             }
+            future_write.wait();
             jplace.end();
 
             std::cout << "Placed " << num_seq_placed << " sequences.\n" << std::flush;

@@ -62,7 +62,7 @@ namespace epik
         /// the overhead of smart pointers. Make sure that the lifetime of these variables is
         /// longer than placer's one.
         placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& _original_tree,
-               size_t keep_at_most, double keep_factor, size_t num_threads);
+               size_t keep_at_most, double keep_factor, size_t max_threads);
         placer(const placer&) = delete;
         placer(placer&&) = delete;
         placer& operator=(const placer&) = delete;
@@ -70,7 +70,7 @@ namespace epik
         ~placer() noexcept = default;
 
         /// \brief Places a collection of fasta sequences
-        placed_collection place(const std::vector<i2l::seq_record>& seq_records);
+        placed_collection place(const std::vector<i2l::seq_record>& seq_records, size_t num_threads);
 
     private:
 
@@ -83,7 +83,7 @@ namespace epik
         const i2l::phylo_kmer::score_type _log_threshold;
         const size_t _keep_at_most;
         const double _keep_factor;
-        const size_t _num_threads;
+        const size_t _max_threads;
 
         // A vector of vectors of scores. Every vector corresponds to an array S[]
         // (in terms of the RAPPAS' supplement) for a concurrent thread and its query.

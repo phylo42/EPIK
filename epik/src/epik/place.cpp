@@ -60,12 +60,12 @@ placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tre
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
-    , _num_threads{ std::max(num_threads, 1ul) }
-    , _scores(_num_threads, score_vector(original_tree.get_node_count()))
-    , _scores_amb(_num_threads, score_vector(original_tree.get_node_count()))
-    , _counts(_num_threads, count_vector(original_tree.get_node_count()))
-    , _counts_amb(_num_threads, count_vector(original_tree.get_node_count()))
-    , _edges(_num_threads)
+    , _max_threads{ std::max(num_threads, 1ul) }
+    , _scores(_max_threads, score_vector(original_tree.get_node_count()))
+    , _scores_amb(_max_threads, score_vector(original_tree.get_node_count()))
+    , _counts(_max_threads, count_vector(original_tree.get_node_count()))
+    , _counts_amb(_max_threads, count_vector(original_tree.get_node_count()))
+    , _edges(_max_threads)
 {
     /// precompute pendant lengths
     for (i2l::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
@@ -124,7 +124,7 @@ std::vector<placement> filter_by_ratio(const std::vector<placement>& placements,
     return result;
 }
 
-placed_collection placer::place(const std::vector<seq_record>& seq_records)
+placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads)
 {
     /// There may be identical sequences with different headers. We group them
     /// by the sequence content to not to place the same sequences more than once
@@ -143,7 +143,7 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records)
     /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
 #pragma omp parallel for schedule(dynamic) num_threads(_num_threads) default(none) shared(placed_seqs)
     #else
-#pragma omp parallel for schedule(dynamic) num_threads(_num_threads) \
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
     default(none) shared(unique_sequences, placed_seqs)
     #endif
 
