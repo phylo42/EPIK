@@ -94,7 +94,6 @@ int main(int argc, char** argv)
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
         const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
-
         for (int i = 4; i < argc; ++i)
         {
             print_line();
@@ -112,21 +111,9 @@ int main(int argc, char** argv)
             size_t num_seq_placed = 0;
 
             /// Batch query reading
-            auto reader = i2l::io::read_fasta(query_file);
-            auto it = reader.begin();
-            auto read_batch = [&it, &reader]() {
-                const size_t batch_size = 10000;
-                auto sequences = std::vector<i2l::seq_record>();
-                bool end = (it == reader.end());
-                size_t j = 0;
-                while (!end)
-                {
-                    sequences.push_back(*it);
-                    ++j;
-                    ++it;
-                    end = (j >= batch_size) || (it == reader.end());
-                }
-                return sequences;
+            auto reader = i2l::io::batch_fasta(query_file, 10000);
+            auto read_batch = [&reader]() {
+                return reader.next_batch();
             };
 
             auto write_batch = [&jplace] (const auto& batch) {
@@ -137,21 +124,21 @@ int main(int argc, char** argv)
             /// If only one, read synchronously and place in one thread.
             /// Otherwise, read asynchronously in a separate thread and place with N-1 threads
             const auto async_policy = (num_threads > 1) ? std::launch::async : std::launch::deferred;
+            //const auto async_policy = std::launch::deferred;
             auto future_read = std::async(async_policy, read_batch);
             std::future<void> future_write;
 
-            bool end = false;
-            while (!end)
+            while (true)
             {
                 const auto batch = future_read.get();
                 if (batch.empty())
                 {
-                    end = true;
+                    break;
                 }
                 future_read = std::async(async_policy, read_batch);
 
-                const auto threads_available = num_threads -
-                    (is_ready_or_dead(future_read) ? 0 : 1) - (is_ready_or_dead(future_write) ? 0 : 1);
+                const auto threads_available = num_threads - (is_ready_or_dead(future_read) ? 0 : 1) -
+                    (is_ready_or_dead(future_write) ? 0 : 1);
                 std::cout << "Threads: " << threads_available << ". " <<
                     "Reading: " << (is_ready_or_dead(future_read) ? ". " : "BUSY ") <<
                     "Writing: " << (is_ready_or_dead(future_write) ? ". " : "BUSY ") << std::endl;
@@ -160,9 +147,9 @@ int main(int argc, char** argv)
                 {
                     future_write.wait();
                 }
+
                 const auto async_write_policy = std::launch::async;
                 future_write = std::async(async_write_policy, write_batch, placed_batch);
-
                 num_seq_placed += batch.size();
             }
             future_write.wait();
