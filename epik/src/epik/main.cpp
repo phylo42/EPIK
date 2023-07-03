@@ -116,68 +116,22 @@ int main(int argc, char** argv)
             size_t num_seq_placed = 0;
 
             /// Batch query reading
-            auto reader = i2l::io::batch_fasta(query_file, 50000);
-            auto read_batch = [&reader]() {
-                const auto begin_batch = std::chrono::steady_clock::now();
-                auto result = reader.next_batch();
-                const auto end_batch = std::chrono::steady_clock::now();
-                std::cout << "Reading done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
-                return result;
-            };
-
-            auto write_batch = [&jplace] (const auto& batch) {
-                const auto begin_batch = std::chrono::steady_clock::now();
-                jplace << batch;
-                const auto end_batch = std::chrono::steady_clock::now();
-                std::cout << "Writing done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
-            };
-
-            /// Query reading future policy depends on how many threads we are allowed to use.
-            /// If only one, read synchronously and place in one thread.
-            /// Otherwise, read asynchronously in a separate thread and place with N-1 threads
-            const auto async_policy = (num_threads > 1) ? std::launch::async : std::launch::deferred;
-            //const auto async_policy = std::launch::deferred;
-            auto future_read = std::async(async_policy, read_batch);
-            std::future<void> future_write;
-            size_t threads_available = 1;
-
+            auto reader = i2l::io::batch_fasta(query_file, 10000);
             while (true)
             {
-                const auto batch = future_read.get();
+                const auto batch = reader.next_batch();
                 if (batch.empty())
                 {
                     break;
                 }
-                future_read = std::async(async_policy, read_batch);
-
-                if (num_threads > 1)
-                {
-                    threads_available = num_threads -
-                                        (is_busy(future_read) ? 1 : 0) -
-                                        (is_busy(future_write) ? 1 : 0);
-                    /*std::cout << "Threads: " << threads_available << ". " <<
-                              "Reading: " << (is_busy(future_read) ? "BUSY " : " . ") <<
-                              "Writing: " << (is_busy(future_write) ? "BUSY " : " . ") << std::endl;*/
-                }
-
                 std::cout << "Placing... " << std::endl;
-
                 const auto begin_batch = std::chrono::steady_clock::now();
-                const auto placed_batch = placer.place(batch, threads_available);
+                const auto placed_batch = placer.place(batch, num_threads);
                 const auto end_batch = std::chrono::steady_clock::now();
                 std::cout << "Placement done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
-                if (future_write.valid())
-                {
-                    future_write.wait();
-                }
-
-                future_read.wait();
-
-                const auto async_write_policy = (num_threads > 1) ? std::launch::async : std::launch::deferred;
-                future_write = std::async(async_write_policy, write_batch, placed_batch);
+                jplace << placed_batch;
                 num_seq_placed += batch.size();
             }
-            future_write.wait();
             jplace.end();
 
             std::cout << "Placed " << num_seq_placed << " sequences.\n" << std::flush;
