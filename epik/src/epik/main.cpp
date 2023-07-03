@@ -40,9 +40,14 @@ void print_line()
 }
 
 template<typename R>
-bool is_ready_or_dead(const std::future<R>& f)
+bool is_busy(const std::future<R>& f)
 {
-    return (!f.valid()) || (f.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready);
+    return f.valid() && (f.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready);
+}
+
+auto time_diff(std::chrono::steady_clock::time_point begin, std::chrono::steady_clock::time_point end)
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 }
 
 int main(int argc, char** argv)
@@ -111,13 +116,20 @@ int main(int argc, char** argv)
             size_t num_seq_placed = 0;
 
             /// Batch query reading
-            auto reader = i2l::io::batch_fasta(query_file, 10000);
+            auto reader = i2l::io::batch_fasta(query_file, 50000);
             auto read_batch = [&reader]() {
-                return reader.next_batch();
+                const auto begin_batch = std::chrono::steady_clock::now();
+                auto result = reader.next_batch();
+                const auto end_batch = std::chrono::steady_clock::now();
+                std::cout << "Reading done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
+                return result;
             };
 
             auto write_batch = [&jplace] (const auto& batch) {
+                const auto begin_batch = std::chrono::steady_clock::now();
                 jplace << batch;
+                const auto end_batch = std::chrono::steady_clock::now();
+                std::cout << "Writing done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
             };
 
             /// Query reading future policy depends on how many threads we are allowed to use.
@@ -127,6 +139,7 @@ int main(int argc, char** argv)
             //const auto async_policy = std::launch::deferred;
             auto future_read = std::async(async_policy, read_batch);
             std::future<void> future_write;
+            size_t threads_available = 1;
 
             while (true)
             {
@@ -137,18 +150,30 @@ int main(int argc, char** argv)
                 }
                 future_read = std::async(async_policy, read_batch);
 
-                const auto threads_available = num_threads - (is_ready_or_dead(future_read) ? 0 : 1) -
-                    (is_ready_or_dead(future_write) ? 0 : 1);
-                std::cout << "Threads: " << threads_available << ". " <<
-                    "Reading: " << (is_ready_or_dead(future_read) ? ". " : "BUSY ") <<
-                    "Writing: " << (is_ready_or_dead(future_write) ? ". " : "BUSY ") << std::endl;
+                if (num_threads > 1)
+                {
+                    threads_available = num_threads -
+                                        (is_busy(future_read) ? 1 : 0) -
+                                        (is_busy(future_write) ? 1 : 0);
+                    /*std::cout << "Threads: " << threads_available << ". " <<
+                              "Reading: " << (is_busy(future_read) ? "BUSY " : " . ") <<
+                              "Writing: " << (is_busy(future_write) ? "BUSY " : " . ") << std::endl;*/
+                }
+
+                std::cout << "Placing... " << std::endl;
+
+                const auto begin_batch = std::chrono::steady_clock::now();
                 const auto placed_batch = placer.place(batch, threads_available);
+                const auto end_batch = std::chrono::steady_clock::now();
+                std::cout << "Placement done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
                 if (future_write.valid())
                 {
                     future_write.wait();
                 }
 
-                const auto async_write_policy = std::launch::async;
+                future_read.wait();
+
+                const auto async_write_policy = (num_threads > 1) ? std::launch::async : std::launch::deferred;
                 future_write = std::async(async_write_policy, write_batch, placed_batch);
                 num_seq_placed += batch.size();
             }
