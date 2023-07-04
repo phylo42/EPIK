@@ -67,7 +67,6 @@ placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tre
     , _counts_amb(_max_threads, count_vector(original_tree.get_node_count()))
     , _edges(_max_threads)
 {
-        std::cout << " VEC SIZE " << original_tree.get_node_count() << std::endl;
     /// precompute pendant lengths
     for (i2l::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
     {
@@ -142,7 +141,7 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
 #ifdef EPIK_OMP
     #if __GNUC__ && (__GNUC__ < 9)
     /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
-#pragma omp parallel for schedule(dynamic) num_threads(_num_threads) default(none) shared(placed_seqs)
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) default(none) shared(placed_seqs)
     #else
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
     default(none) shared(unique_sequences, placed_seqs)
@@ -214,11 +213,19 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 
     /// Results of DB search for exact k-mers and
     /// pairs (k-mer, results of search) for ambiguous k-mers
-    std::pair<
+    /*std::pair<
         search_result,
         std::vector<std::pair<i2l::phylo_kmer::key_type, search_result>>
-    > result;
-    result.first.reserve(seq.size() - db.kmer_size() + 1);
+    > result;*/
+
+    struct kmer_results
+    {
+        search_result exact;
+        std::vector<search_result> ambiguous;
+    };
+    kmer_results result;
+
+    result.exact.reserve(seq.size() - db.kmer_size() + 1);
 
     /// Query every k-mer that has no more than one ambiguous character
     for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, db.kmer_size()))
@@ -227,14 +234,15 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
         if (keys.size() == 1)
         {
             const auto key = keys[0];
-            result.first.push_back(db.search(key));
+            result.exact.push_back(db.search(key));
         }
         else
         {
-            /*for (const auto& key : keys)
+            for (const auto& key : keys)
             {
-                result.second.push_back(std::make_pair(key, db.search(key)));
-            }*/
+                result.ambiguous.emplace_back();
+                result.ambiguous.back().push_back(db.search(key));
+            }
         }
     }
     return result;
@@ -267,68 +275,70 @@ placed_sequence placer::place_seq(std::string_view seq)
 
     /// Let's query every k-mer in advance. We'll apply the scores later
     const auto search_results = query_kmers(seq, _db);
-    const auto exact_phylo_kmers = search_results.first;
+    const auto exact_phylo_kmers = search_results.exact;
 
     /// Now let's update the score vectors according to retrieved values
-    for (auto search_result : exact_phylo_kmers)
+    for (auto exact_result : exact_phylo_kmers)
     {
-        for (const auto& [postorder_node_id, score] : *search_result)
+        if (exact_result)
         {
-            if (thread_counts[postorder_node_id] == 0)
+            for (const auto& [postorder_node_id, score] : *exact_result)
             {
-                thread_edges.push_back(postorder_node_id);
-            }
+                if (thread_counts[postorder_node_id] == 0)
+                {
+                    thread_edges.push_back(postorder_node_id);
+                }
 
-            thread_counts[postorder_node_id] += 1;
-            thread_scores[postorder_node_id] += score;
+                thread_counts[postorder_node_id] += 1;
+                thread_scores[postorder_node_id] += score;
+            }
         }
     }
 
-    /*const auto ambiguous_phylo_kmers = search_results.second;
+    const auto ambiguous_phylo_kmers = search_results.ambiguous;
     /// Now let's update the score vectors according to retrieved values
-    for (auto ambiguous_result : ambiguous_phylo_kmers)
+    for (const auto& ambiguous_result : ambiguous_phylo_kmers)
     {
-        for (const auto key: ambiguous_result)
-        {
-
-        }
-
         /// hash set of branch ids that are scored by the ambiguous k-mer
         std::unordered_set<i2l::phylo_kmer::branch_type> l_amb;
-        for (const auto& [postorder_node_id, score] : *ambiguous_result)
+        for (auto exact_result : ambiguous_result)
         {
-            if (thread_counts_amb[postorder_node_id] == 0)
+            if (exact_result)
             {
-                l_amb.insert(postorder_node_id);
+                for (const auto& [postorder_node_id, score] : *exact_result)
+                {
+                    if (thread_counts_amb[postorder_node_id] == 0)
+                    {
+                        l_amb.insert(postorder_node_id);
+                    }
+
+                    thread_counts_amb[postorder_node_id] += 1;
+                    thread_scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
+                }
+
+                /// Number of keys resolved from the k-mer
+                const size_t w_size = _db.kmer_size();
+
+                /// Calculate average scores
+                for (const auto postorder_node_id: l_amb)
+                {
+                    const auto average_prob = (thread_scores_amb[postorder_node_id] +
+                        static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold)
+                            / static_cast<float>(w_size);
+
+                    if (thread_counts[postorder_node_id] == 0)
+                    {
+                        thread_edges.push_back(postorder_node_id);
+                    }
+
+                    thread_counts[postorder_node_id] += 1;
+                    thread_scores[postorder_node_id] += average_prob;
+                }
             }
-
-            thread_counts_amb[postorder_node_id] += 1;
-            thread_scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10,
-                                                                                                      score));
-
         }
 
-        /// Number of keys resolved from the k-mer
-        const size_t w_size = phylo_kmer.size();
-
-        /// Calculate average scores
-        for (const auto postorder_node_id: l_amb)
-        {
-            const auto average_prob = (
-                                          thread_scores_amb[postorder_node_id] +
-                                          static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold
-                                      ) / static_cast<float>(w_size);
-
-            if (thread_counts[postorder_node_id] == 0)
-            {
-                thread_edges.push_back(postorder_node_id);
-            }
-
-            thread_counts[postorder_node_id] += 1;
-            thread_scores[postorder_node_id] += average_prob;
-        }
     }
-*/
+
     /// Score correction
     for (const auto& edge: thread_edges)
     {

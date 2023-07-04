@@ -115,6 +115,9 @@ int main(int argc, char** argv)
 
             size_t num_seq_placed = 0;
 
+            std::unordered_map<i2l::phylo_kmer::key_type,
+                               std::unordered_map<std::string_view, int>> kmer_map;
+
             /// Batch query reading
             auto reader = i2l::io::batch_fasta(query_file, 10000);
             while (true)
