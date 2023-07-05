@@ -12,6 +12,8 @@
 #include <epik/place.h>
 #ifdef EPIK_OMP
 #include <omp.h>
+#include <chrono>
+
 #endif
 
 using namespace epik::impl;
@@ -138,6 +140,8 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
 
+    const auto begin_omp = std::chrono::steady_clock::now();
+
 #ifdef EPIK_OMP
     #if __GNUC__ && (__GNUC__ < 9)
     /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
@@ -146,7 +150,6 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
     default(none) shared(unique_sequences, placed_seqs)
     #endif
-
 #endif
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
@@ -177,6 +180,11 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         /// Remove placements with low weight ratio
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
+    const auto end_omp = std::chrono::steady_clock::now();
+    const float seconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_omp - begin_omp).count() / 1000.0f;
+    float speed = seq_records.size() / seconds / num_threads;
+    std::cout << "Query/sec (per thread): " << speed << std::endl << std::endl;
     return { sequence_map, placed_seqs };
 }
 
@@ -234,7 +242,11 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
         if (keys.size() == 1)
         {
             const auto key = keys[0];
-            result.exact.push_back(db.search(key));
+            auto key_result = db.search(key);
+            if (key_result)
+            {
+                result.exact.push_back(key_result);
+            }
         }
         else
         {
@@ -253,6 +265,7 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 placed_sequence placer::place_seq(std::string_view seq)
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
+
 #ifdef EPIK_OMP
     const auto thread_id = omp_get_thread_num();
 #else
@@ -277,6 +290,7 @@ placed_sequence placer::place_seq(std::string_view seq)
     const auto search_results = query_kmers(seq, _db);
     const auto exact_phylo_kmers = search_results.exact;
 
+/*
     /// Now let's update the score vectors according to retrieved values
     for (auto exact_result : exact_phylo_kmers)
     {
@@ -294,6 +308,52 @@ placed_sequence placer::place_seq(std::string_view seq)
             }
         }
     }
+*/
+
+    const size_t kmer_batch_size = 16;
+    const size_t num_kmer_batches = std::ceil((float)exact_phylo_kmers.size() / (float)kmer_batch_size);
+    const size_t branch_batch_size = 32;
+    const auto max_node_id = _original_tree.get_node_count();
+
+    std::array<uint16_t, kmer_batch_size> kmer_indices {};
+    for (size_t kmer_batch = 0; kmer_batch < num_kmer_batches; kmer_batch++)
+    {
+        std::fill(kmer_indices.begin(), kmer_indices.end(), 0);
+
+        for (size_t branch_batch_begin = 0; branch_batch_begin < max_node_id; branch_batch_begin += branch_batch_size)
+        {
+            const auto batch_end = branch_batch_begin + branch_batch_size;
+
+            // Process all k-mers
+            for (size_t i = 0; i < kmer_batch_size; ++i)
+            {
+                const auto kmer_index = kmer_batch_size * kmer_batch + i;
+
+                if (kmer_index >= num_of_kmers)
+                {
+                    break;
+                }
+                const auto& exact_result = exact_phylo_kmers[kmer_index];
+
+                // Process all exact_result entries within the current batch range
+                while (kmer_indices[i] < exact_result->size() &&
+                       (*exact_result)[kmer_indices[i]].branch < batch_end)
+                {
+                    const auto [postorder_node_id, score] = (*exact_result)[kmer_indices[i]];
+                    if (thread_counts[postorder_node_id] == 0)
+                    {
+                        thread_edges.push_back(postorder_node_id);
+                    }
+
+                    thread_counts[postorder_node_id] += 1;
+                    thread_scores[postorder_node_id] += score;
+
+                    kmer_indices[i]++;
+                }
+            }
+        }
+    }
+
 
     const auto ambiguous_phylo_kmers = search_results.ambiguous;
     /// Now let's update the score vectors according to retrieved values
