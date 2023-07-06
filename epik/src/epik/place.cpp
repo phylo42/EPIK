@@ -21,7 +21,7 @@ using i2l::seq_record;
 
 namespace epik::impl
 {
-    float (*pow)(float, float) = std::pow;  // definition
+    float (*pow)(float, float) = std::pow;
 }
 
 #else
@@ -29,10 +29,12 @@ namespace epik::impl
 
 namespace epik::impl
 {
-    lwr_type (*pow)(const lwr_type&, const lwr_type&) =
+    /*lwr_type (*pow)(const lwr_type&, const lwr_type&) =
     [](const lwr_type& base, const lwr_type& exponent) {
         return boost::multiprecision::pow(base, exponent);
-    };  // definition
+    };*/
+
+    double (*pow)(double, double) = std::pow;
 }
 #endif
 
@@ -224,7 +226,7 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         /// Remove placements with low weight ratio
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
-    return { sequence_map, placed_seqs };
+    return { sequence_map, std::move(placed_seqs) };
 }
 
 /// \brief Places a fasta sequence
@@ -336,7 +338,7 @@ placed_sequence placer::place_seq(std::string_view seq)
     std::vector<placement> placements;
     for (const auto& edge: _edges)
     {
-        const auto node = _original_tree.get_by_postorder_id(edge);
+        const auto node = _original_tree.get_by_postorder_id((i2l::phylo_node::id_type)edge);
         if (!node)
         {
             throw std::runtime_error("Could not find node by post-order id: " + std::to_string(edge));
@@ -345,7 +347,5 @@ placed_sequence placer::place_seq(std::string_view seq)
         const auto distal_length = (*node)->get_branch_length() / 2;
         placements.push_back({edge, _scores[edge], 0.0, _counts[edge], distal_length, _pendant_lengths[edge] });
     }
-
-    //return { seq, select_best_placements(std::move(placements), _keep_at_most) };
-    return { seq, std::move(placements) };
+    return { seq, std::move(placements), total_score };
 }

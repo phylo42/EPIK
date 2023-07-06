@@ -17,15 +17,16 @@
 namespace epik::impl
 {
     using lwr_type = float;
-    extern float (*pow)(float, float);  // declaration
+    extern float (*pow)(float, float);
 }
 #else
 #include <boost/multiprecision/float128.hpp>
 
 namespace epik::impl
 {
-    using lwr_type = boost::multiprecision::float128;
-    extern lwr_type (*pow)(const lwr_type&, const lwr_type&);  // declaration
+    //using lwr_type = boost::multiprecision::float128;
+    //extern lwr_type (*pow)(const lwr_type&, const lwr_type&);
+    extern double (*pow)(double, double);
 }
 #endif
 
@@ -43,7 +44,8 @@ namespace epik::impl
     /// A placement of one sequence
     struct placement {
     public:
-        using weight_ratio_type = lwr_type;
+        //using weight_ratio_type = lwr_type;
+        using weight_ratio_type = double;
 
         i2l::phylo_kmer::branch_type branch_id;
         i2l::phylo_kmer::score_type score;
@@ -57,6 +59,13 @@ namespace epik::impl
     struct placed_sequence {
         std::string_view sequence;
         std::vector<placement> placements;
+        i2l::phylo_kmer::score_type score_sum;
+
+        placed_sequence() = default;
+        placed_sequence(const placed_sequence&) = delete;
+        placed_sequence(placed_sequence&&) noexcept = default;
+        placed_sequence& operator=(const placed_sequence&) = delete;
+        placed_sequence& operator=(placed_sequence&&) noexcept = default;
     };
 
     /// \brief A collection of placed sequences
@@ -95,7 +104,6 @@ namespace epik
 
         /// \brief Places a fasta sequence
         placed_sequence place_seq(std::string_view seq);
-
 
         epik::impl::placement::weight_ratio_type sum_scores(const std::vector<epik::impl::placement>& placements,
                                                             std::string_view seq);
