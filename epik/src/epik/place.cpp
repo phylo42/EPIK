@@ -221,11 +221,6 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 
     /// Results of DB search for exact k-mers and
     /// pairs (k-mer, results of search) for ambiguous k-mers
-    /*std::pair<
-        search_result,
-        std::vector<std::pair<i2l::phylo_kmer::key_type, search_result>>
-    > result;*/
-
     struct kmer_results
     {
         search_result exact;
@@ -261,6 +256,7 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 }
 
 
+
 /// \brief Places a fasta sequence
 placed_sequence placer::place_seq(std::string_view seq)
 {
@@ -290,56 +286,21 @@ placed_sequence placer::place_seq(std::string_view seq)
     const auto search_results = query_kmers(seq, _db);
     const auto exact_phylo_kmers = search_results.exact;
 
-/*
-    /// Now let's update the score vectors according to retrieved values
-    for (auto exact_result : exact_phylo_kmers)
+//#define EPIK_BLOCK
+    //if (_max_threads == 1)
+#ifdef EPIK_BLOCK
+    if (false)
+#else
+    if (true)
+#endif
     {
-        if (exact_result)
+        /// Now let's update the score vectors according to retrieved values
+        for (auto exact_result : exact_phylo_kmers)
         {
-            for (const auto& [postorder_node_id, score] : *exact_result)
+            if (exact_result)
             {
-                if (thread_counts[postorder_node_id] == 0)
+                for (const auto& [postorder_node_id, score] : *exact_result)
                 {
-                    thread_edges.push_back(postorder_node_id);
-                }
-
-                thread_counts[postorder_node_id] += 1;
-                thread_scores[postorder_node_id] += score;
-            }
-        }
-    }
-*/
-
-    const size_t kmer_batch_size = 16;
-    const size_t num_kmer_batches = std::ceil((float)exact_phylo_kmers.size() / (float)kmer_batch_size);
-    const size_t branch_batch_size = 32;
-    const auto max_node_id = _original_tree.get_node_count();
-
-    std::array<uint16_t, kmer_batch_size> kmer_indices {};
-    for (size_t kmer_batch = 0; kmer_batch < num_kmer_batches; kmer_batch++)
-    {
-        std::fill(kmer_indices.begin(), kmer_indices.end(), 0);
-
-        for (size_t branch_batch_begin = 0; branch_batch_begin < max_node_id; branch_batch_begin += branch_batch_size)
-        {
-            const auto batch_end = branch_batch_begin + branch_batch_size;
-
-            // Process all k-mers
-            for (size_t i = 0; i < kmer_batch_size; ++i)
-            {
-                const auto kmer_index = kmer_batch_size * kmer_batch + i;
-
-                if (kmer_index >= num_of_kmers)
-                {
-                    break;
-                }
-                const auto& exact_result = exact_phylo_kmers[kmer_index];
-
-                // Process all exact_result entries within the current batch range
-                while (kmer_indices[i] < exact_result->size() &&
-                       (*exact_result)[kmer_indices[i]].branch < batch_end)
-                {
-                    const auto [postorder_node_id, score] = (*exact_result)[kmer_indices[i]];
                     if (thread_counts[postorder_node_id] == 0)
                     {
                         thread_edges.push_back(postorder_node_id);
@@ -347,13 +308,56 @@ placed_sequence placer::place_seq(std::string_view seq)
 
                     thread_counts[postorder_node_id] += 1;
                     thread_scores[postorder_node_id] += score;
-
-                    kmer_indices[i]++;
                 }
             }
         }
     }
+    else
+    {
+        const size_t kmer_batch_size = 1;
+        const size_t num_kmer_batches = std::ceil((float)exact_phylo_kmers.size() / (float)kmer_batch_size);
+        const auto max_node_id = _original_tree.get_node_count();
+        const size_t branch_batch_size = max_node_id;
 
+        std::array<uint16_t, kmer_batch_size> kmer_indices {};
+        for (size_t kmer_batch = 0; kmer_batch < num_kmer_batches; kmer_batch++)
+        {
+            std::fill(kmer_indices.begin(), kmer_indices.end(), 0);
+
+            for (size_t branch_batch_begin = 0; branch_batch_begin < max_node_id; branch_batch_begin += branch_batch_size)
+            {
+                const auto batch_end = branch_batch_begin + branch_batch_size;
+
+                // Process all k-mers
+                for (size_t i = 0; i < kmer_batch_size; ++i)
+                {
+                    const auto kmer_index = kmer_batch_size * kmer_batch + i;
+
+                    if (kmer_index >= num_of_kmers)
+                    {
+                        break;
+                    }
+                    const auto& exact_result = exact_phylo_kmers[kmer_index];
+
+                    // Process all exact_result entries within the current batch range
+                    while (kmer_indices[i] < exact_result->size() &&
+                           (*exact_result)[kmer_indices[i]].branch < batch_end)
+                    {
+                        const auto [postorder_node_id, score] = (*exact_result)[kmer_indices[i]];
+                        if (thread_counts[postorder_node_id] == 0)
+                        {
+                            thread_edges.push_back(postorder_node_id);
+                        }
+
+                        thread_counts[postorder_node_id] += 1;
+                        thread_scores[postorder_node_id] += score;
+
+                        kmer_indices[i]++;
+                    }
+                }
+            }
+        }
+    }
 
     const auto ambiguous_phylo_kmers = search_results.ambiguous;
     /// Now let's update the score vectors according to retrieved values
@@ -383,8 +387,8 @@ placed_sequence placer::place_seq(std::string_view seq)
                 for (const auto postorder_node_id: l_amb)
                 {
                     const auto average_prob = (thread_scores_amb[postorder_node_id] +
-                        static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold)
-                            / static_cast<float>(w_size);
+                                               static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold)
+                                              / static_cast<float>(w_size);
 
                     if (thread_counts[postorder_node_id] == 0)
                     {
@@ -396,7 +400,6 @@ placed_sequence placer::place_seq(std::string_view seq)
                 }
             }
         }
-
     }
 
     /// Score correction
