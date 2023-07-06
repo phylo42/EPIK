@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <cmath>
 #include <iostream>
+#include <i2l/seq.h>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/phylo_tree.h>
 #include <i2l/kmer_iterator.h>
@@ -11,6 +12,8 @@
 #include <epik/place.h>
 #ifdef EPIK_OMP
 #include <omp.h>
+#include <chrono>
+
 #endif
 
 using namespace epik::impl;
@@ -59,12 +62,12 @@ placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tre
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
-    , _num_threads{ num_threads }
-    , _scores(num_threads, score_vector(original_tree.get_node_count()))
-    , _scores_amb(num_threads, score_vector(original_tree.get_node_count()))
-    , _counts(num_threads, count_vector(original_tree.get_node_count()))
-    , _counts_amb(num_threads, count_vector(original_tree.get_node_count()))
-    , _edges(num_threads)
+    , _max_threads{ std::max(num_threads, 1ul) }
+    , _scores(_max_threads, score_vector(original_tree.get_node_count()))
+    , _scores_amb(_max_threads, score_vector(original_tree.get_node_count()))
+    , _counts(_max_threads, count_vector(original_tree.get_node_count()))
+    , _counts_amb(_max_threads, count_vector(original_tree.get_node_count()))
+    , _edges(_max_threads)
 {
     /// precompute pendant lengths
     for (i2l::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
@@ -123,7 +126,7 @@ std::vector<placement> filter_by_ratio(const std::vector<placement>& placements,
     return result;
 }
 
-placed_collection placer::place(const std::vector<seq_record>& seq_records)
+placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads)
 {
     /// There may be identical sequences with different headers. We group them
     /// by the sequence content to not to place the same sequences more than once
@@ -137,15 +140,16 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records)
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
 
+    const auto begin_omp = std::chrono::steady_clock::now();
+
 #ifdef EPIK_OMP
     #if __GNUC__ && (__GNUC__ < 9)
     /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
-#pragma omp parallel for schedule(dynamic) num_threads(_num_threads) default(none) shared(placed_seqs)
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) default(none) shared(placed_seqs)
     #else
-#pragma omp parallel for schedule(dynamic) num_threads(_num_threads) \
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
     default(none) shared(unique_sequences, placed_seqs)
     #endif
-
 #endif
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
@@ -176,6 +180,11 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records)
         /// Remove placements with low weight ratio
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
+    const auto end_omp = std::chrono::steady_clock::now();
+    const float seconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_omp - begin_omp).count() / 1000.0f;
+    float speed = seq_records.size() / seconds / num_threads;
+    std::cout << "Query/sec (per thread): " << speed << std::endl << std::endl;
     return { sequence_map, placed_seqs };
 }
 
@@ -208,11 +217,89 @@ std::vector<placement> select_best_placements(std::vector<placement> placements,
 
 #include <xmmintrin.h>
 
+auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
+{
+    using search_result = std::vector<decltype(db.search(0))>;
+
+    /// Results of DB search for exact k-mers and
+    /// pairs (k-mer, results of search) for ambiguous k-mers
+    struct kmer_results
+    {
+        search_result exact;
+        std::vector<search_result> ambiguous;
+    };
+    kmer_results result;
+
+    result.exact.reserve(seq.size() - db.kmer_size() + 1);
+
+    /// Query every k-mer that has no more than one ambiguous character
+    for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, db.kmer_size()))
+    {
+        (void) kmer;
+        if (keys.size() == 1)
+        {
+            const auto key = keys[0];
+            auto key_result = db.search(key);
+            if (key_result)
+            {
+                result.exact.push_back(key_result);
+            }
+        }
+        else
+        {
+            for (const auto& key : keys)
+            {
+                result.ambiguous.emplace_back();
+                result.ambiguous.back().push_back(db.search(key));
+            }
+        }
+    }
+    return result;
+}
+
+template <class T>
+void update_vector(std::vector<i2l::phylo_kmer::score_type>& vec,
+                  std::vector<size_t>& counts,
+                  std::vector<i2l::phylo_kmer::branch_type>& edges,
+                  const T& updates) {
+    int i = 0;
+
+    // Process updates in blocks of 4 as long as possible
+    for (; i <= (int)updates.size() - 4; i += 4) {
+        // Load score updates
+        __m128 simdValues =  _mm_set_ps(updates[i].score, updates[i+1].score,
+                                        updates[i+2].score, updates[i+3].score);
+
+        // Load the current scores
+        __m128 currentValues = _mm_set_ps(vec[updates[i].branch], vec[updates[i+1].branch],
+                                          vec[updates[i+2].branch], vec[updates[i+3].branch]);
+
+        // SIMD Aadd
+        __m128 newValues = _mm_add_ps(currentValues, simdValues);
+
+        // Store the new values back in the vector individually
+        for (int j = 0; j < 4; j++) {
+            vec[updates[i+j].branch] = newValues[j];
+            if (counts[updates[i+j].branch] == 0)
+            {
+                edges.push_back(updates[i+j].branch);
+            }
+            counts[updates[i+j].branch]++;
+        }
+    }
+
+    // Process the remaining updates
+    for (; i < (int)updates.size(); i++) {
+        vec[updates[i].branch] += updates[i].score;
+        counts[updates[i].branch]++;
+    }
+}
 
 /// \brief Places a fasta sequence
 placed_sequence placer::place_seq(std::string_view seq)
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
+
 #ifdef EPIK_OMP
     const auto thread_id = omp_get_thread_num();
 #else
@@ -233,150 +320,80 @@ placed_sequence placer::place_seq(std::string_view seq)
     }
     thread_edges.clear();
 
-    /// Query every k-mer that has no more than one ambiguous character
-    for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, _db.kmer_size()))
+    /// Let's query every k-mer in advance. We'll apply the scores later
+    const auto search_results = query_kmers(seq, _db);
+    const auto exact_phylo_kmers = search_results.exact;
+
+    /// Now let's update the score vectors according to retrieved values
+    for (auto exact_result : exact_phylo_kmers)
     {
-        (void)kmer;
-
-        /// if the k-mer is unambiguous
-        if (keys.size() == 1)
+        if (exact_result)
         {
-            const auto key = keys[0];
-
-            /// Update placements if found
-            if (const auto entries  = _db.search(key); entries)
-            {
-                const auto& [branches, updates] = *entries;
-#define SSE
+//#define SSE
 #ifdef SSE
-                const int num_entries = updates.size();
-                //const auto num_entries = std::distance(updates.begin(), updates.end());
+            //const int num_entries = static_cast<int>(exact_result->size());
+            //const auto num_entries = std::distance(updates.begin(), updates.end());
 
-                int i = 0;
-                for (; i < num_entries - 4; i += 4) {
-                    /// Load a block of current scores and score updates
-                    __m128 current_scores4 = _mm_load_ps((float*)&thread_scores[i]);
-                    __m128 score_updates4 = _mm_load_ps((float*)&updates[i]);
-
-                    // Add the updates to the current scores
-                    __m128 new_scores4 = _mm_add_ps(current_scores4, score_updates4);
-
-                    if (thread_counts[branches[i]] == 0)
-                    {
-                        thread_edges.push_back(branches[i]);
-                    }
-                    if (thread_counts[branches[i+1]] == 0)
-                    {
-                        thread_edges.push_back(branches[i+1]);
-                    }
-                    if (thread_counts[branches[i+2]] == 0)
-                    {
-                        thread_edges.push_back(branches[i+2]);
-                    }
-                    if (thread_counts[branches[i+3]] == 0)
-                    {
-                        thread_edges.push_back(branches[i+3]);
-                    }
-
-                    // Store the new values back in the vector
-                    thread_scores[branches[i]] = new_scores4[0];
-                    thread_scores[branches[i+1]] = new_scores4[1];
-                    thread_scores[branches[i+2]] = new_scores4[2];
-                    thread_scores[branches[i+3]] = new_scores4[3];
-
-                    thread_counts[branches[i]]++;
-                    thread_counts[branches[i+1]]++;
-                    thread_counts[branches[i+2]]++;
-                    thread_counts[branches[i+3]]++;
-                }
-
-                // Process the remaining updates
-                for (; i < num_entries; i++) {
-
-                    if (thread_counts[branches[i]] == 0)
-                    {
-                        thread_edges.push_back(branches[i]);
-                    }
-
-                    thread_counts[branches[i]] += 1;
-                    thread_scores[branches[i]] += updates[i];
-                }
+            update_vector(thread_scores, thread_counts, thread_edges, *exact_result);
 
 #else
-#ifdef KEEP_POSITIONS
-                for (const auto& [postorder_node_id, score, position] : *entries)
-                {
-                    (void)position;
-#else
-                for (size_t i = 0; i < branches.size(); ++i)
-                //for (const auto& [postorder_node_id, score] : *entries)
-                {
-                    const auto postorder_node_id = branches[i];
-                    const auto score = updates[i];
-#endif
-                    if (thread_counts[postorder_node_id] == 0)
-                    {
-                        thread_edges.push_back(postorder_node_id);
-                    }
-
-                    thread_counts[postorder_node_id] += 1;
-                    thread_scores[postorder_node_id] += score;
-                }
-                //std::cout << std::endl;
-#endif
-
-            }
-        }
-        /// treat ambiguities with mean
-        else
-        {
-            /*
-            /// hash set of branch ids that are scored by the ambiguous k-mer
-            std::unordered_set<i2l::phylo_kmer::branch_type> l_amb;
-
-            for (const auto& key : keys)
+            for (const auto& [postorder_node_id, score] : *exact_result)
             {
-                if (auto entries = _db.search(key); entries)
-                {
-#ifdef KEEP_POSITIONS
-                    for (const auto& [postorder_node_id, score, position] : *entries)
-                    {
-                        (void)position;
-#else
-                    for (const auto& [postorder_node_id, score] : *entries)
-                    {
-#endif
-                        if (thread_counts_amb[postorder_node_id] == 0)
-                        {
-                            l_amb.insert(postorder_node_id);
-                        }
-
-                        thread_counts_amb[postorder_node_id] += 1;
-                        thread_scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
-                    }
-                }
-            }
-
-            /// Number of keys resolved from the k-mer
-            const size_t w_size = keys.size();
-
-            /// Calculate average scores
-            for (const auto postorder_node_id : l_amb)
-            {
-                const auto average_prob = (
-                    thread_scores_amb[postorder_node_id] +
-                    static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold
-                    ) / static_cast<float>(w_size);
-
                 if (thread_counts[postorder_node_id] == 0)
                 {
                     thread_edges.push_back(postorder_node_id);
                 }
 
                 thread_counts[postorder_node_id] += 1;
-                thread_scores[postorder_node_id] += average_prob;
-            }*/
+                thread_scores[postorder_node_id] += score;
+            }
+#endif
         }
+
+    }
+
+    const auto ambiguous_phylo_kmers = search_results.ambiguous;
+    /// Now let's update the score vectors according to retrieved values
+    for (const auto& ambiguous_result : ambiguous_phylo_kmers)
+    {
+        /// hash set of branch ids that are scored by the ambiguous k-mer
+        std::unordered_set<i2l::phylo_kmer::branch_type> l_amb;
+        for (auto exact_result : ambiguous_result)
+        {
+            if (exact_result)
+            {
+                for (const auto& [postorder_node_id, score] : *exact_result)
+                {
+                    if (thread_counts_amb[postorder_node_id] == 0)
+                    {
+                        l_amb.insert(postorder_node_id);
+                    }
+
+                    thread_counts_amb[postorder_node_id] += 1;
+                    thread_scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
+                }
+
+                /// Number of keys resolved from the k-mer
+                const size_t w_size = _db.kmer_size();
+
+                /// Calculate average scores
+                for (const auto postorder_node_id: l_amb)
+                {
+                    const auto average_prob = (thread_scores_amb[postorder_node_id] +
+                                               static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold)
+                                              / static_cast<float>(w_size);
+
+                    if (thread_counts[postorder_node_id] == 0)
+                    {
+                        thread_edges.push_back(postorder_node_id);
+                    }
+
+                    thread_counts[postorder_node_id] += 1;
+                    thread_scores[postorder_node_id] += average_prob;
+                }
+            }
+        }
+
     }
 
     /// Score correction

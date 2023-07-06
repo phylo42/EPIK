@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+#include <future>
 #include <boost/filesystem.hpp>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/serialization.h>
@@ -36,6 +37,17 @@ void print_line()
         std::cout << '*';
     }
     std::cout << std::endl;
+}
+
+template<typename R>
+bool is_busy(const std::future<R>& f)
+{
+    return f.valid() && (f.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready);
+}
+
+auto time_diff(std::chrono::steady_clock::time_point begin, std::chrono::steady_clock::time_point end)
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 }
 
 int main(int argc, char** argv)
@@ -87,7 +99,6 @@ int main(int argc, char** argv)
         /// Here we transform the tree to .newick by our own to make sure the output format is always the same
         const auto tree_as_newick = i2l::io::to_newick(tree, true);
 
-
         for (int i = 4; i < argc; ++i)
         {
             print_line();
@@ -103,27 +114,26 @@ int main(int argc, char** argv)
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
             size_t num_seq_placed = 0;
-            const size_t batch_size = 10000;
 
-            auto reader = i2l::io::read_fasta(query_file);
-            auto it = reader.begin();
-            while (it != reader.end())
+            std::unordered_map<i2l::phylo_kmer::key_type,
+                               std::unordered_map<std::string_view, int>> kmer_map;
+
+            /// Batch query reading
+            auto reader = i2l::io::batch_fasta(query_file, 10000);
+            while (true)
             {
-                auto sequences = std::vector<i2l::seq_record>();
-                bool end = (it == reader.end());
-                size_t j = 0;
-                while (!end)
+                const auto batch = reader.next_batch();
+                if (batch.empty())
                 {
-                    sequences.push_back(*it);
-                    ++j;
-                    ++it;
-                    end = (j >= batch_size) || (it == reader.end());
+                    break;
                 }
-
-                const auto placed_batch = placer.place(sequences);
+                std::cout << "Placing... " << std::endl;
+                const auto begin_batch = std::chrono::steady_clock::now();
+                const auto placed_batch = placer.place(batch, num_threads);
+                const auto end_batch = std::chrono::steady_clock::now();
+                std::cout << "Placement done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
                 jplace << placed_batch;
-
-                num_seq_placed += sequences.size();
+                num_seq_placed += batch.size();
             }
             jplace.end();
 
