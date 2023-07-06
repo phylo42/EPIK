@@ -10,9 +10,20 @@
 #include <i2l/seq_record.h>
 #include <i2l/fasta.h>
 #include <epik/place.h>
-#ifdef EPIK_OMP
+
+#include <chrono>
+
+#if defined(EPIK_OMP)
 #include <omp.h>
 #endif
+
+#if defined(EPIK_SSE) or \
+    defined(EPIK_AVX) or \
+    defined(EPIK_AVX2) or \
+    defined(EPIK_AVX512)
+#include <epik/intrinsic.h>
+#endif
+
 
 using namespace epik::impl;
 using namespace epik;
@@ -29,15 +40,9 @@ namespace epik::impl
 }
 
 #else
-#include <boost/multiprecision/float128.hpp>
 
 namespace epik::impl
 {
-    /*lwr_type (*pow)(const lwr_type&, const lwr_type&) =
-    [](const lwr_type& base, const lwr_type& exponent) {
-        return boost::multiprecision::pow(base, exponent);
-    };*/
-
     double (*pow)(double, double) = std::pow;
 }
 #endif
@@ -201,6 +206,8 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
 
+    const auto begin_omp = std::chrono::steady_clock::now();
+
 #ifdef EPIK_OMP
     #if __GNUC__ && (__GNUC__ < 9)
     /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
@@ -240,8 +247,14 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         /// Remove placements with low weight ratio
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
+    const auto end_omp = std::chrono::steady_clock::now();
+    const float seconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_omp - begin_omp).count() / 1000.0f;
+    float speed = seq_records.size() / seconds / num_threads;
+    std::cout << "Query/sec (per thread): " << speed << std::endl << std::endl;
     return { sequence_map, std::move(placed_seqs) };
 }
+
 
 auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 {
@@ -249,11 +262,6 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 
     /// Results of DB search for exact k-mers and
     /// pairs (k-mer, results of search) for ambiguous k-mers
-    /*std::pair<
-        search_result,
-        std::vector<std::pair<i2l::phylo_kmer::key_type, search_result>>
-    > result;*/
-
     struct kmer_results
     {
         search_result exact;
@@ -270,7 +278,11 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
         if (keys.size() == 1)
         {
             const auto key = keys[0];
-            result.exact.push_back(db.search(key));
+            auto key_result = db.search(key);
+            if (key_result)
+            {
+                result.exact.push_back(key_result);
+            }
         }
         else
         {
@@ -289,7 +301,8 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 placed_sequence placer::place_seq(std::string_view seq)
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
-#ifdef EPIK_OMP
+
+#if defined(EPIK_OMP)
     const auto thread_id = omp_get_thread_num();
 #else
     const size_t thread_id = 0;
@@ -318,6 +331,11 @@ placed_sequence placer::place_seq(std::string_view seq)
     {
         if (exact_result)
         {
+
+#if defined(EPIK_SSE) or defined(EPIK_AVX) or defined(EPIK_AVX2) or defined(EPIK_AVX512)
+            update_vector(thread_scores, thread_counts, thread_edges, *exact_result);
+#else
+
             for (const auto& [postorder_node_id, score] : *exact_result)
             {
                 if (thread_counts[postorder_node_id] == 0)
@@ -325,10 +343,12 @@ placed_sequence placer::place_seq(std::string_view seq)
                     thread_edges.push_back(postorder_node_id);
                 }
 
-                thread_counts[postorder_node_id] += 1;
+                ++thread_counts[postorder_node_id];
                 thread_scores[postorder_node_id] += score;
             }
+#endif
         }
+
     }
 
     const auto ambiguous_phylo_kmers = search_results.ambiguous;
@@ -359,8 +379,8 @@ placed_sequence placer::place_seq(std::string_view seq)
                 for (const auto postorder_node_id: l_amb)
                 {
                     const auto average_prob = (thread_scores_amb[postorder_node_id] +
-                        static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold)
-                            / static_cast<float>(w_size);
+                                               static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold)
+                                              / static_cast<float>(w_size);
 
                     if (thread_counts[postorder_node_id] == 0)
                     {

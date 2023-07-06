@@ -50,6 +50,21 @@ auto time_diff(std::chrono::steady_clock::time_point begin, std::chrono::steady_
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 }
 
+void print_intruction_set()
+{
+#if defined(EPIK_SSE)
+    std::cout << "Instruction set: SSE" << std::endl;
+#elif defined(EPIK_AVX)
+    std::cout << "Instruction set: AVX" << std::endl;
+#elif defined(EPIK_AVX2)
+    std::cout << "Instruction set: AVX2" << std::endl;
+#elif defined(EPIK_AVX512)
+    std::cout << "Intruction set: AVX-512" << std::endl;
+#else
+    std::cout << "Instruction set: scalar" << std::endl;
+#endif
+}
+
 int main(int argc, char** argv)
 {
     std::ios::sync_with_stdio(false);
@@ -111,6 +126,8 @@ int main(int argc, char** argv)
             jplace.start();
 
             std::cout << "Placing " << query_file << "..." << std::endl;
+            print_intruction_set();
+
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
             size_t num_seq_placed = 0;
