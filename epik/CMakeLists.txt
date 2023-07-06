@@ -40,17 +40,20 @@ target_link_libraries(epik-dna
             Boost::program_options
             Boost::filesystem
             Boost::iostreams
-            quadmath
 )
 
 if(ENABLE_OMP)
     target_link_libraries(epik-dna PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(epik-dna PRIVATE quadmath)
+endif()
+
 # Turn on the warnings and treat them as errors
 target_compile_options(epik-dna
         PRIVATE
-            -Wall -Wextra -Werror
+            -Wall -Wextra -Wpedantic
 )
 
 
@@ -79,15 +82,19 @@ target_link_libraries(epik-aa
         Boost::program_options
         Boost::filesystem
         Boost::iostreams
-        quadmath
         )
+
 if(ENABLE_OMP)
     target_link_libraries(epik-aa PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(epik-dna PRIVATE quadmath)
+endif()
+
 target_compile_options(epik-aa
         PRIVATE
-        -Wall -Wextra -Werror
+        -Wall -Wextra -Wpedantic
         )
 
 target_compile_features(epik-aa

@@ -9,8 +9,8 @@ namespace epik
 {
     namespace impl
     {
-        class placed_sequence;
-        class placed_collection;
+        struct placed_sequence;
+        struct placed_collection;
     }
 
     namespace io

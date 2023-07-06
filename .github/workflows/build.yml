@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-20.04] #, macos-13, macos-12 ]
+        os: [ ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
         include:
           - os: ubuntu-22.04
             buildname: 'ubuntu-22.04'
@@ -24,14 +24,14 @@ jobs:
             buildname: 'ubuntu-20.04'
             triplet: x64-linux
             compiler: gcc_64
-          #- os: macos-13
-          #  buildname: 'macos-13'
-          #  triplet: x64-osx
-          #  compiler: clang_64
-          #- os: macos-12
-          #  buildname: 'macos-12'
-          #  triplet: x64-osx
-          #  compiler: clang_64
+          - os: macos-13
+            buildname: 'macos-13'
+            triplet: x64-osx
+            compiler: clang_64
+          - os: macos-12
+            buildname: 'macos-12'
+            triplet: x64-osx
+            compiler: clang_64
 
     steps:
       - name: Checkout
@@ -39,23 +39,32 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Get number of CPU cores
+        uses: SimenB/github-actions-cpu-cores@v1
+        id: cpu-cores
+
       - name: (MacOS) Install dependencies
         if: runner.os == 'macOS'
-        run: brew update && brew install cmake boost zlib rapidjson && pip3 install click
+        run: brew update && brew install cmake boost zlib rapidjson libomp && pip3 install click
 
       - name: (Linux) Install dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip && pip install click
+        run: sudo apt-get update && sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip && pip3 install click
 
-      - name: Configure CMake
+      - name: (MacOS) Configure CMake
+        if: runner.os == 'macOS'
+        run: cmake -DCMAKE_CXX_FLAGS="-L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include" -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY="/usr/local/opt/libomp/lib/libomp.dylib" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: (Linux) Configure CMake
+        if: runner.os == 'Linux'
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: Build
-        run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE
+        run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE -j ${{ steps.cpu-cores.outputs.count }}
 
       - name: Test build successful
         working-directory: ${{runner.workspace}}/bin
-        run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-dna
+        run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-aa
 
       - name: Test python script
         run: python3 epik.py place --help

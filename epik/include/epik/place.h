@@ -6,7 +6,30 @@
 #include <i2l/phylo_kmer.h>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/phylo_tree.h>
+
+#ifdef __clang__
+/// Clang still does not fully support boost::multiprecion.
+/// We use floats instead despite of known precion-related
+/// issues in rare cases
+
+#include <cmath>
+
+namespace epik::impl
+{
+    using lwr_type = float;
+    extern float (*pow)(float, float);
+}
+#else
 #include <boost/multiprecision/float128.hpp>
+
+namespace epik::impl
+{
+    //using lwr_type = boost::multiprecision::float128;
+    //extern lwr_type (*pow)(const lwr_type&, const lwr_type&);
+    extern double (*pow)(double, double);
+}
+#endif
+
 
 namespace i2l
 {
@@ -21,7 +44,8 @@ namespace epik::impl
     /// A placement of one sequence
     struct placement {
     public:
-        using weight_ratio_type = boost::multiprecision::float128;
+        //using weight_ratio_type = lwr_type;
+        using weight_ratio_type = double;
 
         i2l::phylo_kmer::branch_type branch_id;
         i2l::phylo_kmer::score_type score;
@@ -35,6 +59,12 @@ namespace epik::impl
     struct placed_sequence {
         std::string_view sequence;
         std::vector<placement> placements;
+
+        placed_sequence() = default;
+        placed_sequence(const placed_sequence&) = delete;
+        placed_sequence(placed_sequence&&) noexcept = default;
+        placed_sequence& operator=(const placed_sequence&) = delete;
+        placed_sequence& operator=(placed_sequence&&) noexcept = default;
     };
 
     /// \brief A collection of placed sequences
@@ -76,6 +106,9 @@ namespace epik
 
         /// \brief Places a fasta sequence
         placed_sequence place_seq(std::string_view seq);
+
+        epik::impl::placement::weight_ratio_type sum_scores(const std::vector<epik::impl::placement>& placements,
+                                                            std::string_view seq);
 
         const i2l::phylo_kmer_db& _db;
         const i2l::phylo_tree& _original_tree;

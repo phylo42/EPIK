@@ -19,11 +19,34 @@ using namespace epik;
 using i2l::seq_record;
 
 
-/// \brief Copies the keys of an input map to a vector
-template<typename K, typename V, template<class, class> typename Map>
-std::vector<K> copy_keys(const Map<K, V>& map)
+#ifdef __clang__
+
+#include <cmath>
+
+namespace epik::impl
 {
-    std::vector<K> values;
+    float (*pow)(float, float) = std::pow;
+}
+
+#else
+#include <boost/multiprecision/float128.hpp>
+
+namespace epik::impl
+{
+    /*lwr_type (*pow)(const lwr_type&, const lwr_type&) =
+    [](const lwr_type& base, const lwr_type& exponent) {
+        return boost::multiprecision::pow(base, exponent);
+    };*/
+
+    double (*pow)(double, double) = std::pow;
+}
+#endif
+
+
+/// \brief Copies the keys of an input map to a vector
+std::vector<std::string_view> copy_keys(const sequence_map_t& map)
+{
+    std::vector<std::string_view> values;
     values.reserve(map.size());
 
     for(const auto& [key, value] : map)
@@ -97,89 +120,6 @@ placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tre
     }
 }
 
-/// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
-/// We use a longer float type, not phylo_kmer::score_type here, because 10 ** score can be a small number.
-placement::weight_ratio_type sum_scores(const std::vector<placement>& placements)
-{
-    placement::weight_ratio_type sum = 0.0;
-    for (const auto& placement : placements)
-    {
-        sum += boost::multiprecision::pow(10.0, placement::weight_ratio_type(placement.score));
-    }
-    return sum;
-}
-
-/// \brief Copies placements that have a weight ratio >= some threshold value. The threshold
-/// is calculated as a relative _keep_factor from a maximum weight_ratio among the given placements.
-std::vector<placement> filter_by_ratio(const std::vector<placement>& placements, double _keep_factor)
-{
-    /// calculate the ratio threshold. Here we assume that input placements are sorted
-    const auto best_ratio = placements.size() > 0 ? placements[0].weight_ratio : 0.0f;
-    const auto ratio_threshold = best_ratio *_keep_factor;
-
-    std::vector<placement> result;
-    result.reserve(placements.size());
-    std::copy_if(std::begin(placements), std::end(placements), std::back_inserter(result),
-                 [ratio_threshold](const placement& p) { return p.weight_ratio >= ratio_threshold; });
-    return result;
-}
-
-placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads)
-{
-    /// There may be identical sequences with different headers. We group them
-    /// by the sequence content to not to place the same sequences more than once
-    const auto sequence_map = group_by_sequence_content(seq_records);
-
-    /// To support OpenMP, we need to iterate over unique sequences in the old-style fashion.
-    /// To do this, we copy all the unique keys from a map to a vector.
-    /// Keys are std::string_view's, so copying is cheap enough
-    const auto unique_sequences = copy_keys(sequence_map);
-
-    /// Place only unique sequences
-    std::vector<placed_sequence> placed_seqs(unique_sequences.size());
-
-#ifdef EPIK_OMP
-    #if __GNUC__ && (__GNUC__ < 9)
-    /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
-#pragma omp parallel for schedule(dynamic) num_threads(num_threads) default(none) shared(placed_seqs)
-    #else
-#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
-    default(none) shared(unique_sequences, placed_seqs)
-    #endif
-
-#endif
-    for (size_t i = 0; i < unique_sequences.size(); ++i)
-    {
-        auto keep_factor = _keep_factor;
-        const auto sequence = unique_sequences[i];
-
-        placed_seqs[i] = place_seq(sequence);
-
-        /// compute weight ratio
-        const auto score_sum = sum_scores(placed_seqs[i].placements);
-        for (auto& placement : placed_seqs[i].placements)
-        {
-            /// If the scores are that small that taking 10 to these powers is still zero
-            /// according to boost::multiprecision::pow, then score_sum is zero.
-            /// Assign all weight_ration to zeros and keep_factor to zero as well to
-            /// not filter them out.
-            if (score_sum == 0)
-            {
-                placement.weight_ratio = 0.0f;
-                keep_factor = 0.0f;
-            }
-            else
-            {
-                placement.weight_ratio = boost::multiprecision::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
-            }
-        }
-
-        /// Remove placements with low weight ratio
-        placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
-    }
-    return { sequence_map, placed_seqs };
-}
-
 bool compare_placed_branches(const placement& lhs, const placement& rhs)
 {
     return lhs.score > rhs.score;
@@ -205,6 +145,102 @@ std::vector<placement> select_best_placements(std::vector<placement> placements,
                       compare_placed_branches);
     placements.resize(return_size);
     return placements;
+}
+
+
+/// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
+/// We use a longer float type, not phylo_kmer::score_type here, because 10 ** score can be a small number.
+placement::weight_ratio_type placer::sum_scores(const std::vector<placement>& placements, std::string_view seq)
+{
+    const auto num_branches = static_cast<i2l::phylo_kmer::score_type>(_original_tree.get_node_count());
+    const auto num_placements = static_cast<i2l::phylo_kmer::score_type>(placements.size());
+    const auto num_kmers = static_cast<i2l::phylo_kmer::score_type>(seq.size() - _db.kmer_size() + 1);
+    const auto kmer_size = static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
+
+    /// There are n branches where we placed the sequence, and N-n where we did not.
+    /// We score each of them with (#kmers * log_threshold) / k. This gives us the total score for
+    /// all branches to which the query was not placed:
+    placement::weight_ratio_type sum_not_placed =
+        (num_branches - num_placements) * epik::impl::pow(10.0, (num_kmers * _log_threshold / kmer_size));
+
+    /// The final sum includes branches that were scored by k-mers explicitly
+    placement::weight_ratio_type sum_placed = 0.0f;
+    for (const auto& placement : placements)
+    {
+        sum_placed += epik::impl::pow(10.0, placement::weight_ratio_type(placement.score));
+    }
+    return sum_not_placed + sum_placed;
+}
+
+/// \brief Copies placements that have a weight ratio >= some threshold value. The threshold
+/// is calculated as a relative _keep_factor from a maximum weight_ratio among the given placements.
+std::vector<placement> filter_by_ratio(const std::vector<placement>& placements, double _keep_factor)
+{
+    /// calculate the ratio threshold. Here we assume that input placements are sorted
+    const auto best_ratio = placements.empty() ? 0.0f : placements[0].weight_ratio;
+    const auto ratio_threshold = best_ratio * _keep_factor;
+
+    std::vector<placement> result;
+    result.reserve(placements.size());
+    std::copy_if(std::begin(placements), std::end(placements), std::back_inserter(result),
+                 [ratio_threshold](const placement& p) { return p.weight_ratio >= ratio_threshold; });
+    return result;
+}
+
+placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads)
+{
+    /// There may be identical sequences with different headers. We group them
+    /// by the sequence content to not to place the same sequences more than once
+    const auto sequence_map = group_by_sequence_content(seq_records);
+
+    /// To support OpenMP, we need to iterate over unique sequences in the old-style fashion.
+    /// To do this, we copy all the unique keys from a map to a vector.
+    /// Keys are std::string_view's, so copying is cheap enough
+    const auto unique_sequences = copy_keys(sequence_map);
+
+    /// Place only unique sequences
+    std::vector<placed_sequence> placed_seqs(unique_sequences.size());
+
+#ifdef EPIK_OMP
+    #if __GNUC__ && (__GNUC__ < 9)
+    /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) default(none) shared(epik::impl::pow, placed_seqs)
+    #else
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
+    default(none) shared(epik::impl::pow, unique_sequences, placed_seqs)
+    #endif
+#endif
+    for (size_t i = 0; i < unique_sequences.size(); ++i)
+    {
+        auto keep_factor = _keep_factor;
+        const auto sequence = unique_sequences[i];
+
+        placed_seqs[i] = place_seq(sequence);
+
+        /// compute weight ratio
+        const auto score_sum = sum_scores(placed_seqs[i].placements, sequence);
+        placed_seqs[i].placements = select_best_placements(std::move(placed_seqs[i].placements), _keep_at_most);
+        for (auto& placement : placed_seqs[i].placements)
+        {
+            /// If the scores are that small that taking 10 to these powers is still zero
+            /// according to boost::multiprecision::pow, then score_sum is zero.
+            /// Assign all weight_ration to zeros and keep_factor to zero as well to
+            /// not filter them out.
+            if (score_sum == 0)
+            {
+                placement.weight_ratio = 0.0f;
+                keep_factor = 0.0f;
+            }
+            else
+            {
+                placement.weight_ratio = epik::impl::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
+            }
+        }
+
+        /// Remove placements with low weight ratio
+        placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
+    }
+    return { sequence_map, std::move(placed_seqs) };
 }
 
 auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
@@ -343,6 +379,7 @@ placed_sequence placer::place_seq(std::string_view seq)
     for (const auto& edge: thread_edges)
     {
         thread_scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - thread_counts[edge]) * _log_threshold;
+        thread_scores[edge] /= static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
     }
 
     std::vector<placement> placements;
@@ -350,7 +387,7 @@ placed_sequence placer::place_seq(std::string_view seq)
 
     for (const auto& edge: thread_edges)
     {
-        const auto node = _original_tree.get_by_postorder_id(edge);
+        const auto node = _original_tree.get_by_postorder_id((i2l::phylo_node::id_type)edge);
         if (!node)
         {
             throw std::runtime_error("Could not find node by post-order id: " + std::to_string(edge));
@@ -360,6 +397,5 @@ placed_sequence placer::place_seq(std::string_view seq)
         placements.push_back({ edge, thread_scores[edge], 0.0,
                                thread_counts[edge], distal_length, _pendant_lengths[edge] });
     }
-
-    return { seq, select_best_placements(std::move(placements), _keep_at_most) };
+    return { seq, std::move(placements) };
 }
