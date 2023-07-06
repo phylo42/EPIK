@@ -10,11 +10,20 @@
 #include <i2l/seq_record.h>
 #include <i2l/fasta.h>
 #include <epik/place.h>
-#ifdef EPIK_OMP
-#include <omp.h>
+
 #include <chrono>
 
+#if defined(EPIK_OMP)
+#include <omp.h>
 #endif
+
+#if defined(EPIK_SSE) or \
+    defined(EPIK_AVX) or \
+    defined(EPIK_AVX2) or \
+    defined(EPIK_AVX512)
+#include <epik/intrinsic.h>
+#endif
+
 
 using namespace epik::impl;
 using namespace epik;
@@ -215,7 +224,6 @@ std::vector<placement> select_best_placements(std::vector<placement> placements,
     return placements;
 }
 
-#include <xmmintrin.h>
 
 auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 {
@@ -257,50 +265,13 @@ auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
     return result;
 }
 
-template <class T>
-void update_vector(std::vector<i2l::phylo_kmer::score_type>& vec,
-                  std::vector<size_t>& counts,
-                  std::vector<i2l::phylo_kmer::branch_type>& edges,
-                  const T& updates) {
-    int i = 0;
-
-    // Process updates in blocks of 4 as long as possible
-    for (; i <= (int)updates.size() - 4; i += 4) {
-        // Load score updates
-        __m128 simdValues =  _mm_set_ps(updates[i].score, updates[i+1].score,
-                                        updates[i+2].score, updates[i+3].score);
-
-        // Load the current scores
-        __m128 currentValues = _mm_set_ps(vec[updates[i].branch], vec[updates[i+1].branch],
-                                          vec[updates[i+2].branch], vec[updates[i+3].branch]);
-
-        // SIMD Aadd
-        __m128 newValues = _mm_add_ps(currentValues, simdValues);
-
-        // Store the new values back in the vector individually
-        for (int j = 0; j < 4; j++) {
-            vec[updates[i+j].branch] = newValues[j];
-            if (counts[updates[i+j].branch] == 0)
-            {
-                edges.push_back(updates[i+j].branch);
-            }
-            counts[updates[i+j].branch]++;
-        }
-    }
-
-    // Process the remaining updates
-    for (; i < (int)updates.size(); i++) {
-        vec[updates[i].branch] += updates[i].score;
-        counts[updates[i].branch]++;
-    }
-}
 
 /// \brief Places a fasta sequence
 placed_sequence placer::place_seq(std::string_view seq)
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
 
-#ifdef EPIK_OMP
+#if defined(EPIK_OMP)
     const auto thread_id = omp_get_thread_num();
 #else
     const size_t thread_id = 0;
@@ -329,14 +300,11 @@ placed_sequence placer::place_seq(std::string_view seq)
     {
         if (exact_result)
         {
-//#define SSE
-#ifdef SSE
-            //const int num_entries = static_cast<int>(exact_result->size());
-            //const auto num_entries = std::distance(updates.begin(), updates.end());
 
+#if defined(EPIK_SSE) or defined(EPIK_AVX) or defined(EPIK_AVX2) or defined(EPIK_AVX512)
             update_vector(thread_scores, thread_counts, thread_edges, *exact_result);
-
 #else
+
             for (const auto& [postorder_node_id, score] : *exact_result)
             {
                 if (thread_counts[postorder_node_id] == 0)
@@ -344,7 +312,7 @@ placed_sequence placer::place_seq(std::string_view seq)
                     thread_edges.push_back(postorder_node_id);
                 }
 
-                thread_counts[postorder_node_id] += 1;
+                ++thread_counts[postorder_node_id];
                 thread_scores[postorder_node_id] += score;
             }
 #endif
