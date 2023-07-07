@@ -8,8 +8,9 @@ __author__ = "Nikolai Romashchenko"
 __license__ = "MIT"
 
 
+import click
 import json
-import sys
+import tqdm
 from copy import deepcopy
 from typing import Dict, List, Union, Mapping
 
@@ -156,8 +157,26 @@ def set_almost_equals(a, b, epsilon=EPSILON):
 
     return True
 
+def check_first(result1, result2) -> int:
+    # if both empty, return 1 matching record
+    if len(result1.placements) == len(result2.placements) == 0:
+        return 1
+    
+    # if only one is empty, return a non-match
+    if (len(result1.placements) == 0) or (len(result2.placements) == 0):
+        return 0
+    
+    placement1 = result1.placements[0]
+    placement2 = result2.placements[0]
 
-def jplace_diff(jplace1: str, jplace2: str) -> None:
+    return placement1.edge_num == placement2.edge_num
+
+
+@click.command()
+@click.argument('jplace1', type=click.Path(exists=True))
+@click.argument('jplace2', type=click.Path(exists=True))
+@click.option('--only-best', is_flag=True, default=False)
+def jplace_diff(jplace1: str, jplace2: str, only_first: bool) -> None:
     # parse the input files
     parser1 = JplaceParser(jplace1)
     parser1.parse()
@@ -167,53 +186,49 @@ def jplace_diff(jplace1: str, jplace2: str) -> None:
 
     num_seqs = len(parser1.placements)
     num_matches = 0
-    for name, result1 in parser1.placements.items():
+    for name, result1 in tqdm.tqdm(parser1.placements.items()):
 
         # get the placements for the same sequence from the second file
         result2 = parser2.placements[name]
 
-        records1 = dict((rec.edge_num, rec.likelihood) for rec in result1.placements)
-        records2 = dict((rec.edge_num, rec.likelihood) for rec in result2.placements)
-        edge_union = set(records1.keys()).union(set(records2.keys()))
+        if only_first:
+            num_matches += check_first(result1, result2)
+        else:
+            records1 = dict((rec.edge_num, rec.likelihood) for rec in result1.placements)
+            records2 = dict((rec.edge_num, rec.likelihood) for rec in result2.placements)
+            edge_union = set(records1.keys()).union(set(records2.keys()))
 
-        # check if scores of placements are all the same.
-        # If so, we can skip the sequence (no matter what branches are reported)
-        scores1 = set(rec.likelihood for rec in result1.placements)
-        scores2 = set(rec.likelihood for rec in result2.placements)
+            # check if scores of placements are all the same.
+            # If so, we can skip the sequence (no matter what branches are reported)
+            scores1 = set(rec.likelihood for rec in result1.placements)
+            scores2 = set(rec.likelihood for rec in result2.placements)
 
-        #print(name)
-        #print(scores1)
-        #print(scores2)
-        if set_almost_equals(scores1, scores2):
-            num_matches += 1
-            continue
+            if set_almost_equals(scores1, scores2):
+                num_matches += 1
+                continue
 
-        # compare placements one by one
-        found_mismatch = False
-        for edge in edge_union:
-            if edge not in records1:
-                conditional_print(f'\n{name}:', not found_mismatch)
-                found_mismatch = True
-                print(f"\t{edge} is not in the first file")
-            elif edge not in records2:
-                conditional_print(f'\n{name}:', not found_mismatch)
-                found_mismatch = True
-                print(f"\t{edge} is not in the second file")
-            # if found in both, check likelihoods
-            elif abs(10**records1[edge] - 10**records2[edge]) > EPSILON:
-                conditional_print(f'\n{name}:', not found_mismatch)
-                found_mismatch = True
-                print(f'\t[{edge}] {records1[edge]} != {records2[edge]}')
+            # compare placements one by one
+            found_mismatch = False
+            for edge in edge_union:
+                if edge not in records1:
+                    conditional_print(f'\n{name}:', not found_mismatch)
+                    found_mismatch = True
+                    print(f"\t{edge} is not in the first file")
+                elif edge not in records2:
+                    conditional_print(f'\n{name}:', not found_mismatch)
+                    found_mismatch = True
+                    print(f"\t{edge} is not in the second file")
+                # if found in both, check likelihoods
+                elif abs(10**records1[edge] - 10**records2[edge]) > EPSILON:
+                    conditional_print(f'\n{name}:', not found_mismatch)
+                    found_mismatch = True
+                    print(f'\t[{edge}] {records1[edge]} != {records2[edge]}')
 
-        if not found_mismatch:
-            num_matches += 1
+            if not found_mismatch:
+                num_matches += 1
 
     print(f"\n{num_matches}/{num_seqs} placements match.")
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 3
-
-    jplace1 = sys.argv[1]
-    jplace2 = sys.argv[2]
-    jplace_diff(jplace1, jplace2)
+    jplace_diff()
