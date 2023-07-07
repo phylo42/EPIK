@@ -7,7 +7,6 @@ set(ENABLE_AVX512 OFF)
 
 find_package(RapidJSON REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
-find_package(QuadMath REQUIRED)
 
 if(ENABLE_OMP)
     find_package(OpenMP REQUIRED)
@@ -69,10 +68,6 @@ if(ENABLE_OMP)
     target_link_libraries(epik-dna PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_link_libraries(epik-dna PRIVATE quadmath)
-endif()
-
 if(ENABLE_AVX2)
     # Add compiler flags for AVX2
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -125,9 +120,6 @@ if(ENABLE_OMP)
     target_link_libraries(epik-aa PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_link_libraries(epik-dna PRIVATE quadmath)
-endif()
 
 if(ENABLE_AVX512)
     # Add compiler flags for AVX-512
