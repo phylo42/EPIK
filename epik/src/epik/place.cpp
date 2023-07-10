@@ -206,8 +206,7 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
 
-    const auto begin_omp = std::chrono::steady_clock::now();
-
+    //const auto begin_omp = std::chrono::steady_clock::now();
 #ifdef EPIK_OMP
     #if __GNUC__ && (__GNUC__ < 9)
     /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
@@ -247,11 +246,11 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         /// Remove placements with low weight ratio
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
-    const auto end_omp = std::chrono::steady_clock::now();
-    const float seconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(
-        end_omp - begin_omp).count() / 1000.0f;
-    float speed = seq_records.size() / seconds / num_threads;
-    std::cout << "Query/sec (per thread): " << speed << std::endl << std::endl;
+    //const auto end_omp = std::chrono::steady_clock::now();
+    //const float seconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(
+    //    end_omp - begin_omp).count() / 1000.0f;
+    //float speed = seq_records.size() / seconds / num_threads;
+    //std::cout << "Query/sec (per thread): " << speed << std::endl << std::endl;
     return { sequence_map, std::move(placed_seqs) };
 }
 

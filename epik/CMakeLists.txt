@@ -6,7 +6,7 @@ set(ENABLE_AVX2 OFF)
 set(ENABLE_AVX512 OFF)
 
 find_package(RapidJSON REQUIRED)
-find_package(Boost REQUIRED COMPONENTS program_options filesystem iostreams)
+find_package(Boost REQUIRED COMPONENTS filesystem)
 
 if(ENABLE_OMP)
     find_package(OpenMP REQUIRED)
@@ -59,9 +59,9 @@ target_include_directories(epik-dna
 target_link_libraries(epik-dna
         PRIVATE
             i2l::dna
-            Boost::program_options
             Boost::filesystem
-            Boost::iostreams
+            indicators::indicators
+            cxxopts::cxxopts
 )
 
 if(ENABLE_OMP)
@@ -111,9 +111,9 @@ target_include_directories(epik-aa
 target_link_libraries(epik-aa
         PRIVATE
         i2l::aa
-        Boost::program_options
         Boost::filesystem
-        Boost::iostreams
+        indicators::indicators
+        cxxopts::cxxopts
         )
 
 if(ENABLE_OMP)

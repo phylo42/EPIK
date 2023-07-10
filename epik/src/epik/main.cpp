@@ -2,7 +2,11 @@
 #include <string>
 #include <chrono>
 #include <future>
+#include <sstream>
+#include <iomanip>
 #include <boost/filesystem.hpp>
+#include <indicators/cursor_control.hpp>
+#include <indicators/progress_bar.hpp>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/serialization.h>
 #include <i2l/phylo_tree.h>
@@ -11,13 +15,11 @@
 #include <epik/place.h>
 #include <epik/jplace.h>
 
-namespace fs = boost::filesystem;
-
 /// \brief Creates a string with wich the program was executed
 std::string make_invocation(int argc, char** argv)
 {
     std::vector<std::string> all_args(argv, argv + argc);
-    std::string invocation = "";
+    std::string invocation;
     for (const auto& arg : all_args)
     {
         invocation += arg + " ";
@@ -65,6 +67,73 @@ void print_intruction_set()
 #endif
 }
 
+/// Float-to-humanized string for better output
+std::string humanize(double num)
+{
+    std::ostringstream oss;
+    oss.precision(1);
+
+    if (num < 1000.0)
+    {
+        oss << std::fixed << num;
+    }
+    else if (num < 1000000.0)
+    {
+        oss << std::fixed << num / 1000.0 << "K";
+    }
+    else if (num < 1000000000.0)
+    {
+        oss << std::fixed << num / 1000000.0 << "M";
+    }
+    else
+    {
+        oss << std::fixed << num / 1000000000.0 << "B";
+    }
+
+    return oss.str();
+}
+
+/// Size_t-to-string that translates milliseconds to humanized time
+std::string humanize_time(size_t milliseconds)
+{
+    // Conversion constants
+    const size_t msPerSec = 1000;
+    const size_t msPerMin = 60 * msPerSec;
+    const size_t msPerHour = 60 * msPerMin;
+    const size_t msPerDay = 24 * msPerHour;
+
+    // Calculate time components
+    size_t days = milliseconds / msPerDay;
+    milliseconds %= msPerDay;
+    size_t hours = milliseconds / msPerHour;
+    milliseconds %= msPerHour;
+    size_t minutes = milliseconds / msPerMin;
+    milliseconds %= msPerMin;
+    size_t seconds = milliseconds / msPerSec;
+
+    std::ostringstream oss;
+    if (days > 0)
+    {
+        oss << days << " day";
+        if (days > 1)
+        {
+            oss << "s";
+        }
+        oss << ", ";
+    }
+
+    if (hours > 0 || days > 0)
+    {
+        oss << std::setw(2) << std::setfill('0') << hours << ":";
+    }
+
+    oss << std::setw(2) << std::setfill('0') << minutes << ":"
+        << std::setw(2) << std::setfill('0') << seconds;
+
+    return oss.str();
+}
+
+
 int main(int argc, char** argv)
 {
     std::ios::sync_with_stdio(false);
@@ -94,7 +163,10 @@ int main(int argc, char** argv)
 #endif
 
         std::cout << "Loading database..." << std::endl;
-        const auto db = i2l::load(db_file);
+        const auto batch_size = 1000u;
+        const auto user_omega = 1.7f;
+        const auto user_mu = 0.5f;
+        const auto db = i2l::load(db_file, user_mu, user_omega);
         if (db.version() < i2l::protocol::EARLIEST_INDEX)
         {
             std::cerr << "The serialization protocol version is too old (v" << db.version() << ").\n"
@@ -121,6 +193,7 @@ int main(int argc, char** argv)
 
             const auto jplace_filename = make_output_filename(query_file, output_dir).string();
             const auto invocation = make_invocation(argc, argv);
+            const auto total_fasta_size = fs::file_size(query_file);
 
             auto jplace = epik::io::jplace_writer(jplace_filename, invocation, tree_as_newick);
             jplace.start();
@@ -128,35 +201,77 @@ int main(int argc, char** argv)
             std::cout << "Placing " << query_file << "..." << std::endl;
             print_intruction_set();
 
+            using namespace indicators;
+            ProgressBar bar{
+                option::BarWidth{60},
+                option::Start{"["},
+                option::Fill{"="},
+                option::Lead{">"},
+                option::Remainder{" "},
+                option::End{"]"},
+                option::PrefixText{"Placing "},
+                option::ForegroundColor{Color::green},
+                option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
+                option::MaxProgress{total_fasta_size}
+            };
+
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
             size_t num_seq_placed = 0;
-
             std::unordered_map<i2l::phylo_kmer::key_type,
                                std::unordered_map<std::string_view, int>> kmer_map;
 
+            double average_speed = 0.0;
+            size_t num_iterations = 0;
+
             /// Batch query reading
-            auto reader = i2l::io::batch_fasta(query_file, 10000);
+            auto reader = i2l::io::batch_fasta(query_file, batch_size);
             while (true)
             {
+                // Synchronous reading of the next batch to place
                 const auto batch = reader.next_batch();
                 if (batch.empty())
                 {
                     break;
                 }
-                std::cout << "Placing... " << std::endl;
+
+                // Place in parallel
                 const auto begin_batch = std::chrono::steady_clock::now();
                 const auto placed_batch = placer.place(batch, num_threads);
                 const auto end_batch = std::chrono::steady_clock::now();
-                std::cout << "Placement done in " << time_diff(begin_batch, end_batch) << " ms. " << std::endl;
+
+                // Compute placement speed, sequences per second
+                const auto ms_diff = (float)(std::chrono::duration_cast<std::chrono::milliseconds>
+                    (end_batch - begin_batch).count());
+                const auto seq_per_second = 1000.0 * batch_size / ms_diff;
+                average_speed += seq_per_second;
+
+                // Update progress bar
+                bar.set_option(option::PrefixText{humanize(seq_per_second) + " seq/s "});
+                bar.set_option(option::PostfixText{std::to_string(num_seq_placed) + " / ?"});
+                bar.set_progress(reader.bytes_read());
+
+                // Synchronous output to the .jplace file
                 jplace << placed_batch;
+
                 num_seq_placed += batch.size();
+                ++num_iterations;
             }
             jplace.end();
 
-            std::cout << "Placed " << num_seq_placed << " sequences.\n" << std::flush;
-            std::cout << "Time (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - begin).count() << std::endl << std::endl;
+            average_speed /= (double)num_iterations;
+            bar.set_option(option::PrefixText{"Done. "});
+            bar.set_option(option::PostfixText{std::to_string(num_seq_placed)});
+            bar.set_progress(reader.bytes_read());
+
+            std::cout << std::endl << termcolor::bold << termcolor::white
+                      << "Placed " << num_seq_placed << " sequences.\nAverage speed: "
+                      << humanize(average_speed) << " seq/s.\n";
+
+            const auto placement_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - begin).count();
+            std::cout << "Placement time: " << humanize_time(placement_time)
+                << " (" << placement_time << " ms)" << termcolor::reset << std::endl;
         }
 
         std::cout << "Done." << '\n' << std::flush;
