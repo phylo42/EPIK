@@ -131,21 +131,27 @@ bool compare_placed_branches(const placement& lhs, const placement& rhs)
 }
 
 /// \brief Selects keep_at_most most placed branches among these that have count > 0
-std::vector<placement> select_best_placements(std::vector<placement> placements, size_t keep_at_most)
+std::vector<placement> placer::select_best_placements(std::vector<placement> placements, size_t num_kmers)
 {
     /// Partially select best keep_at_most placements
-    size_t return_size = std::min(keep_at_most, placements.size());
+    size_t return_size = std::min(_keep_at_most, placements.size());
 
     /// if no single query k-mer was found, all counts are zeros, and
-    /// we take just first keep_at_most branches
+    /// we create first keep_at_most placements
     if (return_size == 0)
     {
-        return_size = std::min(keep_at_most, placements.size());
-        placements.resize(return_size);
-        std::copy(placements.begin(), placements.end(), placements.begin());
+        return_size = _keep_at_most;
+        placements.reserve(return_size);
+
+        const auto threshold_score = _log_threshold * static_cast<i2l::phylo_kmer::score_type>(num_kmers)
+            / static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
+        for (size_t i = 0; i < _keep_at_most; ++i)
+        {
+            placements.push_back({ i2l::phylo_kmer::branch_type (i), threshold_score, 0.0, 0, 0.0, 0.0 });
+        }
     }
     std::partial_sort(std::begin(placements),
-                      std::begin(placements) + return_size,
+                      std::begin(placements) + (long)return_size,
                       std::end(placements),
                       compare_placed_branches);
     placements.resize(return_size);
@@ -225,7 +231,8 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
 
         /// compute weight ratio
         const auto score_sum = sum_scores(placed_seqs[i].placements, sequence);
-        placed_seqs[i].placements = select_best_placements(std::move(placed_seqs[i].placements), _keep_at_most);
+        const auto num_kmers = sequence.size() - _db.kmer_size() + 1;
+        placed_seqs[i].placements = select_best_placements(std::move(placed_seqs[i].placements), num_kmers);
         for (auto& placement : placed_seqs[i].placements)
         {
             /// If the scores are that small that taking 10 to these powers is still zero
@@ -239,7 +246,15 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
             }
             else
             {
-                placement.weight_ratio = epik::impl::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
+                const auto power = epik::impl::pow(10.0f, placement::weight_ratio_type(placement.score));
+                if (power == 0.0)
+                {
+                    placement.weight_ratio = 0.0;
+                }
+                else
+                {
+                    placement.weight_ratio = power / score_sum;
+                }
             }
         }
 

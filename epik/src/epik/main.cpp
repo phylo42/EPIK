@@ -193,7 +193,7 @@ int main(int argc, char** argv)
                   << "\tk: " << db.kmer_size() << std::endl
                   << "\tomega: " << db.omega() << std::endl
                   << "\tPositions loaded: " << (db.positions_loaded() ? "true" : "false") << std::endl << std::endl;
-        std::cout << "Loaded a database of " << humanize(db.get_num_entries_loaded()) << " phylo-k-mers. " << std::endl << std::endl;
+        std::cout << "Loaded " << humanize(db.get_num_entries_loaded()) << " phylo-k-mers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
         auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads);
@@ -277,6 +277,7 @@ int main(int argc, char** argv)
         std::cout << std::endl << termcolor::bold << termcolor::white
                   << "Placed " << num_seq_placed << " sequences.\nAverage speed: "
                   << humanize(average_speed) << " seq/s.\n";
+        std::cout << "Output: " << jplace_filename << std::endl;
 
         const auto placement_time = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - begin).count();

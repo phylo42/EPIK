@@ -110,6 +110,8 @@ namespace epik
         epik::impl::placement::weight_ratio_type sum_scores(const std::vector<epik::impl::placement>& placements,
                                                             std::string_view seq);
 
+        std::vector<impl::placement> select_best_placements(std::vector<impl::placement> placements, size_t num_kmers);
+
         const i2l::phylo_kmer_db& _db;
         const i2l::phylo_tree& _original_tree;
         const i2l::phylo_kmer::score_type _threshold;
