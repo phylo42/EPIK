@@ -60,7 +60,8 @@ void print_intruction_set()
 }
 
 /// Float-to-humanized string for better output
-std::string humanize(double num)
+template<typename T>
+std::string humanize(T num)
 {
     std::ostringstream oss;
     oss.precision(1);
@@ -192,7 +193,7 @@ int main(int argc, char** argv)
                   << "\tk: " << db.kmer_size() << std::endl
                   << "\tomega: " << db.omega() << std::endl
                   << "\tPositions loaded: " << (db.positions_loaded() ? "true" : "false") << std::endl << std::endl;
-        std::cout << "Loaded a database of " << db.size() << " phylo-kmers. " << std::endl << std::endl;
+        std::cout << "Loaded a database of " << humanize(db.get_num_entries_loaded()) << " phylo-k-mers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
         auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads);
@@ -248,8 +249,10 @@ int main(int argc, char** argv)
             const auto end_batch = std::chrono::steady_clock::now();
 
             // Compute placement speed, sequences per second
-            const auto ms_diff = (float)(std::chrono::duration_cast<std::chrono::milliseconds>
+            auto ms_diff = (float)(std::chrono::duration_cast<std::chrono::milliseconds>
                 (end_batch - begin_batch).count());
+            if (ms_diff == 0)
+                ms_diff = 1;
             const auto seq_per_second = 1000.0 * (double)batch_size / ms_diff;
             average_speed += seq_per_second;
 
