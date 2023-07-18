@@ -4,6 +4,8 @@
 #include <future>
 #include <sstream>
 #include <iomanip>
+#include <cctype>
+#include <stdexcept>
 #include <boost/filesystem.hpp>
 #include <cxxopts.hpp>
 #include <indicators/cursor_control.hpp>
@@ -126,6 +128,56 @@ std::string humanize_time(size_t milliseconds)
     return oss.str();
 }
 
+/// Parse the humanized RAM size to a number.
+/// I know that the name of this function is unfortunate.
+size_t dehumanize_ram(const std::string& max_ram)
+{
+    double value;
+    char unit = 0;
+    std::stringstream ss(max_ram);
+
+    // Parse the numerical part
+    ss >> value;
+    if (ss.fail())
+    {
+        throw std::runtime_error("Can't parse max_ram parameter: wrong numerical part");
+    }
+
+    // Check if there is a memory unit
+    if (!ss.eof())
+    {
+        ss >> unit;
+        if (ss.fail())
+        {
+            throw std::runtime_error("Can't parse max_ram parameter: wrong unit");
+        }
+    }
+
+    switch (std::toupper(unit))
+    {
+        case 0:
+            [[fallthrough]];
+        case 'B':
+            return static_cast<size_t>(value);
+        case 'K':
+            return static_cast<size_t>(value * 1024);
+        case 'M':
+            return static_cast<size_t>(value * 1024 * 1024);
+        case 'G':
+            return static_cast<size_t>(value * 1024 * 1024 * 1024);
+        default:
+            throw std::runtime_error("Unknown memory unit.");
+    }
+}
+
+void check_mu(float mu)
+{
+    if ((mu < 0.0) || (mu > 1.0))
+    {
+        throw std::runtime_error("Mu has to a value in [0, 1]");
+    }
+}
+
 
 int main(int argc, char** argv)
 {
@@ -139,6 +191,7 @@ int main(int argc, char** argv)
         ("batch-size", "Batch size", cxxopts::value<size_t>()->default_value("2000"))
         ("omega", "Determines the threshold value", cxxopts::value<float>()->default_value("1.5"))
         ("mu", "Proportion of the database to load", cxxopts::value<float>()->default_value("1.0"))
+        ("max-ram", "Approximate database size to load, MB", cxxopts::value<std::string>())
         ("o,output-dir", "Output directory", cxxopts::value<std::string>())
         ("keep-at-most", "Number of branches to report", cxxopts::value<size_t>()->default_value("7"))
         ("keep-factor", "Minimum LWR to report", cxxopts::value<double>()->default_value("0.01"))
@@ -166,9 +219,22 @@ int main(int argc, char** argv)
         const auto batch_size = parsed_options["batch-size"].as<size_t>();
         const auto user_omega = parsed_options["omega"].as<float>();
         const auto user_mu = parsed_options["mu"].as<float>();
+
         const auto keep_at_most = parsed_options["keep-at-most"].as<size_t>();
         const auto keep_factor = parsed_options["keep-factor"].as<double>();
         const auto output_dir = parsed_options["output-dir"].as<std::string>();
+
+        check_mu(user_mu);
+
+        size_t max_entries = std::numeric_limits<size_t>::max();
+        if (parsed_options.count("max-ram"))
+        {
+            const auto max_ram_string = parsed_options["max-ram"].as<std::string>();
+            const auto max_ram = dehumanize_ram(max_ram_string);
+            max_entries = max_ram / sizeof(i2l::pkdb_value);
+            std::cout << "Max-RAM provided: will be loaded not more than "
+                      << humanize(max_entries) << " phylo-k-mers." << std::endl;
+        }
 
 #ifndef EPIK_OMP
         if (num_threads != 1)
@@ -180,7 +246,7 @@ int main(int argc, char** argv)
 #endif
         std::cout << "Loading database with mu=" << user_mu << " and omega="
                   << user_omega << "..." << std::endl;
-        const auto db = i2l::load(db_file, user_mu, user_omega);
+        const auto db = i2l::load(db_file, user_mu, user_omega, max_entries);
         if (db.version() < i2l::protocol::EARLIEST_INDEX)
         {
             std::cerr << "The serialization protocol version is too old (v" << db.version() << ").\n"
@@ -193,7 +259,9 @@ int main(int argc, char** argv)
                   << "\tk: " << db.kmer_size() << std::endl
                   << "\tomega: " << db.omega() << std::endl
                   << "\tPositions loaded: " << (db.positions_loaded() ? "true" : "false") << std::endl << std::endl;
-        std::cout << "Loaded " << humanize(db.get_num_entries_loaded()) << " phylo-k-mers. " << std::endl << std::endl;
+        std::cout << "Loaded " << humanize(db.get_num_entries_loaded())
+                  << " of " << humanize(db.get_num_entries_total())
+                  << " phylo-k-mers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
         auto placer = epik::placer(db, tree, keep_at_most, keep_factor, num_threads);
@@ -287,7 +355,7 @@ int main(int argc, char** argv)
     }
     catch (const std::runtime_error& error)
     {
-        std::cerr << "Exception occurred:\n\t" << error.what() << std::endl;
+        std::cerr << "Error: " << error.what() << std::endl;
         return -1;
     }
 
