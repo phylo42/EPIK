@@ -61,11 +61,15 @@ def place(database, states, omega, mu, outputdir, threads, input_file):
 
 def place_queries(database, states, omega, mu, outputdir, threads, input_file):
     current_dir = os.path.dirname(os.path.realpath(__file__))
+    
+    # If EPIK is installed, look for the binary in the installed location,
+    # otherwise it is run from sources
+    epik_bin_dir = f"{current_dir}" if os.path.exists(f"{current_dir}/epik-dna") else f"{current_dir}/bin/epik"
 
     if states == 'nucl':
-        epik_bin = f"{current_dir}/bin/epik/epik-dna"
+        epik_bin = f"{epik_bin_dir}/epik-dna"
     else:
-        epik_bin = f"{current_dir}/bin/epik/epik-aa"
+        epik_bin = f"{epik_bin_dir}/epik-aa"
 
     command = [
         epik_bin, 

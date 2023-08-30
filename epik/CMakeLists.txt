@@ -137,3 +137,7 @@ target_compile_features(epik-aa
         PUBLIC
         cxx_std_17)
 
+
+install(TARGETS epik-dna epik-aa DESTINATION bin)
+
+
