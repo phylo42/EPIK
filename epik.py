@@ -48,18 +48,22 @@ def epik():
              type=int,
              default=4, show_default=True,
              help="Number of threads used.")
+@click.option('--max-ram',
+             type=str,
+             default="", show_default=True,
+             help="Approximate RAM limit to use. Database may not be fully loaded")
 @click.argument('input_file', type=click.Path(exists=True))
-def place(database, states, omega, mu, outputdir, threads, input_file):
+def place(database, states, omega, mu, outputdir, threads, max_ram, input_file):
     """
     Places .fasta files using the input IPK database.
 
     \tpython epik.py place -s [nucl|amino] -i db.rps -o output file.fasta [file2.fasta ...]
 
     """
-    place_queries(database, states, omega, mu, outputdir, threads, input_file)
+    place_queries(database, states, omega, mu, outputdir, threads, max_ram, input_file)
 
 
-def place_queries(database, states, omega, mu, outputdir, threads, input_file):
+def place_queries(database, states, omega, mu, outputdir, threads, max_ram, input_file):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     
     # If EPIK is installed, look for the binary in the installed location,
@@ -80,7 +84,9 @@ def place_queries(database, states, omega, mu, outputdir, threads, input_file):
         "--mu", str(mu),
         "-o", str(outputdir),
     ]
-    command.extend(input_file)
+    if max_ram:
+        command.extend(["--max-ram", max_ram])
+    command.append(input_file)
     print(" ".join(s for s in command))
     return subprocess.call(command)
 
