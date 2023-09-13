@@ -42,7 +42,7 @@ def epik():
               help="The proportion of the database to keep.")
 @click.option('-o', '--outputdir',
               required=True,
-              type=click.Path(dir_okay=True, file_okay=False),
+              type=click.Path(dir_okay=True, file_okay=False, exists=True),
               help="Output directory.")
 @click.option('--threads',
              type=int,
@@ -57,7 +57,7 @@ def place(database, states, omega, mu, outputdir, threads, max_ram, input_file):
     """
     Places .fasta files using the input IPK database.
 
-    \tpython epik.py place -s [nucl|amino] -i db.rps -o output file.fasta [file2.fasta ...]
+    \tpython epik.py place -s [nucl|amino] -i db.ipk -o output file.fasta [file2.fasta ...]
 
     """
     place_queries(database, states, omega, mu, outputdir, threads, max_ram, input_file)
