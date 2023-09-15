@@ -214,7 +214,10 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
 
     //const auto begin_omp = std::chrono::steady_clock::now();
 #ifdef EPIK_OMP
-    #if __GNUC__ && (__GNUC__ < 9)
+    #if __clang__
+    #pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
+        default(none) shared(epik::impl::pow, unique_sequences, placed_seqs)
+    #elif defined (__GNUC__) && (__GNUC__ < 9)
     /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) default(none) shared(epik::impl::pow, placed_seqs)
     #else
