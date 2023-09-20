@@ -3,12 +3,27 @@
 #include <unordered_set>
 #include <cmath>
 #include <iostream>
+#include <i2l/seq.h>
 #include <i2l/phylo_kmer_db.h>
 #include <i2l/phylo_tree.h>
 #include <i2l/kmer_iterator.h>
 #include <i2l/seq_record.h>
 #include <i2l/fasta.h>
 #include <epik/place.h>
+
+#include <chrono>
+
+#if defined(EPIK_OMP)
+#include <omp.h>
+#endif
+
+#if defined(EPIK_SSE) or \
+    defined(EPIK_AVX) or \
+    defined(EPIK_AVX2) or \
+    defined(EPIK_AVX512)
+#include <epik/intrinsic.h>
+#endif
+
 
 using namespace epik::impl;
 using namespace epik;
@@ -21,18 +36,14 @@ using i2l::seq_record;
 
 namespace epik::impl
 {
-    float (*pow)(float, float) = std::pow;  // definition
+    float (*pow)(float, float) = std::pow;
 }
 
 #else
-#include <boost/multiprecision/float128.hpp>
 
 namespace epik::impl
 {
-    lwr_type (*pow)(const lwr_type&, const lwr_type&) =
-    [](const lwr_type& base, const lwr_type& exponent) {
-        return boost::multiprecision::pow(base, exponent);
-    };  // definition
+    double (*pow)(double, double) = std::pow;
 }
 #endif
 
@@ -69,17 +80,20 @@ sequence_map_t group_by_sequence_content(const std::vector<seq_record>& seq_reco
     return sequence_map;
 }
 
-placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tree, size_t keep_at_most, double keep_factor)
+placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tree,
+               size_t keep_at_most, double keep_factor, size_t num_threads)
     : _db{ db }
     , _original_tree{ original_tree }
     , _threshold{ i2l::score_threshold(db.omega(), db.kmer_size()) }
     , _log_threshold{ std::log10(_threshold) }
     , _keep_at_most{ keep_at_most }
     , _keep_factor{ keep_factor }
-    , _scores(original_tree.get_node_count())
-    , _scores_amb(original_tree.get_node_count())
-    , _counts(original_tree.get_node_count())
-    , _counts_amb(original_tree.get_node_count())
+    , _max_threads{ std::max(num_threads, 1ul) }
+    , _scores(_max_threads, score_vector(original_tree.get_node_count()))
+    , _scores_amb(_max_threads, score_vector(original_tree.get_node_count()))
+    , _counts(_max_threads, count_vector(original_tree.get_node_count()))
+    , _counts_amb(_max_threads, count_vector(original_tree.get_node_count()))
+    , _edges(_max_threads)
 {
     /// precompute pendant lengths
     for (i2l::phylo_kmer::branch_type i = 0; i < original_tree.get_node_count(); ++i)
@@ -111,16 +125,62 @@ placer::placer(const i2l::phylo_kmer_db& db, const i2l::phylo_tree& original_tre
     }
 }
 
+bool compare_placed_branches(const placement& lhs, const placement& rhs)
+{
+    return lhs.score > rhs.score;
+}
+
+/// \brief Selects keep_at_most most placed branches among these that have count > 0
+std::vector<placement> placer::select_best_placements(std::vector<placement> placements, size_t num_kmers)
+{
+    /// Partially select best keep_at_most placements
+    size_t return_size = std::min(_keep_at_most, placements.size());
+
+    /// if no single query k-mer was found, all counts are zeros, and
+    /// we create first keep_at_most placements
+    if (return_size == 0)
+    {
+        return_size = _keep_at_most;
+        placements.reserve(return_size);
+
+        const auto threshold_score = _log_threshold * static_cast<i2l::phylo_kmer::score_type>(num_kmers)
+            / static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
+        for (size_t i = 0; i < _keep_at_most; ++i)
+        {
+            placements.push_back({ i2l::phylo_kmer::branch_type (i), threshold_score, 0.0, 0, 0.0, 0.0 });
+        }
+    }
+    std::partial_sort(std::begin(placements),
+                      std::begin(placements) + (long)return_size,
+                      std::end(placements),
+                      compare_placed_branches);
+    placements.resize(return_size);
+    return placements;
+}
+
+
 /// \brief Transforms (pow10) the scores of all placements from an input array and sums it up
 /// We use a longer float type, not phylo_kmer::score_type here, because 10 ** score can be a small number.
-placement::weight_ratio_type sum_scores(const std::vector<placement>& placements)
+placement::weight_ratio_type placer::sum_scores(const std::vector<placement>& placements, std::string_view seq)
 {
-    placement::weight_ratio_type sum = 0.0;
+    const auto num_branches = static_cast<i2l::phylo_kmer::score_type>(_original_tree.get_node_count());
+    const auto num_placements = static_cast<i2l::phylo_kmer::score_type>(placements.size());
+    const auto num_kmers = static_cast<i2l::phylo_kmer::score_type>(seq.size() - _db.kmer_size() + 1);
+    const auto kmer_size = static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
+
+    /// There are n branches where we placed the sequence, and N-n where we did not.
+    /// We score each of them with (#kmers * log_threshold) / k. This gives us the total score for
+    /// all branches to which the query was not placed:
+    placement::weight_ratio_type sum_not_placed =
+        (num_branches - num_placements) * epik::impl::pow(10.0, (num_kmers * _log_threshold / kmer_size));
+
+    /// The final sum includes branches that were scored by k-mers explicitly
+    placement::weight_ratio_type sum_placed = 0.0f;
     for (const auto& placement : placements)
     {
-        sum += epik::impl::pow(10.0, placement::weight_ratio_type(placement.score));
+        sum_placed += epik::impl::pow(10.0, placement::weight_ratio_type(placement.score));
     }
-    return sum;
+    return sum_not_placed + sum_placed;
 }
 
 /// \brief Copies placements that have a weight ratio >= some threshold value. The threshold
@@ -128,8 +188,8 @@ placement::weight_ratio_type sum_scores(const std::vector<placement>& placements
 std::vector<placement> filter_by_ratio(const std::vector<placement>& placements, double _keep_factor)
 {
     /// calculate the ratio threshold. Here we assume that input placements are sorted
-    const auto best_ratio = placements.size() > 0 ? placements[0].weight_ratio : 0.0f;
-    const auto ratio_threshold = best_ratio *_keep_factor;
+    const auto best_ratio = placements.empty() ? 0.0f : placements[0].weight_ratio;
+    const auto ratio_threshold = best_ratio * _keep_factor;
 
     std::vector<placement> result;
     result.reserve(placements.size());
@@ -151,9 +211,20 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
 
     /// Place only unique sequences
     std::vector<placed_sequence> placed_seqs(unique_sequences.size());
-    (void)num_threads;
-    /*#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
-        default(none) shared(placed_seqs, unique_sequences)*/
+
+    //const auto begin_omp = std::chrono::steady_clock::now();
+#ifdef EPIK_OMP
+    #if __clang__
+    #pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
+        default(none) shared(epik::impl::pow, unique_sequences, placed_seqs)
+    #elif defined (__GNUC__) && (__GNUC__ < 9)
+    /// In pre-GCC-9, const variables (unique_sequences here) were predefined shared automatically
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) default(none) shared(epik::impl::pow, placed_seqs)
+    #else
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) \
+    default(none) shared(epik::impl::pow, unique_sequences, placed_seqs)
+    #endif
+#endif
     for (size_t i = 0; i < unique_sequences.size(); ++i)
     {
         auto keep_factor = _keep_factor;
@@ -162,7 +233,9 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
         placed_seqs[i] = place_seq(sequence);
 
         /// compute weight ratio
-        const auto score_sum = sum_scores(placed_seqs[i].placements);
+        const auto score_sum = sum_scores(placed_seqs[i].placements, sequence);
+        const auto num_kmers = sequence.size() - _db.kmer_size() + 1;
+        placed_seqs[i].placements = select_best_placements(std::move(placed_seqs[i].placements), num_kmers);
         for (auto& placement : placed_seqs[i].placements)
         {
             /// If the scores are that small that taking 10 to these powers is still zero
@@ -176,158 +249,190 @@ placed_collection placer::place(const std::vector<seq_record>& seq_records, size
             }
             else
             {
-                placement.weight_ratio = epik::impl::pow(10.0f, placement::weight_ratio_type(placement.score)) / score_sum;
+                const auto power = epik::impl::pow(10.0f, placement::weight_ratio_type(placement.score));
+                if (power == 0.0)
+                {
+                    placement.weight_ratio = 0.0;
+                }
+                else
+                {
+                    placement.weight_ratio = power / score_sum;
+                }
             }
         }
 
         /// Remove placements with low weight ratio
         placed_seqs[i].placements = filter_by_ratio(placed_seqs[i].placements, keep_factor);
     }
-    return { sequence_map, placed_seqs };
+    //const auto end_omp = std::chrono::steady_clock::now();
+    //const float seconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(
+    //    end_omp - begin_omp).count() / 1000.0f;
+    //float speed = seq_records.size() / seconds / num_threads;
+    //std::cout << "Query/sec (per thread): " << speed << std::endl << std::endl;
+    return { sequence_map, std::move(placed_seqs) };
 }
 
-bool compare_placed_branches(const placement& lhs, const placement& rhs)
-{
-    return lhs.score > rhs.score;
-}
 
-/// \brief Selects keep_at_most most placed branches among these that have count > 0
-std::vector<placement> select_best_placements(std::vector<placement> placements, size_t keep_at_most)
+auto query_kmers(std::string_view seq, const i2l::phylo_kmer_db& db)
 {
-    /// Partially select best keep_at_most placements
-    size_t return_size = std::min(keep_at_most, placements.size());
+    using search_result = std::vector<decltype(db.search(0))>;
 
-    /// if no single query k-mer was found, all counts are zeros, and
-    /// we take just first keep_at_most branches
-    if (return_size == 0)
+    /// Results of DB search for exact k-mers and
+    /// pairs (k-mer, results of search) for ambiguous k-mers
+    struct kmer_results
     {
-        return_size = std::min(keep_at_most, placements.size());
-        placements.resize(return_size);
-        std::copy(placements.begin(), placements.end(), placements.begin());
+        search_result exact;
+        std::vector<search_result> ambiguous;
+    };
+    kmer_results result;
+
+    result.exact.reserve(seq.size() - db.kmer_size() + 1);
+
+    /// Query every k-mer that has no more than one ambiguous character
+    for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, db.kmer_size()))
+    {
+        (void) kmer;
+        if (keys.size() == 1)
+        {
+            const auto key = keys[0];
+            auto key_result = db.search(key);
+            if (key_result)
+            {
+                result.exact.push_back(key_result);
+            }
+        }
+        else
+        {
+            for (const auto& key : keys)
+            {
+                result.ambiguous.emplace_back();
+                result.ambiguous.back().push_back(db.search(key));
+            }
+        }
     }
-    std::partial_sort(std::begin(placements),
-                      std::begin(placements) + return_size,
-                      std::end(placements),
-                      compare_placed_branches);
-    placements.resize(return_size);
-    return placements;
+    return result;
 }
+
 
 /// \brief Places a fasta sequence
 placed_sequence placer::place_seq(std::string_view seq)
 {
     const auto num_of_kmers = seq.size() - _db.kmer_size() + 1;
 
-    for (const auto& edge : _edges)
+#if defined(EPIK_OMP)
+    const auto thread_id = omp_get_thread_num();
+#else
+    const size_t thread_id = 0;
+#endif
+    auto& thread_counts = _counts[thread_id];
+    auto& thread_scores = _scores[thread_id];
+    auto& thread_counts_amb = _counts_amb[thread_id];
+    auto& thread_scores_amb = _scores_amb[thread_id];
+    auto& thread_edges = _edges[thread_id];
+
+    for (const auto& edge : thread_edges)
     {
-        _counts[edge] = 0;
-        _scores[edge] = 0.0f;
-        _counts_amb[edge] = 0;
-        _scores_amb[edge] = 0.0f;
+        thread_counts[edge] = 0;
+        thread_scores[edge] = 0.0f;
+        thread_counts_amb[edge] = 0;
+        thread_scores_amb[edge] = 0.0f;
     }
-    _edges.clear();
+    thread_edges.clear();
 
-    /// Query every k-mer that has no more than one ambiguous character
-    for (const auto& [kmer, keys] : i2l::to_kmers<i2l::one_ambiguity_policy>(seq, _db.kmer_size()))
+    /// Let's query every k-mer in advance. We'll apply the scores later
+    const auto search_results = query_kmers(seq, _db);
+    const auto exact_phylo_kmers = search_results.exact;
+
+    /// Now let's update the score vectors according to retrieved values
+    for (auto exact_result : exact_phylo_kmers)
     {
-        (void)kmer;
-
-        /// if the k-mer is unambiguous
-        if (keys.size() == 1)
+        if (exact_result)
         {
-            const auto key = keys[0];
 
-            /// Update placements if found
-            if (auto entries = _db.search(key); entries)
-            {
-#ifdef KEEP_POSITIONS
-                for (const auto& [postorder_node_id, score, position] : *entries)
-                {
-                    (void)position;
+#if defined(EPIK_SSE) or defined(EPIK_AVX) or defined(EPIK_AVX2) or defined(EPIK_AVX512)
+            update_vector(thread_scores, thread_counts, thread_edges, *exact_result);
 #else
-                for (const auto& [postorder_node_id, score] : *entries)
+
+            for (const auto& [postorder_node_id, score] : *exact_result)
+            {
+                if (thread_counts[postorder_node_id] == 0)
                 {
+                    thread_edges.push_back(postorder_node_id);
+                }
+
+                ++thread_counts[postorder_node_id];
+                thread_scores[postorder_node_id] += score;
+            }
 #endif
-                    if (_counts[postorder_node_id] == 0)
+        }
+
+    }
+
+    const auto ambiguous_phylo_kmers = search_results.ambiguous;
+    /// Now let's update the score vectors according to retrieved values
+    for (const auto& ambiguous_result : ambiguous_phylo_kmers)
+    {
+        /// hash set of branch ids that are scored by the ambiguous k-mer
+        std::unordered_set<i2l::phylo_kmer::branch_type> l_amb;
+        for (auto exact_result : ambiguous_result)
+        {
+            if (exact_result)
+            {
+                for (const auto& [postorder_node_id, score] : *exact_result)
+                {
+                    if (thread_counts_amb[postorder_node_id] == 0)
                     {
-                        _edges.push_back(postorder_node_id);
+                        l_amb.insert(postorder_node_id);
                     }
 
-                    _counts[postorder_node_id] += 1;
-                    _scores[postorder_node_id] += score;
+                    thread_counts_amb[postorder_node_id] += 1;
+                    thread_scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
                 }
 
-            }
-        }
-        /// treat ambiguities with mean
-        else
-        {
-            /// hash set of branch ids that are scored by the ambiguous k-mer
-            std::unordered_set<i2l::phylo_kmer::branch_type> l_amb;
+                /// Number of keys resolved from the k-mer
+                const size_t w_size = _db.kmer_size();
 
-            for (const auto& key : keys)
-            {
-                if (auto entries = _db.search(key); entries)
+                /// Calculate average scores
+                for (const auto postorder_node_id: l_amb)
                 {
-#ifdef KEEP_POSITIONS
-                    for (const auto& [postorder_node_id, score, position] : *entries)
-                    {
-                        (void)position;
-#else
-                    for (const auto& [postorder_node_id, score] : *entries)
-                    {
-#endif
-                        if (_counts_amb[postorder_node_id] == 0)
-                        {
-                            l_amb.insert(postorder_node_id);
-                        }
+                    const auto average_prob = (thread_scores_amb[postorder_node_id] +
+                                               static_cast<float>(w_size - thread_counts_amb[postorder_node_id]) * _threshold)
+                                              / static_cast<float>(w_size);
 
-                        _counts_amb[postorder_node_id] += 1;
-                        _scores_amb[postorder_node_id] += static_cast<i2l::phylo_kmer::score_type>(std::pow(10, score));
+                    if (thread_counts[postorder_node_id] == 0)
+                    {
+                        thread_edges.push_back(postorder_node_id);
                     }
+
+                    thread_counts[postorder_node_id] += 1;
+                    thread_scores[postorder_node_id] += average_prob;
                 }
-            }
-
-            /// Number of keys resolved from the k-mer
-            const size_t w_size = keys.size();
-
-            /// Calculate average scores
-            for (const auto postorder_node_id : l_amb)
-            {
-                const auto average_prob = (
-                    _scores_amb[postorder_node_id] +
-                    static_cast<float>(w_size - _counts_amb[postorder_node_id]) * _threshold
-                    ) / static_cast<float>(w_size);
-
-                if (_counts[postorder_node_id] == 0)
-                {
-                    _edges.push_back(postorder_node_id);
-                }
-
-                _counts[postorder_node_id] += 1;
-                _scores[postorder_node_id] += average_prob;
             }
         }
+
     }
 
     /// Score correction
-    for (const auto& edge: _edges)
+    for (const auto& edge: thread_edges)
     {
-        _scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - _counts[edge]) * _log_threshold;
+        thread_scores[edge] += static_cast<i2l::phylo_kmer::score_type>(num_of_kmers - thread_counts[edge]) * _log_threshold;
+        thread_scores[edge] /= static_cast<i2l::phylo_kmer::score_type>(_db.kmer_size());
     }
 
     std::vector<placement> placements;
-    for (const auto& edge: _edges)
+    placements.reserve(thread_edges.size());
+
+    for (const auto& edge: thread_edges)
     {
-        const auto node = _original_tree.get_by_postorder_id(edge);
+        const auto node = _original_tree.get_by_postorder_id((i2l::phylo_node::id_type)edge);
         if (!node)
         {
             throw std::runtime_error("Could not find node by post-order id: " + std::to_string(edge));
         }
 
         const auto distal_length = (*node)->get_branch_length() / 2;
-        placements.push_back({edge, _scores[edge], 0.0, _counts[edge], distal_length, _pendant_lengths[edge] });
+        placements.push_back({ edge, thread_scores[edge], 0.0,
+                               thread_counts[edge], distal_length, _pendant_lengths[edge] });
     }
-
-    return { seq, select_best_placements(std::move(placements), _keep_at_most) };
+    return { seq, std::move(placements) };
 }

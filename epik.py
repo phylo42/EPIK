@@ -32,40 +32,61 @@ def epik():
               default='nucl', show_default=True,
               required=True,
               help="States used in analysis.")
+@click.option('--omega',
+              type=float,
+              default=1.5,
+              help="User omega value, determines the score threhold.")
+@click.option('--mu',
+              type=float,
+              default=1.0,
+              help="The proportion of the database to keep.")
 @click.option('-o', '--outputdir',
               required=True,
-              type=click.Path(dir_okay=True, file_okay=False),
+              type=click.Path(dir_okay=True, file_okay=False, exists=True),
               help="Output directory.")
 @click.option('--threads',
              type=int,
              default=4, show_default=True,
              help="Number of threads used.")
-@click.argument('input_files', type=click.Path(exists=True), nargs=-1)
-def place(database, states, outputdir, threads, input_files):
+@click.option('--max-ram',
+             type=str,
+             default="", show_default=True,
+             help="Approximate RAM limit to use. Database may not be fully loaded")
+@click.argument('input_file', type=click.Path(exists=True))
+def place(database, states, omega, mu, outputdir, threads, max_ram, input_file):
     """
     Places .fasta files using the input IPK database.
 
-    \tpython epik.py place -s [nucl|amino] -i db.rps -o output file.fasta [file2.fasta ...]
+    \tpython epik.py place -s [nucl|amino] -i db.ipk -o output file.fasta [file2.fasta ...]
 
     """
-    place_queries(database, states, outputdir, threads, input_files)
+    place_queries(database, states, omega, mu, outputdir, threads, max_ram, input_file)
 
 
-def place_queries(database, states, outputdir, threads, input_files):
+def place_queries(database, states, omega, mu, outputdir, threads, max_ram, input_file):
     current_dir = os.path.dirname(os.path.realpath(__file__))
+    
+    # If EPIK is installed, look for the binary in the installed location,
+    # otherwise it is run from sources
+    epik_bin_dir = f"{current_dir}" if os.path.exists(f"{current_dir}/epik-dna") else f"{current_dir}/bin/epik"
 
     if states == 'nucl':
-        epik_bin = f"{current_dir}/bin/epik/epik-dna"
+        epik_bin = f"{epik_bin_dir}/epik-dna"
     else:
-        epik_bin = f"{current_dir}/bin/epik/epik-aa"
+        epik_bin = f"{epik_bin_dir}/epik-aa"
 
     command = [
-        epik_bin,
-        str(database),
-        str(outputdir),
-        str(threads)
+        epik_bin, 
+        "-d", str(database),
+        "-q", str(input_file),
+        "-j", str(threads),
+        "--omega", str(omega),
+        "--mu", str(mu),
+        "-o", str(outputdir),
     ]
-    command.extend(input_files)
+    if max_ram:
+        command.extend(["--max-ram", max_ram])
+    command.append(input_file)
     print(" ".join(s for s in command))
     return subprocess.call(command)
 

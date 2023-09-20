@@ -11,3 +11,9 @@ endif()
 add_subdirectory(i2l)
 add_subdirectory(third-party)
 add_subdirectory(epik)
+
+install(FILES epik.py
+        DESTINATION bin
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE)
