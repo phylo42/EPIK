@@ -20,6 +20,10 @@ jobs:
             buildname: 'ubuntu-22.04'
             triplet: x64-linux
             compiler: gcc_64
+          - os: ubuntu-22.04
+            buildname: 'ubuntu-22.04'
+            triplet: x64-linux
+            compiler: clang_64
           - os: ubuntu-20.04
             buildname: 'ubuntu-20.04'
             triplet: x64-linux
