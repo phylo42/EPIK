@@ -39,3 +39,17 @@ See `python epik.py place --help` for more information.
 
 To compute phylo-k-mer databases, use [IPK](https://github.com/phylo42/IPK).
 
+
+## Other
+
+### Code quality
+
+EPIK scores 7.6/10 in the code quality evaluation according to [softwipe](https://github.com/adrianzap/softwipe) [1]. To run it:
+
+```
+softwipe --cmake --cpp -x third-party,i2l/third-party,i2l/tests/catch2,i2l/examples --no-execution .
+```
+
+
+## References
+[1] A. Zapletal, D. Höhler, C. Sinz, A. Stamatakis (2021) The SoftWipe tool and benchmark for assessing coding standards adherence of scientific software Sci Rep 11, 10015 (2021). https://doi.org/10.1038/s41598-021-89495-8
