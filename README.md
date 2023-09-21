@@ -1,4 +1,11 @@
 # EPIK: Evolutionary Placement with Informative K-mers
+
+
+[![build](https://github.com/phylo42/IPK/actions/workflows/build.yml/badge.svg)](https://github.com/phylo42/IPK/actions/workflows/build.yml)
+<a>
+<img src="https://img.shields.io/badge/softwipe-7.6-green" />
+</a>
+        
 EPIK is a program for rapid alignment-free phylogenetic placement, the successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
 ## Installation
@@ -44,8 +51,7 @@ To compute phylo-k-mer databases, use [IPK](https://github.com/phylo42/IPK).
 
 ### Code quality
 
-EPIK scores 7.6/10 in the code quality evaluation according to [softwipe](https://github.com/adrianzap/softwipe) [1]. To run it:
-
+Code quality evaluation with [softwipe](https://github.com/adrianzap/softwipe) [1]:
 ```
 softwipe --cmake --cpp -x third-party,i2l/third-party,i2l/tests/catch2,i2l/examples --no-execution .
 ```
