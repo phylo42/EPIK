@@ -55,9 +55,9 @@ Remember to export the `DIRECTORY/bin` to your `PATH`. You can do this manually 
 
 ### Phylogenetic placement
 ```
-python epik.py place -i DATABASE -s [nucl|amino] -o OUTPUT_DIR INPUT_FASTA
+epik.py place -i DATABASE -s [nucl|amino] -o OUTPUT_DIR INPUT_FASTA
 ```
-See `python epik.py place --help` for more information.
+See `epik.py place --help` for more information.
 
 ### Building databases
 
