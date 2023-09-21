@@ -1,7 +1,7 @@
 # EPIK: Evolutionary Placement with Informative K-mers
 
 
-[![build](https://github.com/phylo42/IPK/actions/workflows/build.yml/badge.svg)](https://github.com/phylo42/IPK/actions/workflows/build.yml)
+[![build](https://github.com/phylo42/EPIK/actions/workflows/build.yml/badge.svg)](https://github.com/phylo42/EPIK/actions/workflows/build.yml)
 <a>
 <img src="https://img.shields.io/badge/softwipe-7.6-green" />
 </a>
