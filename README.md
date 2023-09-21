@@ -33,6 +33,23 @@ cmake ..
 make -j4
 ```
 
+### Install
+You can use `epik.py` from the directory where it was built or install it system-wide or for a single user to make `epik.py` visible from any directory.
+
+For a system-wide installation (requires elevated permissions):
+```
+sudo cmake --install .
+```
+
+Alternatively, to install for the current user, choose a directory where you want to install the tool. For instance, you might choose `/home/$USER/opt` or any other directory that you prefer. Replace `DIRECTORY` in the commands below with your chosen directory path:
+
+```
+cmake --install . --prefix DIRECTORY
+export PATH=DIRECTORY/bin:$PATH
+```
+Remember to export the `DIRECTORY/bin` to your `PATH`. You can do this manually each time or add the export command to your shell initialization scripts (e.g., `.bashrc`).
+
+
 ## Usage
 
 
