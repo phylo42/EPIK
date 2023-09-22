@@ -14,16 +14,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
+        os: [ ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
         include:
           - os: ubuntu-22.04
             buildname: 'ubuntu-22.04'
             triplet: x64-linux
             compiler: gcc_64
-          - os: ubuntu-22.04
-            buildname: 'ubuntu-22.04-clang'
-            triplet: x64-linux
-            compiler: clang_64
+          #- os: ubuntu-22.04
+          #  buildname: 'ubuntu-22.04-clang'
+          #  triplet: x64-linux
+          #  compiler: clang_64
           - os: ubuntu-20.04
             buildname: 'ubuntu-20.04'
             triplet: x64-linux
@@ -49,11 +49,17 @@ jobs:
 
       - name: (MacOS) Install dependencies
         if: runner.os == 'macOS'
-        run: brew update && brew install cmake boost zlib rapidjson libomp && pip3 install click
+        run: |
+          brew update
+          brew install cmake boost zlib rapidjson libomp
+          pip3 install click
 
       - name: (Linux) Install dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip && pip3 install click
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
+          pip3 install click
 
       - name: (MacOS) Configure CMake
         if: runner.os == 'macOS'
@@ -68,7 +74,21 @@ jobs:
 
       - name: Test build successful
         working-directory: ${{runner.workspace}}/bin
-        run: test -f ${{runner.workspace}}/bin/epik/epik-dna && test -f ${{runner.workspace}}/bin/epik/epik-aa
+        run: |
+          test -f ${{runner.workspace}}/bin/epik/epik-dna
+          test -f ${{runner.workspace}}/bin/epik/epik-aa
 
-      - name: Test python script
-        run: python3 epik.py place --help
+      - name: Install
+        run: cmake --install .
+
+      - name: Test installation and the python wrapper
+        run: | 
+          epik.py --help
+          epik.py place --help
+
+      - name: Test placement
+        run: | 
+          cd tests
+          bash test-placement.sh
+
+

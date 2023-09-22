@@ -175,7 +175,7 @@ def check_first(result1, result2) -> int:
 @click.command()
 @click.argument('jplace1', type=click.Path(exists=True))
 @click.argument('jplace2', type=click.Path(exists=True))
-@click.option('--only-best', is_flag=True, default=False)
+@click.option('--only-first', is_flag=True, default=False)
 def jplace_diff(jplace1: str, jplace2: str, only_first: bool) -> None:
     # parse the input files
     parser1 = JplaceParser(jplace1)
