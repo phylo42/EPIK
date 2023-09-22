@@ -79,7 +79,7 @@ jobs:
           test -f ${{runner.workspace}}/bin/epik/epik-aa
 
       - name: Install
-        run: cmake --install .
+        run: sudo cmake --install .
 
       - name: Test installation and the python wrapper
         run: | 
