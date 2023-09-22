@@ -22,7 +22,7 @@ EPIK is a program for rapid alignment-free phylogenetic placement, the successor
 On Debian-like systems they can be installed with:
 ```
 sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
-pip install click
+pip3 install click
 ```
 
 ### Clone and build
