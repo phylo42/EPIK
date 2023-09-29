@@ -200,6 +200,8 @@ std::vector<placement> filter_by_ratio(const std::vector<placement>& placements,
 
 placed_collection placer::place(const std::vector<seq_record>& seq_records, size_t num_threads)
 {
+    (void)num_threads;
+
     /// There may be identical sequences with different headers. We group them
     /// by the sequence content to not to place the same sequences more than once
     const auto sequence_map = group_by_sequence_content(seq_records);
