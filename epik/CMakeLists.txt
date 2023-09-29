@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-set(ENABLE_OMP ON)
+set(ENABLE_OMP OFF)
 set(ENABLE_SSE OFF)
 set(ENABLE_AVX2 OFF)
 set(ENABLE_AVX512 OFF)
