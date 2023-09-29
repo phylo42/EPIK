@@ -1,4 +1,4 @@
-name: build
+name: CI
 
 on: [push]
 
@@ -14,16 +14,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
+        os: [ ubuntu-22.04,  ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
         include:
           - os: ubuntu-22.04
-            buildname: 'ubuntu-22.04'
+            buildname: 'ubuntu-22.04-gcc'
             triplet: x64-linux
             compiler: gcc_64
-          #- os: ubuntu-22.04
-          #  buildname: 'ubuntu-22.04-clang'
-          #  triplet: x64-linux
-          #  compiler: clang_64
+          - os: ubuntu-22.04
+            buildname: 'ubuntu-22.04-clang'
+            triplet: x64-linux
+            compiler: clang_64
           - os: ubuntu-20.04
             buildname: 'ubuntu-20.04'
             triplet: x64-linux
@@ -54,22 +54,33 @@ jobs:
           brew install cmake boost zlib rapidjson libomp
           pip3 install click tqdm
 
-      - name: (Linux) Install dependencies
-        if: runner.os == 'Linux'
+      - name: (Linux GCC) Install dependencies
+        if: runner.os == 'Linux' && runner.compiler == 'gcc_64'
         run: | 
           sudo apt-get update
           sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
+          pip3 install click tqdm
+
+      - name: (Linux Clang) Install dependencies
+        if: runner.os == 'Linux' && runner.compiler == 'gcc_64'
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip clang++
           pip3 install click tqdm
 
       - name: (MacOS) Configure CMake
         if: runner.os == 'macOS'
         run: cmake -DCMAKE_CXX_FLAGS="-L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include" -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY="/usr/local/opt/libomp/lib/libomp.dylib" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
-      - name: (Linux) Configure CMake
-        if: runner.os == 'Linux'
+      - name: (Linux GCC) Configure CMake
+        if: runner.os == 'Linux' && runner.os == 'gcc_64'
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
-      - name: Build
+      - name: (Linux Clang) Configure CMake
+        if: runner.os == 'Linux' && runner.os == 'gcc_64'
+        run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DC_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build 
         run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE -j ${{ steps.cpu-cores.outputs.count }}
 
       - name: Test build successful
