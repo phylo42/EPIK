@@ -57,7 +57,10 @@ def place(database, states, omega, mu, outputdir, threads, max_ram, input_file):
     """
     Places .fasta files using the input IPK database.
 
-    \tpython epik.py place -s [nucl|amino] -i db.ipk -o output file.fasta [file2.fasta ...]
+    epik.py place -s [nucl|amino] -i DB.ipk -o output file.fasta [file2.fasta ...]
+
+    Examples:
+    \tepik.py place -i DB.ipk -o temp --max-ram 4G --threads 8 query.fasta
 
     """
     place_queries(database, states, omega, mu, outputdir, threads, max_ram, input_file)
