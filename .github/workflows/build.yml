@@ -48,8 +48,7 @@ jobs:
 
       - name: (Linux) Install Clang
         if: contains(matrix.config.os, 'ubuntu') && (matrix.config.compiler == 'clang')
-        run: | 
-          sudo apt install clang++
+        run: sudo apt install clang
 
       - name: (MacOS) Configure CMake
         if: contains(matrix.config.os, 'macos')
