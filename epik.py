@@ -46,7 +46,7 @@ def epik():
               help="Output directory.")
 @click.option('--threads',
              type=int,
-             default=4, show_default=True,
+             default=1, show_default=True,
              help="Number of threads used.")
 @click.option('--max-ram',
              type=str,
