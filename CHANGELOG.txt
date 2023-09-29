@@ -1,5 +1,8 @@
 ============================================================================================================
 v0.2.0
+
+The pre-publication release intended to be the reference version for the further improvements. Previous releases are left mostly for history and are not supposed to be used.
+
 - Supported partial loading of databases with phylo-k-mer filtering (--mu, --max-ram)
 - Reintroduced parallelism (--threads)
 - Reworked LWR formula so that it is normalized over all branches of the tree

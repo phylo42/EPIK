@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cctype>
+#include <cmath>
 #include <stdexcept>
 #include <boost/filesystem.hpp>
 #include <cxxopts.hpp>
@@ -63,29 +64,51 @@ void print_intruction_set()
 
 /// Float-to-humanized string for better output
 template<typename T>
-std::string humanize(T num)
+std::string to_human_readable(T num)
 {
     std::ostringstream oss;
-    oss.precision(1);
 
-    if (num < 1000.0)
+    if (num < 1024)
     {
         oss << std::fixed << num;
     }
-    else if (num < 1000000.0)
-    {
-        oss << std::fixed << num / 1000.0 << "K";
-    }
-    else if (num < 1000000000.0)
-    {
-        oss << std::fixed << num / 1000000.0 << "M";
-    }
     else
     {
-        oss << std::fixed << num / 1000000000.0 << "B";
+        double value;
+        std::string suffix;
+
+        if (num < 1024 * 1024)
+        {
+            value = num / 1024.0;
+            suffix = "K";
+        }
+        else if (num < 1024 * 1024 * 1024)
+        {
+            value = num / (1024.0 * 1024.0);
+            suffix = "M";
+        }
+        else
+        {
+            value = num / (1024.0 * 1024.0 * 1024.0);
+            suffix = "B";
+        }
+
+        // Check if the fractional part is zero
+        double int_part;
+        double frac_part = std::modf(value, &int_part);
+        if (frac_part == 0.0)
+        {
+            oss << static_cast<long long>(int_part) << suffix;
+        }
+        else
+        {
+            oss.precision(1);
+            oss << std::fixed << value << suffix;
+        }
     }
 
     return oss.str();
+
 }
 
 /// Size_t-to-string that translates milliseconds to humanized time
@@ -128,9 +151,9 @@ std::string humanize_time(size_t milliseconds)
     return oss.str();
 }
 
-/// Parse the humanized RAM size to a number.
-/// I know that the name of this function is unfortunate.
-size_t dehumanize_ram(const std::string& max_ram)
+/// Parse a human-readable --max-ram value as the number of bytes
+/// e.g. 128K, 50M, 4.2Gb etc.
+size_t parse_human_readable(const std::string& max_ram)
 {
     double value;
     char unit = 0;
@@ -140,7 +163,7 @@ size_t dehumanize_ram(const std::string& max_ram)
     ss >> value;
     if (ss.fail())
     {
-        throw std::runtime_error("Can't parse max_ram parameter: wrong numerical part");
+        throw std::runtime_error("Could not parse --max-ram parameter: wrong numerical part");
     }
 
     // Check if there is a memory unit
@@ -149,7 +172,7 @@ size_t dehumanize_ram(const std::string& max_ram)
         ss >> unit;
         if (ss.fail())
         {
-            throw std::runtime_error("Can't parse max_ram parameter: wrong unit");
+            throw std::runtime_error("Could not parse --max-ram parameter: wrong unit");
         }
     }
 
@@ -230,10 +253,15 @@ int main(int argc, char** argv)
         if (parsed_options.count("max-ram"))
         {
             const auto max_ram_string = parsed_options["max-ram"].as<std::string>();
-            const auto max_ram = dehumanize_ram(max_ram_string);
-            max_entries = max_ram / sizeof(i2l::pkdb_value);
+            const auto max_ram = parse_human_readable(max_ram_string);
+            max_entries = static_cast<size_t>(max_ram / sizeof(i2l::pkdb_value));
+
+            if (max_entries == 0)
+            {
+                throw std::runtime_error("Memory limit is too low");
+            }
             std::cout << "Max-RAM provided: will be loaded not more than "
-                      << humanize(max_entries) << " phylo-k-mers." << std::endl;
+                      << to_human_readable(max_entries) << " phylo-k-mers." << std::endl;
         }
 
 #ifndef EPIK_OMP
@@ -259,8 +287,8 @@ int main(int argc, char** argv)
                   << "\tk: " << db.kmer_size() << std::endl
                   << "\tomega: " << db.omega() << std::endl
                   << "\tPositions loaded: " << (db.positions_loaded() ? "true" : "false") << std::endl << std::endl;
-        std::cout << "Loaded " << humanize(db.get_num_entries_loaded())
-                  << " of " << humanize(db.get_num_entries_total())
+        std::cout << "Loaded " << to_human_readable(db.get_num_entries_loaded())
+                  << " of " << to_human_readable(db.get_num_entries_total())
                   << " phylo-k-mers. " << std::endl << std::endl;
 
         const auto tree = i2l::io::parse_newick(db.tree());
@@ -325,7 +353,7 @@ int main(int argc, char** argv)
             average_speed += seq_per_second;
 
             // Update progress bar
-            bar.set_option(option::PrefixText{humanize(seq_per_second) + " seq/s "});
+            bar.set_option(option::PrefixText{to_human_readable(seq_per_second) + " seq/s "});
             bar.set_option(option::PostfixText{std::to_string(num_seq_placed) + " / ?"});
             bar.set_progress(reader.bytes_read());
 
@@ -339,12 +367,12 @@ int main(int argc, char** argv)
 
         average_speed /= (double)num_iterations;
         bar.set_option(option::PrefixText{"Done. "});
-        bar.set_option(option::PostfixText{std::to_string(num_seq_placed)});
+        bar.set_option(option::PostfixText{to_human_readable(num_seq_placed)});
         bar.set_progress(reader.bytes_read());
 
         std::cout << std::endl << termcolor::bold << termcolor::white
                   << "Placed " << num_seq_placed << " sequences.\nAverage speed: "
-                  << humanize(average_speed) << " seq/s.\n";
+                  << to_human_readable(average_speed) << " seq/s.\n";
         std::cout << "Output: " << jplace_filename << std::endl;
 
         const auto placement_time = std::chrono::duration_cast<std::chrono::milliseconds>(

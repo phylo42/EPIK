@@ -1,9 +1,20 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-set(ENABLE_OMP OFF)
-set(ENABLE_SSE OFF)
-set(ENABLE_AVX2 OFF)
-set(ENABLE_AVX512 OFF)
+if (NOT DEFINED ENABLE_OMP)
+    set(ENABLE_OMP ON)
+endif()
+
+if (NOT DEFINED ENABLE_SSE)
+    set(ENABLE_SSE OFF)
+endif()
+
+if (NOT DEFINED ENABLE_AVX2)
+    set(ENABLE_AVX2 OFF)
+endif()
+
+if (NOT DEFINED ENABLE_AVX512)
+    set(ENABLE_AVX512 OFF)
+endif()
 
 find_package(RapidJSON REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem)
