@@ -1,12 +1,20 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-set(ENABLE_OMP ON)
-set(ENABLE_SSE OFF)
-set(ENABLE_AVX2 OFF)
-set(ENABLE_AVX512 OFF)
+if (NOT DEFINED ENABLE_OMP)
+    set(ENABLE_OMP ON)
+endif()
 
-find_package(RapidJSON REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem)
+if (NOT DEFINED ENABLE_SSE)
+    set(ENABLE_SSE OFF)
+endif()
+
+if (NOT DEFINED ENABLE_AVX2)
+    set(ENABLE_AVX2 OFF)
+endif()
+
+if (NOT DEFINED ENABLE_AVX512)
+    set(ENABLE_AVX512 OFF)
+endif()
 
 if(ENABLE_OMP)
     find_package(OpenMP REQUIRED)
@@ -33,6 +41,8 @@ else()
     message(STATUS "EPIK: Vectorization DISABLED")
 endif()
 
+find_package(RapidJSON REQUIRED)
+find_package(Boost REQUIRED COMPONENTS filesystem)
 message(STATUS "RapidJSON: " ${RAPIDJSON_INCLUDE_DIRS})
 # RapidJSON cmake scripts are different between versions
 set(RapidJSON_INCLUDES ${RAPIDJSON_INCLUDE_DIRS} ${RapidJSON_INCLUDE_DIR})

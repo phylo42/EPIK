@@ -46,7 +46,7 @@ jobs:
           sudo apt install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
           pip3 install click tqdm
 
-      - name: (Linux) Install Clang
+      - name: (Linux Clang) Install Clang
         if: contains(matrix.config.os, 'ubuntu') && (matrix.config.compiler == 'clang')
         run: sudo apt install clang
 
@@ -60,7 +60,7 @@ jobs:
 
       - name: (Linux Clang) Configure CMake
         if: contains(matrix.config.os, 'ubuntu') && (matrix.config.compiler == 'clang')
-        run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DC_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+        run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DC_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DENABLE_OMP=OFF
 
       - name: Build 
         run: cmake --build ${{runner.workspace}}/bin --config $BUILD_TYPE -j ${{ steps.cpu-cores.outputs.count }}
