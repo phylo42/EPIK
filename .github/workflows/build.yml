@@ -1,41 +1,26 @@
 name: CI
 
-on: [push]
+on: [push, pull_request]
 
 env:
   BUILD_TYPE: Release
 
 jobs:
   build-epik:
-    name: ${{matrix.buildname}}
+    name: ${{matrix.config.buildname}}
 
     runs-on: ${{matrix.os}}
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04,  ubuntu-22.04, ubuntu-20.04, macos-13, macos-12 ]
-        include:
-          - os: ubuntu-22.04
-            buildname: 'ubuntu-22.04-gcc'
-            triplet: x64-linux
-            compiler: gcc_64
-          - os: ubuntu-22.04
-            buildname: 'ubuntu-22.04-clang'
-            triplet: x64-linux
-            compiler: clang_64
-          - os: ubuntu-20.04
-            buildname: 'ubuntu-20.04'
-            triplet: x64-linux
-            compiler: gcc_64
-          - os: macos-13
-            buildname: 'macos-13'
-            triplet: x64-osx
-            compiler: clang_64
-          - os: macos-12
-            buildname: 'macos-12'
-            triplet: x64-osx
-            compiler: clang_64
+        config:
+          - {os: ubuntu-22.04, compiler: 'gcc', buildname: 'ubuntu-22.04-gcc'}
+          - {os: ubuntu-22.04, compiler: 'clang', buildname: 'ubuntu-22.04-clang'}
+          - {os: 'ubuntu-20.04', compiler: 'gcc', buildname: 'ubuntu-20.04-gcc'}
+          - {os: 'ubuntu-20.04', compiler: 'clang', buildname: 'ubuntu-20.04-clang'}
+          - {os: macos-13, compiler: 'clang', buildname: 'macos-13'}
+          - {os: macos-12, compiler: 'clang', buildname: 'macos-12'}
 
     steps:
       - name: Checkout
@@ -48,36 +33,36 @@ jobs:
         id: cpu-cores
 
       - name: (MacOS) Install dependencies
-        if: runner.os == 'macOS'
+        if: matrix.config.os == 'macOS'
         run: |
           brew update
           brew install cmake boost zlib rapidjson libomp
           pip3 install click tqdm
 
       - name: (Linux GCC) Install dependencies
-        if: (runner.os == 'Linux') && (matrix.compiler == 'gcc_64')
+        if: (matrix.config.os == 'Linux') && (matrix.config.compiler == 'gcc')
         run: | 
           sudo apt-get update
           sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
           pip3 install click tqdm
 
       - name: (Linux Clang) Install dependencies
-        if: (runner.os == 'Linux') && (matrix.compiler == 'clang_64')
+        if: (matrix.config.os == 'Linux') && (matrix.config.compiler == 'clang')
         run: | 
           sudo apt-get update
           sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip clang++
           pip3 install click tqdm
 
       - name: (MacOS) Configure CMake
-        if: runner.os == 'macOS'
+        if: matrix.config.os == 'macOS'
         run: cmake -DCMAKE_CXX_FLAGS="-L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include" -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY="/usr/local/opt/libomp/lib/libomp.dylib" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: (Linux GCC) Configure CMake
-        if: (runner.os == 'Linux') && (matrix.compiler == 'gcc_64')
+        if: (matrix.config.os == 'Linux') && (matrix.config.compiler == 'gcc')
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: (Linux Clang) Configure CMake
-        if: (runner.os == 'Linux') && (matrix.compiler == 'clang_64')
+        if: (matrix.config.os == 'Linux') && (matrix.config.compiler == 'clang')
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DC_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 
       - name: Build 
