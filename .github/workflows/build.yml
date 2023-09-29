@@ -55,14 +55,14 @@ jobs:
           pip3 install click tqdm
 
       - name: (Linux GCC) Install dependencies
-        if: (runner.os == 'Linux') && (runner.compiler == 'gcc_64')
+        if: (runner.os == 'Linux') && (matrix.compiler == 'gcc_64')
         run: | 
           sudo apt-get update
           sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
           pip3 install click tqdm
 
       - name: (Linux Clang) Install dependencies
-        if: (runner.os == 'Linux') && (runner.compiler == 'clang_64')
+        if: (runner.os == 'Linux') && (matrix.compiler == 'clang_64')
         run: | 
           sudo apt-get update
           sudo apt-get install -yq build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip clang++
@@ -73,11 +73,11 @@ jobs:
         run: cmake -DCMAKE_CXX_FLAGS="-L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include" -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY="/usr/local/opt/libomp/lib/libomp.dylib" -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: (Linux GCC) Configure CMake
-        if: (runner.os == 'Linux') && (runner.os == 'gcc_64')
+        if: (runner.os == 'Linux') && (matrix.compiler == 'gcc_64')
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: (Linux Clang) Configure CMake
-        if: (runner.os == 'Linux') && (runner.os == 'clang_64')
+        if: (runner.os == 'Linux') && (matrix.compiler == 'clang_64')
         run: cmake -B ${{runner.workspace}}/bin -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DC_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 
       - name: Build 
