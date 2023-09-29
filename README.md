@@ -68,7 +68,7 @@ If EPIK is not installed, run `./epik.py` from the EPIK directory instead.
 | -s        | States, `nucl` for DNA and `amino` for proteins                                                                                                                         | nucl    |
 | --omega   | The user-defined threshold. Can be set higher than the one used when database was created. (If you are not sure, ignore this parameter.)                                | 1.5     |
 | --mu      | The proportion of the database to keep when filtering. Mutually exclusive with `--max-ram`. Should be a value in (0.0, 1.0]                                             | 1.0     |
-| --max-ram | The maximum amount of memory used to keep the database content. Mutually exclusive with `--mu`. Sets an approximate limit to EPIK's RAM consumption.                    |         |
+| --max-ram | The maximum amount of memory used to keep the database content. Mutually exclusive with `--mu`. Sets an approximate limit to EPIK's RAM consumption (i.e. the given limit might be exceeded but EPIK will consider it). Examples: 512, 256K, 42M, 4.2G.                    |         |
 | --threads | Number of parallel threads used for placement. EPIK should be compiled with OpenMP support enabled, i.e. `EPIK_OMP=ON`. (If you compile as we recommend, it is enabled) | 1       |
 
 Also, see `epik.py place --help` for information.
