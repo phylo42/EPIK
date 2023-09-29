@@ -12,7 +12,11 @@ import click
 import subprocess
 
 
+__version__ = "0.2.0"
+
+
 @click.group()
+@click.version_option(__version__)
 def epik():
     """
     EPIK: Evolutionary Placement with Informative K-mers
