@@ -5,6 +5,8 @@
 <a>
 <img src="https://img.shields.io/badge/softwipe-7.6-green" />
 </a>
+
+**Please cite:**  [![doi](https://img.shields.io/static/v1?label=doi&message=10.1093/bioinformatics/btad692&color=blue)](https://doi.org/10.1093/bioinformatics/btad692)
         
 EPIK is a program for rapid alignment-free phylogenetic placement, the successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
