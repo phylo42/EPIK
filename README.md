@@ -6,7 +6,7 @@
 <img src="https://img.shields.io/badge/softwipe-7.6-green" />
 </a>
 
-**Please cite:**  [![doi](https://img.shields.io/static/v1?label=doi&message=10.1093/bioinformatics/btad692&color=blue)](https://doi.org/10.1093/bioinformatics/btad692)
+**Please cite:**  [![doi](https://img.shields.io/static/v1?label=doi&message=10.1093/bioinformatics/btad692&color=blue)](https://doi.org/10.1093/bioinformatics/btad692) [1]
         
 EPIK is a program for rapid alignment-free phylogenetic placement, the successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
@@ -80,11 +80,13 @@ Also, see `epik.py place --help` for information.
 
 ### Code quality
 
-Code quality evaluation with [softwipe](https://github.com/adrianzap/softwipe) [1]:
+Code quality evaluation with [softwipe](https://github.com/adrianzap/softwipe) [2]:
 ```
 softwipe --cmake --cpp -x third-party,i2l/third-party,i2l/tests/catch2,i2l/examples --no-execution .
 ```
 
 
 ## References
-[1] A. Zapletal, D. Höhler, C. Sinz, A. Stamatakis (2021) The SoftWipe tool and benchmark for assessing coding standards adherence of scientific software Sci Rep 11, 10015 (2021). https://doi.org/10.1038/s41598-021-89495-8
+[1] Romashchenko, N., Linard, B., Pardi, F., & Rivals, E. (2023). EPIK: precise and scalable evolutionary placement with informative k-mers. Bioinformatics, 39(12), btad692. https://doi.org/10.1093/bioinformatics/btad692
+
+[2] Zapletal, A., Höhler, D., Sinz, C., & Stamatakis, A. (2021). The SoftWipe tool and benchmark for assessing coding standards adherence of scientific software. Scientific reports, 11(1), 10015. https://doi.org/10.1038/s41598-021-89495-8
