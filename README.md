@@ -10,7 +10,17 @@
         
 EPIK is a program for rapid alignment-free phylogenetic placement, the successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
-## Installation
+## Installation via Bioconda
+It is advised to install the package in a new environement, because our C++ dependencies are strict and may clash with other packages requiring, for instance, libboost.
+We also recommend to use `mamba, which is more faster in solving environment dependencies.
+```
+conda create -n epik
+conda activate epik
+conda config --set channel_priority strict
+mamba install ipk epik
+```
+
+## Installation via compilation
 
 ### Prerequisites
 
