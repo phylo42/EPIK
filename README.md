@@ -23,6 +23,30 @@ conda config --set channel_priority strict
 mamba install ipk epik
 ```
 
+Rapid test:
+```
+# get some test alignment and tree
+wget https://github.com/phylo42/IPK/blob/main/tests/data/D652/reference.fasta
+wget https://github.com/phylo42/IPK/blob/main/tests/data/D652/tree.rooted.newick
+
+# activate conda environment
+conda activate epik
+
+# build database with IPK : using 1 CPU and default phylogenetic model parameters
+# a better approach would be to use appropriate parameters, see documentation
+ipk.py build --refalign reference.fasta --reftree tree.rooted.newick --states nucl --workdir . --model GTR
+
+# place with EPIK
+epik.py place -i DB.ipk -s nucl -o . reference.fasta
+
+# jplace results
+cat placements_reference.fasta.jplace
+
+# you can do post-analyses with the excellent 'gappa' package
+# (available in bioconda too, see https://github.com/lczech/gappa)
+```
+
+
 ## Installation via compilation
 
 ### Prerequisites
