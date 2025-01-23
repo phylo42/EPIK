@@ -17,7 +17,7 @@ We also recommend to use `mamba, which is faster in solving environment dependen
 ```
 conda create -n epik
 conda activate epik
-conda config --set channel_priority strict
+conda config set channel_priority strict
 
 # note that we install both ipk (database creation) and epik (phylogenetic placement)
 mamba install ipk epik
