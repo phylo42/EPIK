@@ -13,11 +13,14 @@ EPIK is a program for rapid alignment-free phylogenetic placement, the successor
 ## Installation via Bioconda
 
 It is advised to install the package in a new environment, because our C++ dependencies are strict and may clash with other packages (requiring libboost in particular).
-We also recommend to use `mamba, which is faster in solving environment dependencies.
+We also recommend to use `mamba`, which is faster in solving environment dependencies.
 ```
 conda create -n epik
 conda activate epik
-conda config set channel_priority strict
+conda config --set channel_priority strict
+
+# If you use mamba:
+# conda config set channel_priority strict
 
 # note that we install both ipk (database creation) and epik (phylogenetic placement)
 mamba install ipk epik
