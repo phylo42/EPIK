@@ -26,31 +26,21 @@ conda config --set channel_priority strict
 mamba install ipk epik
 ```
 
-Rapid test:
+## Installation via Pixi
+
+If you find conda slow and clumsy, consider the wonderful [pixi](https://pixi.sh/) manager:
+
 ```
-# get some test alignment and tree
-wget https://github.com/phylo42/IPK/blob/main/tests/data/D652/reference.fasta
-wget https://github.com/phylo42/IPK/blob/main/tests/data/D652/tree.rooted.newick
-
-# activate conda environment
-conda activate epik
-
-# build database with IPK : using 1 CPU and default phylogenetic model parameters
-# a better approach would be to use appropriate parameters, see documentation
-ipk.py build --refalign reference.fasta --reftree tree.rooted.newick --states nucl --workdir . --model GTR
-
-# place with EPIK
-epik.py place -i DB.ipk -s nucl -o . reference.fasta
-
-# jplace results
-cat placements_reference.fasta.jplace
-
-# you can do post-analyses with the excellent 'gappa' package
-# (available in bioconda too, see https://github.com/lczech/gappa)
+pixi init -c conda-forge -c bioconda
+pixi add epik ipk
+pixi shell
 ```
 
+And you're good to go.
 
-## Installation via compilation
+## Installation from sources
+
+If you want to get your hands dirty, follow these steps.
 
 ### Prerequisites
 
@@ -66,6 +56,30 @@ On Debian-like systems they can be installed with:
 sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
 pip3 install click
 ```
+
+## Quick test
+
+Once you installed EPIK and activated your virtual environment with `conda activate epik` or `pixi shell`, run:
+
+```
+# get some test alignment and tree
+wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/reference.fasta 
+wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/tree.rooted.newick
+
+# build database with IPK : using 1 CPU and default phylogenetic model parameters
+# a better approach would be to use appropriate parameters, see documentation
+ipk.py build --refalign reference.fasta --reftree tree.rooted.newick --states nucl --workdir . --model GTR
+
+# place with EPIK
+epik.py place -i DB.ipk -s nucl -o . reference.fasta
+
+# jplace results
+cat placements_reference.fasta.jplace
+
+# you can do post-analyses with the excellent 'gappa' package
+# (available in bioconda too, see https://github.com/lczech/gappa)
+```
+
 
 ### Clone and build
 ```
