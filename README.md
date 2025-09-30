@@ -57,30 +57,6 @@ sudo apt install build-essential cmake libboost-dev libboost-serialization-dev l
 pip3 install click
 ```
 
-## Quick test
-
-Once you installed EPIK and activated your virtual environment with `conda activate epik` or `pixi shell`, run:
-
-```
-# get some test alignment and tree
-wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/reference.fasta 
-wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/tree.rooted.newick
-
-# build database with IPK : using 1 CPU and default phylogenetic model parameters
-# a better approach would be to use appropriate parameters, see documentation
-ipk.py build --refalign reference.fasta --reftree tree.rooted.newick --states nucl --workdir . --model GTR
-
-# place with EPIK
-epik.py place -i DB.ipk -s nucl -o . reference.fasta
-
-# jplace results
-cat placements_reference.fasta.jplace
-
-# you can do post-analyses with the excellent 'gappa' package
-# (available in bioconda too, see https://github.com/lczech/gappa)
-```
-
-
 ### Clone and build
 ```
 git clone --recursive https://github.com/phylo42/EPIK epik
@@ -104,6 +80,31 @@ cmake --install . --prefix DIRECTORY
 export PATH=DIRECTORY/bin:$PATH
 ```
 Remember to export the `DIRECTORY/bin` to your `PATH`. You can do this manually each time or add the export command to your shell initialization scripts (e.g., `.bashrc`).
+
+
+## Quick test
+
+Once you installed EPIK and activated your virtual environment with `conda activate epik` or `pixi shell`, run:
+
+```
+# get some test alignment and tree
+wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/reference.fasta 
+wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/tree.rooted.newick
+
+# build database with IPK : using 1 CPU and default phylogenetic model parameters
+# a better approach would be to use appropriate parameters, see documentation
+ipk.py build --refalign reference.fasta --reftree tree.rooted.newick --states nucl --workdir . --model GTR
+
+# place with EPIK
+epik.py place -i DB.ipk -s nucl -o . reference.fasta
+
+# jplace results
+cat placements_reference.fasta.jplace
+
+# you can do post-analyses with the excellent 'gappa' package
+# (available in bioconda too, see https://github.com/lczech/gappa)
+```
+
 
 
 ## Usage
