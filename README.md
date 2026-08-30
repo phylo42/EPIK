@@ -103,6 +103,12 @@ cat placements_reference.fasta.jplace
 
 # you can do post-analyses with the excellent 'gappa' package
 # (available in bioconda too, see https://github.com/lczech/gappa)
+#
+# Example:
+# mamba install gappa
+# gappa examine heat-tree --jplace-path ./placements_reference.fasta.jplace --write-svg-tree
+#
+# After, open "tree.svg" in your browser
 ```
 
 
