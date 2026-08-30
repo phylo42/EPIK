@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+title: EPIK
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Nikolai
+    family-names: Romashchenko
+    email: nikolai.romashchenko@unil.ch
+    affiliation: >-
+      University of Lausanne, SIB Swiss Institute of
+      Bioinformatics, Lausanne, Switzerland
+    orcid: https://orcid.org/0000-0002-2264-5219
+  - given-names: Benjamin
+    family-names: Linard
+    email: benjamin.linard@inrae.fr
+    affiliation: >-
+      INRAE, MIAT, UR 875, Toulouse, France
+    orcid: https://orcid.org/0000-0002-5555-898X
+  - given-names: Fabio
+    family-names: Pardi
+    email: pardi@lirmm.fr
+    affiliation: >-
+      LIRMM, University of Montpellier, CNRS, 
+      Montpellier, France
+    orcid: https://orcid.org/0000-0001-8084-1464
+  - given-names: Eric
+    family-names: Rivals
+    email: rivals@lirmm.fr
+    affiliation: >-
+      LIRMM, University of Montpellier, CNRS, 
+      Montpellier, France
+    orcid: https://orcid.org/0000-0003-3791-3973
+identifiers:
+  - type: doi
+    value: 10.1093/bioinformatics/btad692
+repository-code: https://github.com/phylo42/EPIK
+abstract: >-
+  EPIK is a program for rapid alignment-free phylogenetic
+  placement, the successor of RAPPAS.
+keywords:
+  - 'phylogenetics, placement, k-mers'
+license: MIT

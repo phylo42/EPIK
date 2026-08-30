@@ -5,10 +5,42 @@
 <a>
 <img src="https://img.shields.io/badge/softwipe-7.6-green" />
 </a>
+
+**Please cite:**  [![doi](https://img.shields.io/static/v1?label=doi&message=10.1093/bioinformatics/btad692&color=blue)](https://doi.org/10.1093/bioinformatics/btad692) [1]
         
 EPIK is a program for rapid alignment-free phylogenetic placement, the successor of [RAPPAS](https://github.com/phylo42/RAPPAS).
 
-## Installation
+## Installation via Bioconda
+
+It is advised to install the package in a new environment, because our C++ dependencies are strict and may clash with other packages (requiring libboost in particular).
+We also recommend to use `mamba`, which is faster in solving environment dependencies.
+```
+conda create -n epik
+conda activate epik
+conda config --set channel_priority strict
+
+# If you use mamba:
+# conda config set channel_priority strict
+
+# note that we install both ipk (database creation) and epik (phylogenetic placement)
+mamba install ipk epik
+```
+
+## Installation via Pixi
+
+If you find conda slow and clumsy, consider the wonderful [pixi](https://pixi.sh/) manager:
+
+```
+pixi init -c conda-forge -c bioconda
+pixi add epik ipk
+pixi shell
+```
+
+And you're good to go.
+
+## Installation from sources
+
+If you want to get your hands dirty, follow these steps.
 
 ### Prerequisites
 
@@ -22,7 +54,7 @@ EPIK is a program for rapid alignment-free phylogenetic placement, the successor
 On Debian-like systems they can be installed with:
 ```
 sudo apt install build-essential cmake libboost-dev libboost-serialization-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev zlib1g-dev rapidjson-dev libquadmath0 python3-pip
-pip install click
+pip3 install click
 ```
 
 ### Clone and build
@@ -50,6 +82,37 @@ export PATH=DIRECTORY/bin:$PATH
 Remember to export the `DIRECTORY/bin` to your `PATH`. You can do this manually each time or add the export command to your shell initialization scripts (e.g., `.bashrc`).
 
 
+## Quick test
+
+Once you installed EPIK and activated your virtual environment with `conda activate epik` or `pixi shell`, run:
+
+```
+# get some test alignment and tree
+wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/reference.fasta 
+wget https://github.com/phylo42/IPK/raw/refs/heads/main/tests/data/D652/tree.rooted.newick
+
+# build database with IPK : using 1 CPU and default phylogenetic model parameters
+# a better approach would be to use appropriate parameters, see documentation
+ipk.py build --refalign reference.fasta --reftree tree.rooted.newick --states nucl --workdir . --model GTR
+
+# place with EPIK
+epik.py place -i DB.ipk -s nucl -o . reference.fasta
+
+# jplace results
+cat placements_reference.fasta.jplace
+
+# you can do post-analyses with the excellent 'gappa' package
+# (available in bioconda too, see https://github.com/lczech/gappa)
+#
+# Example:
+# mamba install gappa
+# gappa examine heat-tree --jplace-path ./placements_reference.fasta.jplace --write-svg-tree
+#
+# After, open "tree.svg" in your browser
+```
+
+
+
 ## Usage
 
 
@@ -68,7 +131,7 @@ If EPIK is not installed, run `./epik.py` from the EPIK directory instead.
 | -s        | States, `nucl` for DNA and `amino` for proteins                                                                                                                         | nucl    |
 | --omega   | The user-defined threshold. Can be set higher than the one used when database was created. (If you are not sure, ignore this parameter.)                                | 1.5     |
 | --mu      | The proportion of the database to keep when filtering. Mutually exclusive with `--max-ram`. Should be a value in (0.0, 1.0]                                             | 1.0     |
-| --max-ram | The maximum amount of memory used to keep the database content. Mutually exclusive with `--mu`. Sets an approximate limit to EPIK's RAM consumption.                    |         |
+| --max-ram | The maximum amount of memory used to keep the database content. Mutually exclusive with `--mu`. Sets an approximate limit to EPIK's RAM consumption (i.e. the given limit might be exceeded but EPIK will consider it). Examples: 512, 256K, 42M, 4.2G.                    |         |
 | --threads | Number of parallel threads used for placement. EPIK should be compiled with OpenMP support enabled, i.e. `EPIK_OMP=ON`. (If you compile as we recommend, it is enabled) | 1       |
 
 Also, see `epik.py place --help` for information.
@@ -78,11 +141,13 @@ Also, see `epik.py place --help` for information.
 
 ### Code quality
 
-Code quality evaluation with [softwipe](https://github.com/adrianzap/softwipe) [1]:
+Code quality evaluation with [softwipe](https://github.com/adrianzap/softwipe) [2]:
 ```
 softwipe --cmake --cpp -x third-party,i2l/third-party,i2l/tests/catch2,i2l/examples --no-execution .
 ```
 
 
 ## References
-[1] A. Zapletal, D. Höhler, C. Sinz, A. Stamatakis (2021) The SoftWipe tool and benchmark for assessing coding standards adherence of scientific software Sci Rep 11, 10015 (2021). https://doi.org/10.1038/s41598-021-89495-8
+[1] Romashchenko, N., Linard, B., Pardi, F., & Rivals, E. (2023). EPIK: precise and scalable evolutionary placement with informative k-mers. Bioinformatics, 39(12), btad692. https://doi.org/10.1093/bioinformatics/btad692
+
+[2] Zapletal, A., Höhler, D., Sinz, C., & Stamatakis, A. (2021). The SoftWipe tool and benchmark for assessing coding standards adherence of scientific software. Scientific reports, 11(1), 10015. https://doi.org/10.1038/s41598-021-89495-8
