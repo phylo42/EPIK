@@ -16,7 +16,8 @@ if (NOT DEFINED ENABLE_AVX512)
     set(ENABLE_AVX512 OFF)
 endif()
 
-find_package(RapidJSON REQUIRED)
+#find_package(RapidJSON REQUIRED)
+
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
 if(ENABLE_OMP)
@@ -44,7 +45,7 @@ else()
     message(STATUS "EPIK: Vectorization DISABLED")
 endif()
 
-message(STATUS "RapidJSON: " ${RAPIDJSON_INCLUDE_DIRS})
+message(STATUS "RapidJSON: " ${RAPIDJSON_INCLUDE_DIRS} ${RapidJSON_INCLUDE_DIR})
 # RapidJSON cmake scripts are different between versions
 set(RapidJSON_INCLUDES ${RAPIDJSON_INCLUDE_DIRS} ${RapidJSON_INCLUDE_DIR})
 
