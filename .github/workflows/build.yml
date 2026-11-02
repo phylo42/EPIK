@@ -36,7 +36,7 @@ jobs:
           submodules: recursive
 
       - name: Setup CMake
-        uses: cmake-action/cmake-action@v1 # Ou une action similaire comme 'cmake-action'
+        uses: stevearc/cmake-action@v2  # Ou une action similaire comme 'cmake-action'
         with:
           version: '4.1'
 
