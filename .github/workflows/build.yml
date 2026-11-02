@@ -35,10 +35,13 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup CMake
-        uses: stevearc/cmake-action@v2  # Ou une action similaire comme 'cmake-action'
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v2
         with:
-          version: '4.1'
+          cmake-version: '4.1'
+
+      - name: Use cmake
+        run: cmake --version
 
       - name: Get number of CPU cores
         uses: SimenB/github-actions-cpu-cores@v1
