@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+cmake_minimum_required(VERSION 4.1 FATAL_ERROR)
 
 if (NOT DEFINED ENABLE_OMP)
     set(ENABLE_OMP ON)
@@ -17,8 +17,7 @@ if (NOT DEFINED ENABLE_AVX512)
 endif()
 
 find_package(RapidJSON REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem)
-
+find_package(Boost REQUIRED CONFIG COMPONENTS filesystem)
 if(ENABLE_OMP)
     find_package(OpenMP REQUIRED)
     message(STATUS "EPIK: OpenMP support ENABLED")
